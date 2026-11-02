@@ -13,7 +13,7 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        Icon="Assets/app.ico">
+        Icon="Assets/logo.png">
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="40" CornerRadius="12" GlassFrameThickness="0" ResizeBorderThickness="6" />
