@@ -8,7 +8,18 @@ public partial class MainWindow : Window
 {
     public MainWindow()
     {
-        InitializeComponent();
+        try
+        {
+            App.LogBoot("Inside MainWindow..ctor before InitializeComponent()");
+            InitializeComponent();
+            App.LogBoot("Inside MainWindow..ctor after InitializeComponent()");
+        }
+        catch (Exception ex)
+        {
+            App.LogBoot($"ERROR inside MainWindow..ctor: {ex}");
+            MessageBox.Show($"MainWindow error: {ex.Message}\n{ex.StackTrace}");
+            throw;
+        }
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)

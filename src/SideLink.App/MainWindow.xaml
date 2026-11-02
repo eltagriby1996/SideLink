@@ -10,20 +10,18 @@
         Height="720" Width="1100"
         MinHeight="600" MinWidth="900"
         WindowStartupLocation="CenterScreen"
-        WindowStyle="None"
-        AllowsTransparency="True"
-        Background="Transparent"
-        Icon="Assets/logo.png">
+        WindowStyle="SingleBorderWindow"
+        Background="{StaticResource BgDarkBrush}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" CornerRadius="12" GlassFrameThickness="0" ResizeBorderThickness="6" />
+        <WindowChrome CaptionHeight="40" CornerRadius="0" GlassFrameThickness="0" ResizeBorderThickness="6" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
 
     <!-- Outer Window Border -->
     <Border Background="{StaticResource BgDarkBrush}" 
             BorderBrush="{StaticResource CardBorderBrush}" 
             BorderThickness="1" 
-            CornerRadius="12">
+            CornerRadius="0">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="46" /> <!-- Custom Title Bar -->
@@ -40,7 +38,7 @@
 
                 <!-- Brand Header with Official Logo -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
-                    <Image Source="Assets/logo.png" Width="26" Height="26" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                    <Image Source="/Assets/logo.png" Width="26" Height="26" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
                     <TextBlock Text="SideLink" FontWeight="Bold" FontSize="15" Foreground="White" VerticalAlignment="Center" />
                     <TextBlock Text="v1.0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
                 </StackPanel>
@@ -643,7 +641,7 @@
                     <StackPanel HorizontalAlignment="Center">
                         <!-- Official SideLink Logo -->
                         <Border Width="80" Height="80" CornerRadius="18" Margin="0,0,0,16" HorizontalAlignment="Center" ClipToBounds="True">
-                            <Image Source="Assets/logo.png" RenderOptions.BitmapScalingMode="HighQuality" Stretch="UniformToFill" />
+                            <Image Source="/Assets/logo.png" RenderOptions.BitmapScalingMode="HighQuality" Stretch="UniformToFill" />
                         </Border>
 
                         <TextBlock Text="SideLink Launch Verification" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
