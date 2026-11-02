@@ -102,3 +102,10 @@ public interface ICredentialStore
     Task DeleteApplePasswordAsync(string appleId);
     Task<string?> GetLastAppleIdAsync();
 }
+
+public interface IAppleAuthService
+{
+    Task<(bool Success, bool Requires2Fa, string Message)> AuthenticateAsync(string appleId, string password, CancellationToken cancellationToken = default);
+    Task<(bool Success, string Message)> VerifyTwoFactorCodeAsync(string appleId, string code, CancellationToken cancellationToken = default);
+}
+

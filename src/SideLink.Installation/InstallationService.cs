@@ -53,23 +53,27 @@ public class InstallationService : IInstallationService
         try
         {
             // 1. Inspect IPA metadata
-            ReportProgress(progress, "Inspecting application metadata...", 15);
+            ReportProgress(progress, "فحص بيانات حزمة التطبيق (IPA)...", 10);
             var metadata = await _ipaInspector.InspectIpaAsync(signedIpaPath, cancellationToken);
             _logger.LogInformation("Beginning installation of {App} ({BundleId}) version {Version} to device {UDID}", 
                 metadata.EffectiveTitle, metadata.BundleIdentifier, metadata.Version, targetDevice.DeviceId);
 
-            // 2. Transfer package to device staging
-            ReportProgress(progress, "Transferring application bundle to device...", 40);
-            await Task.Delay(1000, cancellationToken); // Simulation / streaming transfer delay
+            // 2. Real Native iOS Installation via Apple Mobile Device
+            var (success, errorMessage) = await NativeMobileDevice.InstallIpaAsync(
+                signedIpaPath, 
+                targetDevice.DeviceId, 
+                progress, 
+                _logger, 
+                cancellationToken);
 
-            // 3. Trigger installation_proxy
-            ReportProgress(progress, "Taking installation lock on iOS container...", 65);
-            await Task.Delay(1200, cancellationToken);
+            if (!success)
+            {
+                _logger.LogWarning("Real iOS installation rejected: {Error}", errorMessage);
+                ReportProgress(progress, errorMessage ?? "فشل تثبيت التطبيق على جهاز الآيفون.", 0, hasError: true, errorMessage: errorMessage);
+                return false;
+            }
 
-            ReportProgress(progress, "Generating application sandbox and verification...", 85);
-            await Task.Delay(800, cancellationToken);
-
-            // 4. Record to repository
+            // 3. Record to repository on verified success
             DateTimeOffset? expiration = metadata.ProvisioningProfile?.ExpirationDate;
             var managedApp = new ManagedApp
             {
@@ -88,14 +92,14 @@ public class InstallationService : IInstallationService
 
             await _appRepository.SaveAppAsync(managedApp);
 
-            ReportProgress(progress, "Installation complete!", 100, isCompleted: true);
+            ReportProgress(progress, "تم تثبيت التطبيق بنجاح على الآيفون!", 100, isCompleted: true);
             _logger.LogInformation("Successfully installed {App} on {Device}", metadata.EffectiveTitle, targetDevice.FriendlyModelName);
             return true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Installation failed for {Ipa}", signedIpaPath);
-            ReportProgress(progress, "Installation error: " + ex.Message, 0, hasError: true, errorMessage: ex.Message);
+            ReportProgress(progress, "حدث خطأ أثناء التثبيت: " + ex.Message, 0, hasError: true, errorMessage: ex.Message);
             return false;
         }
     }
@@ -104,14 +108,15 @@ public class InstallationService : IInstallationService
     {
         _logger.LogInformation("Requesting uninstallation of {BundleId} from {UDID}", bundleIdentifier, targetDevice.DeviceId);
         
+        bool nativeSuccess = await NativeMobileDevice.UninstallAppAsync(bundleIdentifier, targetDevice.DeviceId, _logger, cancellationToken);
+        
         var existing = await _appRepository.GetAppByBundleIdAsync(bundleIdentifier, targetDevice.DeviceId);
         if (existing != null)
         {
             await _appRepository.DeleteAppAsync(existing.Id);
-            return true;
         }
 
-        return true;
+        return nativeSuccess;
     }
 
     private static void ReportProgress(IProgress<AppOperationProgress>? progress, string step, int percent, bool isCompleted = false, bool hasError = false, string? errorMessage = null)

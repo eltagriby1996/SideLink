@@ -10,6 +10,7 @@ namespace SideLink.App.ViewModels;
 public partial class SigningRefreshViewModel : ObservableObject
 {
     private readonly ICredentialStore _credentialStore;
+    private readonly IAppleAuthService _appleAuthService;
     private readonly ILogger<SigningRefreshViewModel> _logger;
 
     [ObservableProperty]
@@ -48,9 +49,16 @@ public partial class SigningRefreshViewModel : ObservableObject
     [ObservableProperty]
     private string _twoFactorCode = string.Empty;
 
-    public SigningRefreshViewModel(ICredentialStore credentialStore, ILogger<SigningRefreshViewModel> logger)
+    [ObservableProperty]
+    private bool _isValidating;
+
+    public SigningRefreshViewModel(
+        ICredentialStore credentialStore,
+        IAppleAuthService appleAuthService,
+        ILogger<SigningRefreshViewModel> logger)
     {
         _credentialStore = credentialStore;
+        _appleAuthService = appleAuthService;
         _logger = logger;
 
         UpdateExplanation();
@@ -95,77 +103,82 @@ public partial class SigningRefreshViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveCredentialsAsync()
     {
+        await AuthenticateAndSaveAccountAsync();
+    }
+
+    [RelayCommand]
+    public async Task Request2FaAsync()
+    {
+        await AuthenticateAndSaveAccountAsync();
+    }
+
+    private async Task AuthenticateAndSaveAccountAsync()
+    {
         if (string.IsNullOrWhiteSpace(AppleId) || !AppleId.Contains("@"))
         {
-            StatusMessage = "يرجى إدخال بريد Apple ID صحيح (مثال: user@icloud.com).";
+            StatusMessage = "يرجى إدخال بريد Apple ID صحيح أولاً (مثال: user@icloud.com).";
             IsSuccessStatus = false;
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(Password))
+        string effectivePassword = Password;
+        if (string.IsNullOrWhiteSpace(effectivePassword) && HasStoredPassword)
+        {
+            effectivePassword = await _credentialStore.GetApplePasswordAsync(AppleId.Trim()) ?? string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(effectivePassword))
         {
             StatusMessage = "يرجى كتابة كلمة مرور Apple ID أو كلمة السر الخاصة بالتطبيق (App-Specific Password).";
             IsSuccessStatus = false;
             return;
         }
 
+        IsValidating = true;
+        StatusMessage = "جاري الاتصال بخوادم Apple للتحقق من بيانات الحساب...";
+        IsSuccessStatus = true;
+
         try
         {
-            await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), Password);
-            HasStoredPassword = true;
-            SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
+            var authResult = await _appleAuthService.AuthenticateAsync(AppleId.Trim(), effectivePassword);
 
-            bool isAppSpecific = Password.Trim().Replace("-", "").Length == 16;
-            if (isAppSpecific)
+            if (authResult.Requires2Fa)
             {
-                StatusMessage = "✓ تم حفظ وتشفير كلمة السر الخاصة بالتطبيقات (App-Specific Password) بنجاح عبر Windows DPAPI! لا تتطلب رمز مصادقة 2FA.";
+                Is2FaPromptVisible = true;
+                TwoFactorCode = string.Empty;
+                StatusMessage = authResult.Message;
+                IsSuccessStatus = true;
+            }
+            else if (authResult.Success)
+            {
+                await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), effectivePassword);
+                HasStoredPassword = true;
+                SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
+                Is2FaPromptVisible = false;
+                StatusMessage = authResult.Message;
+                IsSuccessStatus = true;
             }
             else
             {
-                StatusMessage = "✓ تم تشفير وحفظ بيانات Apple ID بنجاح عبر Windows DPAPI. الحساب جاهز الآن لتوقيع وتثبيت التطبيقات.";
+                Is2FaPromptVisible = false;
+                StatusMessage = authResult.Message;
+                IsSuccessStatus = false;
             }
-            IsSuccessStatus = true;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to save credentials");
-            StatusMessage = "حدث خطأ أثناء تشفير وحفظ البيانات: " + ex.Message;
+            _logger.LogError(ex, "Authentication failure for {Account}", AppleId);
+            StatusMessage = "حدث خطأ أثناء محاولة الاتصال بخوادم Apple: " + ex.Message;
             IsSuccessStatus = false;
+        }
+        finally
+        {
+            IsValidating = false;
         }
     }
 
     [RelayCommand]
-    public async Task Request2FaAsync()
-    {
-        if (string.IsNullOrWhiteSpace(AppleId) || !AppleId.Contains("@"))
-        {
-            StatusMessage = "يرجى إدخال بريد Apple ID صحيح أولاً.";
-            IsSuccessStatus = false;
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(Password) && !HasStoredPassword)
-        {
-            StatusMessage = "يرجى كتابة كلمة المرور الخاصة بحساب Apple ID أولاً.";
-            IsSuccessStatus = false;
-            return;
-        }
-
-        if (!string.IsNullOrWhiteSpace(Password))
-        {
-            await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), Password);
-            HasStoredPassword = true;
-            SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
-        }
-
-        Is2FaPromptVisible = true;
-        TwoFactorCode = string.Empty;
-        StatusMessage = "📱 تم بدء إجراء التحقق: إذا كان حسابك مفعّلاً به التحقق بخطوتين (2FA)، تحقق الآن من ظهور إشعار Apple على هاتفك (iPhone/iPad) أو عبر رسالة SMS، ثم أدخل الرمز المكون من 6 أرقام أدناه واضغط تأكيد.";
-        IsSuccessStatus = true;
-    }
-
-    [RelayCommand]
-    public void Verify2FaCode()
+    public async Task Verify2FaCodeAsync()
     {
         if (string.IsNullOrWhiteSpace(TwoFactorCode) || TwoFactorCode.Trim().Length < 6)
         {
@@ -174,12 +187,48 @@ public partial class SigningRefreshViewModel : ObservableObject
             return;
         }
 
-        _logger.LogInformation("Two-Factor code {Code} confirmed for account {Account}", TwoFactorCode.Trim(), AppleId);
-        
-        Is2FaPromptVisible = false;
-        StatusMessage = $"✓ تم تأكيد رمز المصادقة الثنائية (2FA) بنجاح لحساب ({AppleId})! الحساب مفعل وجاهز لتوقيع وتثبيت التطبيقات.";
-        IsSuccessStatus = true;
-        TwoFactorCode = string.Empty;
+        IsValidating = true;
+        StatusMessage = "جاري إرسال وتأكيد رمز 2FA مع خوادم Apple...";
+
+        try
+        {
+            var result = await _appleAuthService.VerifyTwoFactorCodeAsync(AppleId.Trim(), TwoFactorCode.Trim());
+            if (result.Success)
+            {
+                string effectivePassword = Password;
+                if (string.IsNullOrWhiteSpace(effectivePassword) && HasStoredPassword)
+                {
+                    effectivePassword = await _credentialStore.GetApplePasswordAsync(AppleId.Trim()) ?? string.Empty;
+                }
+
+                if (!string.IsNullOrWhiteSpace(effectivePassword))
+                {
+                    await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), effectivePassword);
+                    HasStoredPassword = true;
+                    SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
+                }
+
+                Is2FaPromptVisible = false;
+                StatusMessage = result.Message;
+                IsSuccessStatus = true;
+                TwoFactorCode = string.Empty;
+            }
+            else
+            {
+                StatusMessage = result.Message;
+                IsSuccessStatus = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to verify 2FA code with Apple");
+            StatusMessage = "خطأ أثناء التحقق من الرمز: " + ex.Message;
+            IsSuccessStatus = false;
+        }
+        finally
+        {
+            IsValidating = false;
+        }
     }
 
     [RelayCommand]

@@ -169,7 +169,13 @@ public partial class IpaLibraryViewModel : ObservableObject
             bool success = await _installationService.InstallIpaAsync(signedIpa, device, progress);
             if (success)
             {
-                StatusMessage = $"Successfully installed {SelectedIpa.EffectiveTitle}!";
+                StatusMessage = $"✓ تم تثبيت {SelectedIpa.EffectiveTitle} بنجاح على جهاز الآيفون!";
+                HasError = false;
+            }
+            else
+            {
+                HasError = true;
+                StatusMessage = "فشل تثبيت التطبيق على جهاز الآيفون.";
             }
         }
         catch (Exception ex)

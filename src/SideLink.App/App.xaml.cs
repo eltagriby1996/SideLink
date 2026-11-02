@@ -87,6 +87,7 @@ public partial class App : Application
             services.AddSingleton<IDeviceDiscoveryService, DeviceDiscoveryService>();
             services.AddSingleton<IIpaInspectorService, IpaInspectorService>();
             services.AddSingleton<ISigningService, SigningService>();
+            services.AddSingleton<IAppleAuthService, AppleAuthService>();
             services.AddSingleton<IInstallationService, InstallationService>();
             services.AddSingleton<IRefreshService, RefreshService>();
 
