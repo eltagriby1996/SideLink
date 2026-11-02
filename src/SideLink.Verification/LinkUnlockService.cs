@@ -10,7 +10,7 @@ using SideLink.Core.Models;
 
 namespace SideLink.Verification;
 
-public class LinkUnlockService : ILinkUnlockService
+public class LinkUnlockService : ILinkUnlockService, IDisposable
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<LinkUnlockService> _logger;
@@ -73,7 +73,6 @@ public class LinkUnlockService : ILinkUnlockService
         _audience = audience;
 
         _embeddedServer = new EmbeddedVerificationServer(_verificationKey, logger);
-        _embeddedServer.Start();
     }
 
     public async Task<VerificationSession> CreateSessionAsync(CancellationToken cancellationToken = default)
@@ -97,6 +96,7 @@ public class LinkUnlockService : ILinkUnlockService
             catch (Exception)
             {
                 // If remote server unreachable, seamlessly fallback to built-in local verification server
+                EnsureEmbeddedServerStarted();
                 _logger.LogInformation("Remote server unreachable, seamlessly using embedded verification server at {Url}", _embeddedServer.BaseUrl);
                 _baseUrl = _embeddedServer.BaseUrl;
                 response = await _httpClient.PostAsJsonAsync(
@@ -306,6 +306,19 @@ public class LinkUnlockService : ILinkUnlockService
             _currentSession = null;
             IsSessionUnlocked = false;
         }
+    }
+
+    private void EnsureEmbeddedServerStarted()
+    {
+        if (!_embeddedServer.IsRunning)
+        {
+            _embeddedServer.Start();
+        }
+    }
+
+    public void Dispose()
+    {
+        _embeddedServer.Dispose();
     }
 
     private record CreateSessionApiResponse
