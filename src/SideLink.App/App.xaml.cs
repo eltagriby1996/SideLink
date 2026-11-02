@@ -86,6 +86,8 @@ public partial class App : Application
             // Domain Services
             services.AddSingleton<IDeviceDiscoveryService, DeviceDiscoveryService>();
             services.AddSingleton<IIpaInspectorService, IpaInspectorService>();
+            services.AddSingleton<IAnisetteClient, AnisetteClient>();
+            services.AddSingleton<IAppleIdentityService, AppleIdentityService>();
             services.AddSingleton<ISigningService, SigningService>();
             services.AddSingleton<IAppleAuthService, AppleAuthService>();
             services.AddSingleton<IInstallationService, InstallationService>();

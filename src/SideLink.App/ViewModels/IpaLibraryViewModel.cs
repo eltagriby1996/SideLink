@@ -15,6 +15,7 @@ public partial class IpaLibraryViewModel : ObservableObject
     private readonly ISigningService _signingService;
     private readonly IInstallationService _installationService;
     private readonly IDeviceDiscoveryService _deviceService;
+    private readonly ICredentialStore _credentialStore;
     private readonly ILogger<IpaLibraryViewModel> _logger;
 
     public ObservableCollection<IpaMetadata> LoadedIpas { get; } = new();
@@ -45,12 +46,14 @@ public partial class IpaLibraryViewModel : ObservableObject
         ISigningService signingService,
         IInstallationService installationService,
         IDeviceDiscoveryService deviceService,
+        ICredentialStore credentialStore,
         ILogger<IpaLibraryViewModel> logger)
     {
         _ipaInspector = ipaInspector;
         _signingService = signingService;
         _installationService = installationService;
         _deviceService = deviceService;
+        _credentialStore = credentialStore;
         _logger = logger;
     }
 
@@ -161,8 +164,13 @@ public partial class IpaLibraryViewModel : ObservableObject
 
         try
         {
-            // 1. Sign IPA
-            var config = new SigningConfiguration { Method = SigningMethodType.PersonalTeam };
+            // 1. Sign IPA using active Apple ID credentials & profile
+            string? activeAppleId = await _credentialStore.GetLastAppleIdAsync();
+            var config = new SigningConfiguration 
+            { 
+                Method = SigningMethodType.PersonalTeam,
+                AppleId = activeAppleId ?? string.Empty
+            };
             string signedIpa = await _signingService.SignIpaAsync(SelectedIpa.FilePath, config, device, progress);
 
             // 2. Install

@@ -13,10 +13,15 @@ public class SigningService : ISigningService
 {
     private readonly ILogger<SigningService> _logger;
     private readonly ICredentialStore _credentialStore;
+    private readonly IAppleIdentityService _identityService;
 
-    public SigningService(ICredentialStore credentialStore, ILogger<SigningService> logger)
+    public SigningService(
+        ICredentialStore credentialStore,
+        IAppleIdentityService identityService,
+        ILogger<SigningService> logger)
     {
         _credentialStore = credentialStore;
+        _identityService = identityService;
         _logger = logger;
     }
 
@@ -132,14 +137,39 @@ public class SigningService : ISigningService
             }
             else if (config.Method == SigningMethodType.PersonalTeam)
             {
-                // Generate / apply personal team profile if one was provided or synthesize profile structure
-                if (!string.IsNullOrWhiteSpace(config.MobileProvisionPath) && File.Exists(config.MobileProvisionPath))
+                string? effectiveProfile = config.MobileProvisionPath;
+                if (string.IsNullOrWhiteSpace(effectiveProfile) || !File.Exists(effectiveProfile))
                 {
-                    File.Copy(config.MobileProvisionPath, embeddedProvisionTarget, true);
+                    string appleId = config.AppleId;
+                    if (string.IsNullOrWhiteSpace(appleId))
+                    {
+                        appleId = await _credentialStore.GetLastAppleIdAsync() ?? string.Empty;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(appleId))
+                    {
+                        var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId);
+                        if (identity == null || !identity.IsReadyToSign)
+                        {
+                            identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId);
+                        }
+
+                        if (identity.IsReadyToSign)
+                        {
+                            effectiveProfile = identity.MobileProvisionPath;
+                            _logger.LogInformation("Resolved personal team provisioning profile for {AppleId}: {Profile}", appleId, effectiveProfile);
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(effectiveProfile) && File.Exists(effectiveProfile))
+                {
+                    File.Copy(effectiveProfile, embeddedProvisionTarget, true);
+                    _logger.LogInformation("Successfully embedded personal mobileprovision profile to {Target}", embeddedProvisionTarget);
                 }
                 else
                 {
-                    _logger.LogInformation("Using existing or default mobileprovision profile for personal signing.");
+                    _logger.LogInformation("No external personal profile specified, preserving existing bundle profile if present.");
                 }
             }
 

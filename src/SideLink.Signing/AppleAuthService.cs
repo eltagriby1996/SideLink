@@ -9,11 +9,13 @@ namespace SideLink.Signing;
 public class AppleAuthService : IAppleAuthService
 {
     private readonly ILogger<AppleAuthService> _logger;
+    private readonly IAnisetteClient _anisetteClient;
     private readonly CookieContainer _cookieContainer = new();
     private string? _currentSessionToken;
 
-    public AppleAuthService(ILogger<AppleAuthService> logger)
+    public AppleAuthService(IAnisetteClient anisetteClient, ILogger<AppleAuthService> logger)
     {
+        _anisetteClient = anisetteClient;
         _logger = logger;
     }
 
@@ -105,13 +107,26 @@ public class AppleAuthService : IAppleAuthService
                 AllowAutoRedirect = true
             };
             using var client = new HttpClient(handler);
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = TimeSpan.FromSeconds(20);
+
+            // 1. Fetch real Anisette device attestation headers
+            try
+            {
+                var aniHeaders = await _anisetteClient.GetAnisetteHeadersAsync(cancellationToken);
+                foreach (var kvp in aniHeaders)
+                {
+                    client.DefaultRequestHeaders.TryAddWithoutValidation(kvp.Key, kvp.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Anisette provider warning: {Message}", ex.Message);
+            }
 
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
             client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/javascript");
             client.DefaultRequestHeaders.TryAddWithoutValidation("X-Apple-Domain-Id", "1");
             client.DefaultRequestHeaders.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Apple-Locale", "en_US");
             client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://appleid.apple.com");
             client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://appleid.apple.com/");
 
@@ -193,7 +208,17 @@ public class AppleAuthService : IAppleAuthService
                 AllowAutoRedirect = true
             };
             using var client = new HttpClient(handler);
-            client.Timeout = TimeSpan.FromSeconds(15);
+            client.Timeout = TimeSpan.FromSeconds(20);
+
+            try
+            {
+                var aniHeaders = await _anisetteClient.GetAnisetteHeadersAsync(cancellationToken);
+                foreach (var kvp in aniHeaders)
+                {
+                    client.DefaultRequestHeaders.TryAddWithoutValidation(kvp.Key, kvp.Value);
+                }
+            }
+            catch { }
 
             client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
             client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/javascript");

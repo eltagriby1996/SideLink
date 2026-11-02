@@ -109,3 +109,24 @@ public interface IAppleAuthService
     Task<(bool Success, string Message)> VerifyTwoFactorCodeAsync(string appleId, string code, CancellationToken cancellationToken = default);
 }
 
+public class AppleIdentityInfo
+{
+    public string AppleId { get; set; } = string.Empty;
+    public string? CertificateSubject { get; set; }
+    public string? TeamId { get; set; }
+    public DateTime? ExpirationDate { get; set; }
+    public string? MobileProvisionPath { get; set; }
+    public string? P12Path { get; set; }
+    public List<string> ProvisionedDevices { get; set; } = new();
+    public bool IsMatchingCurrentDevice { get; set; }
+    public bool IsReadyToSign => !string.IsNullOrEmpty(MobileProvisionPath) && System.IO.File.Exists(MobileProvisionPath);
+}
+
+public interface IAppleIdentityService
+{
+    Task<IReadOnlyList<string>> DiscoverSystemAppleAccountsAsync();
+    Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null);
+    Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid);
+}
+
+

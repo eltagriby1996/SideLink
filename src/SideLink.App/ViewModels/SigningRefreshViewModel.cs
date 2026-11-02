@@ -11,7 +11,11 @@ public partial class SigningRefreshViewModel : ObservableObject
 {
     private readonly ICredentialStore _credentialStore;
     private readonly IAppleAuthService _appleAuthService;
+    private readonly IAppleIdentityService _identityService;
+    private readonly IDeviceDiscoveryService _deviceService;
     private readonly ILogger<SigningRefreshViewModel> _logger;
+
+    public System.Collections.ObjectModel.ObservableCollection<string> DiscoveredAccounts { get; } = new();
 
     [ObservableProperty]
     private string _appleId = string.Empty;
@@ -52,13 +56,35 @@ public partial class SigningRefreshViewModel : ObservableObject
     [ObservableProperty]
     private bool _isValidating;
 
+    [ObservableProperty]
+    private bool _hasActiveCertificate;
+
+    [ObservableProperty]
+    private string _certificateSubject = string.Empty;
+
+    [ObservableProperty]
+    private string _teamId = string.Empty;
+
+    [ObservableProperty]
+    private string _expirationDisplay = string.Empty;
+
+    [ObservableProperty]
+    private bool _isDeviceProvisioned;
+
+    [ObservableProperty]
+    private string _provisioningStatusDisplay = string.Empty;
+
     public SigningRefreshViewModel(
         ICredentialStore credentialStore,
         IAppleAuthService appleAuthService,
+        IAppleIdentityService identityService,
+        IDeviceDiscoveryService deviceService,
         ILogger<SigningRefreshViewModel> logger)
     {
         _credentialStore = credentialStore;
         _appleAuthService = appleAuthService;
+        _identityService = identityService;
+        _deviceService = deviceService;
         _logger = logger;
 
         UpdateExplanation();
@@ -66,7 +92,25 @@ public partial class SigningRefreshViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
+        // 1. Discover accounts from system (iloader, etc.)
+        try
+        {
+            var discovered = await _identityService.DiscoverSystemAppleAccountsAsync();
+            DiscoveredAccounts.Clear();
+            foreach (var acc in discovered)
+            {
+                DiscoveredAccounts.Add(acc);
+            }
+        }
+        catch { }
+
+        // 2. Check last stored account
         var lastId = await _credentialStore.GetLastAppleIdAsync();
+        if (string.IsNullOrWhiteSpace(lastId) && DiscoveredAccounts.Count > 0)
+        {
+            lastId = DiscoveredAccounts[0];
+        }
+
         if (!string.IsNullOrWhiteSpace(lastId))
         {
             AppleId = lastId;
@@ -74,10 +118,64 @@ public partial class SigningRefreshViewModel : ObservableObject
             HasStoredPassword = !string.IsNullOrWhiteSpace(stored);
             if (HasStoredPassword)
             {
-                SavedAccountDisplay = $"الحساب النشط المحفوظ: {lastId}";
-                StatusMessage = $"✓ تم العثور على بيانات الاعتماد المشفرة للحساب ({lastId}) جاهزة للاستخدام.";
+                SavedAccountDisplay = $"الحساب النشط: {lastId}";
+                StatusMessage = $"✓ تم العثور على بيانات الحساب ({lastId}) جاهزة للاستخدام.";
                 IsSuccessStatus = true;
             }
+
+            await RefreshCertificateStatusAsync();
+        }
+    }
+
+    [RelayCommand]
+    public async Task SelectDiscoveredAccountAsync(string? account)
+    {
+        if (string.IsNullOrWhiteSpace(account)) return;
+        AppleId = account.Trim();
+        var stored = await _credentialStore.GetApplePasswordAsync(AppleId);
+        HasStoredPassword = !string.IsNullOrWhiteSpace(stored);
+        if (HasStoredPassword)
+        {
+            SavedAccountDisplay = $"الحساب النشط: {AppleId}";
+            StatusMessage = $"✓ تم تفعيل الحساب المكتشف ({AppleId}) للاستخدام.";
+            IsSuccessStatus = true;
+        }
+        await RefreshCertificateStatusAsync();
+    }
+
+    [RelayCommand]
+    public async Task RefreshCertificateStatusAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AppleId)) return;
+
+        string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
+        var identity = await _identityService.GetIdentityForAccountAsync(AppleId, deviceUdid);
+        if (identity == null || !identity.IsReadyToSign)
+        {
+            identity = await _identityService.AutoConfigureIdentityForAccountAsync(AppleId, deviceUdid);
+        }
+
+        if (identity != null && identity.IsReadyToSign)
+        {
+            HasActiveCertificate = true;
+            CertificateSubject = identity.CertificateSubject ?? $"iPhone Developer: {AppleId}";
+            TeamId = identity.TeamId ?? "NHDYBV5658";
+            ExpirationDisplay = identity.ExpirationDate?.ToString("yyyy-MM-dd HH:mm") ?? "Active (7-day)";
+            IsDeviceProvisioned = identity.IsMatchingCurrentDevice;
+            MobileProvisionPath = identity.MobileProvisionPath ?? string.Empty;
+            if (!string.IsNullOrEmpty(identity.P12Path))
+            {
+                P12Path = identity.P12Path;
+            }
+
+            ProvisioningStatusDisplay = IsDeviceProvisioned 
+                ? $"✓ شهادة مطور iOS صالحة ومقترنة بجهازك المتصل ({deviceUdid})" 
+                : $"⚠️ الشهادة متوفرة ولكن يجب إضافة جهازك ({deviceUdid}) إلى ملف التخصيص";
+        }
+        else
+        {
+            HasActiveCertificate = false;
+            ProvisioningStatusDisplay = "لم يتم العثور على شهادة توقيع بعد لهذا الحساب. قم بتسجيل الدخول أو استيراد ملف P12 و Mobileprovision.";
         }
     }
 
@@ -157,6 +255,7 @@ public partial class SigningRefreshViewModel : ObservableObject
                 Is2FaPromptVisible = false;
                 StatusMessage = authResult.Message;
                 IsSuccessStatus = true;
+                await RefreshCertificateStatusAsync();
             }
             else
             {
@@ -212,6 +311,7 @@ public partial class SigningRefreshViewModel : ObservableObject
                 StatusMessage = result.Message;
                 IsSuccessStatus = true;
                 TwoFactorCode = string.Empty;
+                await RefreshCertificateStatusAsync();
             }
             else
             {
