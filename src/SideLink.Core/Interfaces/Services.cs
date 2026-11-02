@@ -100,4 +100,5 @@ public interface ICredentialStore
     Task SaveApplePasswordAsync(string appleId, string password);
     Task<string?> GetApplePasswordAsync(string appleId);
     Task DeleteApplePasswordAsync(string appleId);
+    Task<string?> GetLastAppleIdAsync();
 }

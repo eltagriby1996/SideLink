@@ -38,7 +38,26 @@ public class DpapiCredentialStore : ICredentialStore
             byte[] plaintextBytes = Encoding.UTF8.GetBytes(password);
             byte[] encrypted = ProtectedData.Protect(plaintextBytes, Entropy, DataProtectionScope.CurrentUser);
             File.WriteAllBytes(GetFilePath(appleId), encrypted);
+            File.WriteAllText(Path.Combine(_storageDir, "last_account.txt"), appleId.Trim());
             _logger.LogInformation("Securely stored credentials using Windows DPAPI for account {Account}", MaskAccount(appleId));
+        });
+    }
+
+    public async Task<string?> GetLastAppleIdAsync()
+    {
+        return await Task.Run(() =>
+        {
+            var path = Path.Combine(_storageDir, "last_account.txt");
+            if (!File.Exists(path)) return null;
+            try
+            {
+                var text = File.ReadAllText(path).Trim();
+                return string.IsNullOrWhiteSpace(text) ? null : text;
+            }
+            catch
+            {
+                return null;
+            }
         });
     }
 
@@ -73,12 +92,21 @@ public class DpapiCredentialStore : ICredentialStore
             return;
 
         var path = GetFilePath(appleId);
+        var lastAccPath = Path.Combine(_storageDir, "last_account.txt");
         await Task.Run(() =>
         {
             if (File.Exists(path))
             {
                 File.Delete(path);
                 _logger.LogInformation("Removed credentials for account {Account}", MaskAccount(appleId));
+            }
+            if (File.Exists(lastAccPath))
+            {
+                var current = File.ReadAllText(lastAccPath).Trim();
+                if (string.Equals(current, appleId.Trim(), StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Delete(lastAccPath);
+                }
             }
         });
     }

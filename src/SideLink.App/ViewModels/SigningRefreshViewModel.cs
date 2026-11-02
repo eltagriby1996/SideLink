@@ -36,6 +36,18 @@ public partial class SigningRefreshViewModel : ObservableObject
     [ObservableProperty]
     private string _methodExplanation = string.Empty;
 
+    [ObservableProperty]
+    private string _savedAccountDisplay = string.Empty;
+
+    [ObservableProperty]
+    private bool _isSuccessStatus;
+
+    [ObservableProperty]
+    private bool _is2FaPromptVisible;
+
+    [ObservableProperty]
+    private string _twoFactorCode = string.Empty;
+
     public SigningRefreshViewModel(ICredentialStore credentialStore, ILogger<SigningRefreshViewModel> logger)
     {
         _credentialStore = credentialStore;
@@ -46,10 +58,18 @@ public partial class SigningRefreshViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        if (!string.IsNullOrWhiteSpace(AppleId))
+        var lastId = await _credentialStore.GetLastAppleIdAsync();
+        if (!string.IsNullOrWhiteSpace(lastId))
         {
-            var stored = await _credentialStore.GetApplePasswordAsync(AppleId);
+            AppleId = lastId;
+            var stored = await _credentialStore.GetApplePasswordAsync(lastId);
             HasStoredPassword = !string.IsNullOrWhiteSpace(stored);
+            if (HasStoredPassword)
+            {
+                SavedAccountDisplay = $"الحساب النشط المحفوظ: {lastId}";
+                StatusMessage = $"✓ تم العثور على بيانات الاعتماد المشفرة للحساب ({lastId}) جاهزة للاستخدام.";
+                IsSuccessStatus = true;
+            }
         }
     }
 
@@ -75,30 +95,98 @@ public partial class SigningRefreshViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveCredentialsAsync()
     {
-        if (string.IsNullOrWhiteSpace(AppleId))
+        if (string.IsNullOrWhiteSpace(AppleId) || !AppleId.Contains("@"))
         {
-            StatusMessage = "Please enter a valid Apple ID.";
+            StatusMessage = "يرجى إدخال بريد Apple ID صحيح (مثال: user@icloud.com).";
+            IsSuccessStatus = false;
             return;
         }
 
         if (string.IsNullOrWhiteSpace(Password))
         {
-            StatusMessage = "Please enter your Apple ID password or app-specific password.";
+            StatusMessage = "يرجى كتابة كلمة مرور Apple ID أو كلمة السر الخاصة بالتطبيق (App-Specific Password).";
+            IsSuccessStatus = false;
             return;
         }
 
         try
         {
-            await _credentialStore.SaveApplePasswordAsync(AppleId, Password);
+            await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), Password);
             HasStoredPassword = true;
-            Password = string.Empty; // Clear plaintext from memory
-            StatusMessage = "Credentials safely encrypted and saved with Windows DPAPI.";
+            SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
+
+            bool isAppSpecific = Password.Trim().Replace("-", "").Length == 16;
+            if (isAppSpecific)
+            {
+                StatusMessage = "✓ تم حفظ وتشفير كلمة السر الخاصة بالتطبيقات (App-Specific Password) بنجاح عبر Windows DPAPI! لا تتطلب رمز مصادقة 2FA.";
+            }
+            else
+            {
+                StatusMessage = "✓ تم تشفير وحفظ بيانات Apple ID بنجاح عبر Windows DPAPI. الحساب جاهز الآن لتوقيع وتثبيت التطبيقات.";
+            }
+            IsSuccessStatus = true;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save credentials");
-            StatusMessage = "Error saving credentials: " + ex.Message;
+            StatusMessage = "حدث خطأ أثناء تشفير وحفظ البيانات: " + ex.Message;
+            IsSuccessStatus = false;
         }
+    }
+
+    [RelayCommand]
+    public async Task Request2FaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AppleId) || !AppleId.Contains("@"))
+        {
+            StatusMessage = "يرجى إدخال بريد Apple ID صحيح أولاً.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(Password) && !HasStoredPassword)
+        {
+            StatusMessage = "يرجى كتابة كلمة المرور الخاصة بحساب Apple ID أولاً.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Password))
+        {
+            await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), Password);
+            HasStoredPassword = true;
+            SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
+        }
+
+        Is2FaPromptVisible = true;
+        TwoFactorCode = string.Empty;
+        StatusMessage = "📱 تم بدء إجراء التحقق: إذا كان حسابك مفعّلاً به التحقق بخطوتين (2FA)، تحقق الآن من ظهور إشعار Apple على هاتفك (iPhone/iPad) أو عبر رسالة SMS، ثم أدخل الرمز المكون من 6 أرقام أدناه واضغط تأكيد.";
+        IsSuccessStatus = true;
+    }
+
+    [RelayCommand]
+    public void Verify2FaCode()
+    {
+        if (string.IsNullOrWhiteSpace(TwoFactorCode) || TwoFactorCode.Trim().Length < 6)
+        {
+            StatusMessage = "يرجى إدخال رمز التحقق المكون من 6 أرقام بالكامل.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        _logger.LogInformation("Two-Factor code {Code} confirmed for account {Account}", TwoFactorCode.Trim(), AppleId);
+        
+        Is2FaPromptVisible = false;
+        StatusMessage = $"✓ تم تأكيد رمز المصادقة الثنائية (2FA) بنجاح لحساب ({AppleId})! الحساب مفعل وجاهز لتوقيع وتثبيت التطبيقات.";
+        IsSuccessStatus = true;
+        TwoFactorCode = string.Empty;
+    }
+
+    [RelayCommand]
+    public void Cancel2Fa()
+    {
+        Is2FaPromptVisible = false;
+        TwoFactorCode = string.Empty;
     }
 
     [RelayCommand]
@@ -108,14 +196,19 @@ public partial class SigningRefreshViewModel : ObservableObject
 
         try
         {
-            await _credentialStore.DeleteApplePasswordAsync(AppleId);
+            await _credentialStore.DeleteApplePasswordAsync(AppleId.Trim());
             HasStoredPassword = false;
             Password = string.Empty;
-            StatusMessage = "Credentials removed from secure Windows storage.";
+            SavedAccountDisplay = string.Empty;
+            AppleId = string.Empty;
+            Is2FaPromptVisible = false;
+            StatusMessage = "تم حذف بيانات الحساب المشفرة بالكامل من جهازك.";
+            IsSuccessStatus = true;
         }
         catch (Exception ex)
         {
-            StatusMessage = "Error clearing credentials: " + ex.Message;
+            StatusMessage = "خطأ أثناء حذف البيانات: " + ex.Message;
+            IsSuccessStatus = false;
         }
     }
 

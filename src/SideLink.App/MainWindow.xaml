@@ -446,16 +446,116 @@
                                 <TextBlock Text="Apple ID Account Details" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4" />
                                 <TextBlock Text="Credentials are encrypted locally using Windows DPAPI. Never stored in plaintext." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,14" />
 
+                                <!-- Active Saved Account Badge (Visible if HasStoredPassword == True) -->
+                                <Border Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SigningRefresh.HasStoredPassword}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="✓ الحساب محفوظ ومشفّر بنجاح في نظام ويندوز (Windows DPAPI)" FontWeight="Bold" FontSize="13" Foreground="#6EE7B7" />
+                                            <TextBlock Text="{Binding SigningRefresh.SavedAccountDisplay}" FontSize="12" Foreground="#A7F3D0" Margin="0,2,0,0" />
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Background="#047857" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
+                                            <TextBlock Text="🔒 جاهز للتوقيع" FontSize="11" FontWeight="Bold" Foreground="White" />
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Status / Feedback Message Alert -->
+                                <Border BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#064E3B" />
+                                            <Setter Property="BorderBrush" Value="#059669" />
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SigningRefresh.IsSuccessStatus}" Value="False">
+                                                    <Setter Property="Background" Value="#450A0A" />
+                                                    <Setter Property="BorderBrush" Value="#7F1D1D" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding SigningRefresh.StatusMessage}" FontSize="12" Foreground="White" TextWrapping="Wrap" />
+                                </Border>
+
                                 <TextBlock Text="Apple ID (Email):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
                                 <TextBox Text="{Binding SigningRefresh.AppleId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
 
-                                <TextBlock Text="Password / App-Specific Password:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+                                <TextBlock Text="Password / App-Specific Password (كلمة المرور):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
                                 <PasswordBox x:Name="ApplePasswordInput" PasswordChanged="ApplePasswordInput_PasswordChanged" Background="#0F172A" Foreground="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" Padding="10,6" Margin="0,0,0,14" />
 
-                                <StackPanel Orientation="Horizontal">
-                                    <Button Style="{StaticResource PrimaryButtonStyle}" Content="💾 Save Securely (DPAPI)" Command="{Binding SigningRefresh.SaveCredentialsCommand}" Margin="0,0,10,0" />
-                                    <Button Style="{StaticResource SecondaryButtonStyle}" Content="🗑️ Clear Stored Credentials" Command="{Binding SigningRefresh.ClearCredentialsCommand}" />
-                                </StackPanel>
+                                <!-- Action Buttons -->
+                                <WrapPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                    <Button Style="{StaticResource PrimaryButtonStyle}" Content="💾 حفظ وتشفير (Save DPAPI)" Command="{Binding SigningRefresh.SaveCredentialsCommand}" Margin="0,0,10,8" />
+                                    <Button Style="{StaticResource PrimaryButtonStyle}" Background="#4338CA" Content="📲 إرسال رمز المصادقة (2FA) / تسجيل الدخول" Command="{Binding SigningRefresh.Request2FaCommand}" Margin="0,0,10,8" />
+                                    <Button Style="{StaticResource SecondaryButtonStyle}" Content="🗑️ مسح الحساب المخزن (Clear)" Command="{Binding SigningRefresh.ClearCredentialsCommand}" Margin="0,0,10,8" />
+                                </WrapPanel>
+
+                                <!-- Interactive 2FA Code Input Box (Visible when Is2FaPromptVisible == True) -->
+                                <Border Background="#1E1B4B" BorderBrush="#6366F1" BorderThickness="1.5" CornerRadius="10" Padding="16" Margin="0,10,0,0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SigningRefresh.Is2FaPromptVisible}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <StackPanel>
+                                        <TextBlock Text="🔐 رمز المصادقة الثنائية من Apple (Two-Factor Authentication)" FontWeight="Bold" FontSize="14" Foreground="#C7D2FE" />
+                                        <TextBlock Text="إذا ظهر لك إشعار Apple على هاتف الآيفون أو الآيباد، أدخل الرمز المكون من 6 أرقام هنا لتأكيد تفعيل الحساب للتوقيع:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,12" TextWrapping="Wrap" />
+
+                                        <Grid Margin="0,0,0,10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox Text="{Binding SigningRefresh.TwoFactorCode, UpdateSourceTrigger=PropertyChanged}" 
+                                                     FontSize="16" FontWeight="Bold" 
+                                                     MaxLength="6" 
+                                                     Background="#0F172A" 
+                                                     Foreground="#38BDF8" 
+                                                     BorderBrush="#818CF8" 
+                                                     Padding="10,8" />
+                                            <Button Grid.Column="1" Style="{StaticResource PrimaryButtonStyle}" 
+                                                    Content="✓ تأكيد الرمز" 
+                                                    Command="{Binding SigningRefresh.Verify2FaCodeCommand}" 
+                                                    Margin="10,0,0,0" Padding="18,8" />
+                                            <Button Grid.Column="2" Style="{StaticResource SecondaryButtonStyle}" 
+                                                    Content="✕ إلغاء" 
+                                                    Command="{Binding SigningRefresh.Cancel2FaCommand}" 
+                                                    Margin="8,0,0,0" Padding="14,8" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                            </StackPanel>
+                        </Border>
+
+                        <!-- App-Specific Password Guidance Card -->
+                        <Border Background="#1E293B" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="💡 نصيحة هامة لتخطي رمز التحقق في كل مرة (App-Specific Password):" FontSize="13" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,0,6" />
+                                <TextBlock Text="إذا كان حسابك مفعّلاً به التحقق بخطوتين (2FA)، نوصي بإنشاء كلمة سر خاصة بالتطبيقات من موقع Apple الرسمي، حيث تسمح لك بتوقيع وتثبيت التطبيقات دون الحاجة لطلب رمز 2FA في كل عملية توقيع أو تحديث:" FontSize="12" Foreground="{StaticResource TextWhiteBrush}" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,8" />
+                                <TextBlock Text="1. توجه إلى موقع: appleid.apple.com وسجل الدخول." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,3" />
+                                <TextBlock Text="2. من قسم 'تسجيل الدخول والأمان' (Sign-In and Security) اختر 'كلمات السر الخاصة بالتطبيقات' (App-Specific Passwords)." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,3" />
+                                <TextBlock Text="3. اضغط إنشاء واكتب اسم (مثال: SideLink)، ثم انسخ كلمة السر المتولدة والصقها في خانة كلمة المرور أعلاه واضغط حفظ." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,0" />
                             </StackPanel>
                         </Border>
 

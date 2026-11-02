@@ -49,7 +49,7 @@ public partial class LinkUnlockViewModel : ObservableObject
     {
         try
         {
-            IsVerifying = true;
+            IsVerifying = false;
             HasError = false;
             ErrorMessage = string.Empty;
             StatusText = "Connecting to verification gateway...";
@@ -57,13 +57,7 @@ public partial class LinkUnlockViewModel : ObservableObject
             var session = await _linkUnlockService.CreateSessionAsync();
             SessionId = session.SessionId;
             VerificationUrl = session.VerificationUrl;
-            StatusText = "Waiting for verification in browser...";
-
-            // Open default browser
-            OpenBrowser();
-
-            // Start polling loop
-            StartPollingLoop(session.SessionId);
+            StatusText = "جاهز للتحقق: يرجى النقر على الزر أدناه لفتح صفحة التحقق في المتصفح.";
         }
         catch (Exception ex)
         {
@@ -76,13 +70,26 @@ public partial class LinkUnlockViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void OpenBrowser()
+    public async Task OpenBrowserAsync()
     {
+        if (string.IsNullOrWhiteSpace(VerificationUrl))
+        {
+            await InitializeSessionAsync();
+        }
+
         if (string.IsNullOrWhiteSpace(VerificationUrl)) return;
+
         try
         {
             Process.Start(new ProcessStartInfo(VerificationUrl) { UseShellExecute = true });
             _logger.LogInformation("Opened browser for verification URL: {Url}", VerificationUrl);
+            StatusText = "بانتظار إكمال خطوة التحقق في المتصفح... / Waiting for verification in browser...";
+            IsVerifying = true;
+
+            if (!string.IsNullOrWhiteSpace(SessionId))
+            {
+                StartPollingLoop(SessionId);
+            }
         }
         catch (Exception ex)
         {
