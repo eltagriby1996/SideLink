@@ -1,6 +1,6 @@
-# BitLoader Link Unlock — Backend API Contracts
+# SideLink Link Unlock — Backend API Contracts
 
-The Link Unlock backend is deployed as a serverless application on Vercel (`bitloader-web`). It provides REST endpoints for session creation, real-time polling, human completion verification, and cryptographic authorization token issuance.
+The Link Unlock backend is deployed as a serverless application on Vercel (`sidelink-web`). It provides REST endpoints for session creation, real-time polling, human completion verification, and cryptographic authorization token issuance.
 
 ---
 
@@ -13,7 +13,7 @@ Confirms backend service health and availability.
 ```json
 {
   "status": "ok",
-  "service": "bitloader-verification-api",
+  "service": "sidelink-verification-api",
   "version": "1.0.0",
   "timestamp": "2026-11-02T08:00:00.000Z"
 }
@@ -24,7 +24,7 @@ Confirms backend service health and availability.
 ## 2. Create Verification Session
 `POST /api/verification/sessions`
 
-Invoked by the BitLoader Windows desktop client on fresh launch.
+Invoked by the SideLink Windows desktop client on fresh launch.
 
 ### Request Body (Optional Metadata)
 ```json
@@ -38,7 +38,7 @@ Invoked by the BitLoader Windows desktop client on fresh launch.
 ```json
 {
   "sessionId": "4f553f14-2bd8-490b-ba62-ec72f7797746",
-  "verificationUrl": "https://bitloader-web.vercel.app/verify?session=4f553f14-2bd8-490b-ba62-ec72f7797746&nonce=9a7c3f...",
+  "verificationUrl": "https://sidelink-web.vercel.app/verify?session=4f553f14-2bd8-490b-ba62-ec72f7797746&nonce=9a7c3f...",
   "expiresAt": "2026-11-02T08:10:00.000Z"
 }
 ```
@@ -87,7 +87,7 @@ Invoked by the web page (`/verify`) upon the user completing the single verifica
   "success": true,
   "sessionId": "4f553f14-2bd8-490b-ba62-ec72f7797746",
   "status": "verified",
-  "message": "Verification complete. You may now return to BitLoader."
+  "message": "Verification complete. You may now return to SideLink."
 }
 ```
 
@@ -101,7 +101,7 @@ Invoked by the web page (`/verify`) upon the user completing the single verifica
 ## 5. Authorize Session & Issue Token
 `POST /api/verification/sessions/{sessionId}/authorize`
 
-Invoked by the BitLoader desktop client once polling detects `verified`. Generates an HMAC-SHA256 cryptographically signed JSON Web Token (JWT).
+Invoked by the SideLink desktop client once polling detects `verified`. Generates an HMAC-SHA256 cryptographically signed JSON Web Token (JWT).
 
 ### Request Body
 ```json
@@ -123,8 +123,8 @@ Invoked by the BitLoader desktop client once polling detects `verified`. Generat
 ### Token Claims
 | Claim | Type | Description |
 |---|---|---|
-| `iss` | String | Must match `bitloader-verification` |
-| `aud` | String | Must match `bitloader-client` |
+| `iss` | String | Must match `sidelink-verification` |
+| `aud` | String | Must match `sidelink-client` |
 | `sub` | String | Session ID matching the active launch session |
 | `sessionId` | String | Session ID binding |
 | `iat` | Integer | Epoch timestamp when token was created |

@@ -2,7 +2,7 @@
 
 ## 1. Threat Model and Principles
 
-BitLoader follows strict secure software development principles:
+SideLink follows strict secure software development principles:
 - **Zero Cloud Credential Storage**: Apple ID credentials and passwords are never transmitted to the Link Unlock backend, third-party analytics, or remote servers.
 - **Ephemeral Process Authorization**: The Link Unlock verification gate is strictly held in process memory (`RAM`). Closing the application immediately clears the verification state. No persistent local flag or bypass file is written to disk.
 - **Cryptographic Token Binding**: The backend issues HMAC-SHA256 signed JWT tokens containing the specific `sessionId` claim. Tokens are valid for a short window (5 minutes) and cannot be reused for different sessions.
@@ -61,4 +61,4 @@ When sponsored content or advertising is integrated into the `/verify` web gatew
 
 - **Information Collected by Backend**: Temporary session identifiers, expiration timestamps, and client IP addresses for rate limiting and abuse prevention.
 - **Retention**: Verification sessions are purged from the database after expiration (30-minute retention cycle).
-- **Apple Data**: BitLoader communicates directly between your local PC and your connected iPhone over USB. No telemetry or IPA binaries are uploaded to the web backend.
+- **Apple Data**: SideLink communicates directly between your local PC and your connected iPhone over USB. No telemetry or IPA binaries are uploaded to the web backend.

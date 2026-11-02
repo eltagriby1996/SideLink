@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>SideLink.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.2" />
+    <PackageReference Include="FluentAssertions" Version="6.12.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SideLink.Core\SideLink.Core.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.Device\SideLink.Device.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.IPA\SideLink.IPA.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.Signing\SideLink.Signing.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.Installation\SideLink.Installation.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.Refresh\SideLink.Refresh.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.Verification\SideLink.Verification.csproj" />
+    <ProjectReference Include="..\..\src\SideLink.Infrastructure\SideLink.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

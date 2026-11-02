@@ -1,36 +1,36 @@
-# BitLoader Architecture and Technical Overview
+# SideLink Architecture and Technical Overview
 
 ## 1. System Components
 
-BitLoader is composed of two primary subsystems:
-1. **Windows Desktop Application (`BitLoader.App` and class libraries)**: A modern WPF .NET 8 application structured using clean architecture and MVVM.
-2. **Verification Gateway & API (`bitloader-web`)**: A Next.js 15+ App Router application deployed to Vercel, backed by a persistent database (PostgreSQL / Supabase / Neon).
+SideLink is composed of two primary subsystems:
+1. **Windows Desktop Application (`SideLink.App` and class libraries)**: A modern WPF .NET 8 application structured using clean architecture and MVVM.
+2. **Verification Gateway & API (`sidelink-web`)**: A Next.js 15+ App Router application deployed to Vercel, backed by a persistent database (PostgreSQL / Supabase / Neon).
 
 ```
 +-----------------------------------------------------------------------------------+
-|                            BitLoader Desktop Client                               |
+|                            SideLink Desktop Client                               |
 |                                                                                   |
 |  +--------------------+   +---------------------+   +--------------------------+  |
-|  |   BitLoader.App    |   |   BitLoader.Core    |   | BitLoader.Infrastructure |  |
+|  |   SideLink.App    |   |   SideLink.Core    |   | SideLink.Infrastructure |  |
 |  |    (WPF / MVVM)    |   |  (Domain Models &   |   |   (SQLite, DPAPI,        |  |
 |  |                    |   |     Interfaces)     |   |    Diagnostics)          |  |
 |  +--------------------+   +---------------------+   +--------------------------+  |
 |             |                         ^                                           |
 |             v                         |                                           |
 |  +--------------------+   +---------------------+   +--------------------------+  |
-|  |  BitLoader.Device  |   |   BitLoader.IPA     |   |   BitLoader.Signing      |  |
+|  |  SideLink.Device  |   |   SideLink.IPA     |   |   SideLink.Signing      |  |
 |  | (Usbmuxd/Lockdown) |   | (Zip / Plist Parser)|   |  (CMS / CodeResources)   |  |
 |  +--------------------+   +---------------------+   +--------------------------+  |
 |             |                         |                          |                |
 |             +------------+------------+--------------------------+                |
 |                          v                                                        |
 |             +-------------------------+   +--------------------------+            |
-|             | BitLoader.Installation  |   |    BitLoader.Refresh     |            |
+|             | SideLink.Installation  |   |    SideLink.Refresh     |            |
 |             | (Staging & Proxy)       |   | (7-Day Expiration Loop)  |            |
 |             +-------------------------+   +--------------------------+            |
 |                                                                                   |
 |  +-----------------------------------------------------------------------------+  |
-|  |                        BitLoader.Verification                               |  |
+|  |                        SideLink.Verification                               |  |
 |  |              (Link Unlock Client & JWT Signature Validator)                 |  |
 |  +-----------------------------------------------------------------------------+  |
 +-----------------------------------------------------------------------------------+
@@ -38,7 +38,7 @@ BitLoader is composed of two primary subsystems:
                                          | HTTPS REST API & Browser Handshake
                                          v
 +-----------------------------------------------------------------------------------+
-|                        bitloader-web (Vercel Backend)                             |
+|                        sidelink-web (Vercel Backend)                             |
 |                                                                                   |
 |  +-----------------------+  +------------------------+  +----------------------+  |
 |  | /api/verification/..  |  |   /verify Web Page     |  |   lib/security       |  |
@@ -59,13 +59,13 @@ BitLoader is composed of two primary subsystems:
 
 ### 2.1 Usbmux Protocol Implementation
 - Apple Mobile Device Service (AMDS) exposes port 27015 on `127.0.0.1`.
-- `BitLoader.Device.UsbmuxdProtocol`:
+- `SideLink.Device.UsbmuxdProtocol`:
   - 16-byte packet header: `[Length: uint32 LE, Version: 1, RequestType: 8, Tag: uint32]`.
   - Sends a `Listen` XML plist command.
   - Asynchronously receives `Attached` and `Detached` event notifications whenever an iPhone or iPad is connected or disconnected over USB.
 
 ### 2.2 Lockdown Service Query
-- When a device is attached, `BitLoader.Device.LockdownClient` requests a connection tunnel to port 62078 (Lockdown service on device).
+- When a device is attached, `SideLink.Device.LockdownClient` requests a connection tunnel to port 62078 (Lockdown service on device).
 - Queries `GetValue`:
   - `DeviceName`
   - `ProductType` (hardware model identifier, e.g. `iPhone15,2` -> "iPhone 14 Pro")
@@ -78,7 +78,7 @@ BitLoader is composed of two primary subsystems:
 ## 3. IPA Archive & Property List Handling
 
 - `.ipa` packages are standard ZIP archives containing `Payload/<AppName>.app/`.
-- `BitLoader.IPA.IpaInspectorService`:
+- `SideLink.IPA.IpaInspectorService`:
   - Enforces strict path traversal (Zip Slip) security checks, rejecting archives with entries containing `..` or absolute paths.
   - Implements `PlistParser`:
     - Handles standard Apple XML Plists.
@@ -94,7 +94,7 @@ BitLoader is composed of two primary subsystems:
 ### 4.1 Personal Development Certificate Lifecycle
 - Free Apple IDs generate personal team provisioning profiles valid for 7 days.
 - Maximum 3 active sideloaded apps per device.
-- `BitLoader.Refresh.RefreshService`:
+- `SideLink.Refresh.RefreshService`:
   - Monitors expiration dates dynamically in local SQLite storage.
   - Categorizes applications: `Active` (> 3 days), `ExpiringSoon` (<= 3 days), and `Expired` (<= 0 days).
   - Triggers re-signing with original IPA archive and re-installs to device.

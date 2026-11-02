@@ -1,6 +1,6 @@
 # Dependency and License Inventory
 
-## 1. Windows Desktop Application (`BitLoader.sln`)
+## 1. Windows Desktop Application (`SideLink.sln`)
 
 Target Platform: Windows 10 & 11 (x64)  
 Framework: .NET 8 LTS (`net8.0`, `net8.0-windows`)
@@ -21,7 +21,7 @@ Framework: .NET 8 LTS (`net8.0`, `net8.0-windows`)
 
 ---
 
-## 2. Web & Verification Backend (`bitloader-web`)
+## 2. Web & Verification Backend (`sidelink-web`)
 
 Runtime: Node.js 22 LTS  
 Framework: Next.js 15.1 (App Router)

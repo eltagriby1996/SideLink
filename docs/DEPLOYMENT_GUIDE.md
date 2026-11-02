@@ -1,6 +1,6 @@
 # Vercel Deployment and Backend Setup Guide
 
-This guide describes how to deploy the BitLoader Link Unlock verification gateway to **Vercel** and configure persistent database storage using **Supabase** or **Neon**.
+This guide describes how to deploy the SideLink Link Unlock verification gateway to **Vercel** and configure persistent database storage using **Supabase** or **Neon**.
 
 ---
 
@@ -9,7 +9,7 @@ This guide describes how to deploy the BitLoader Link Unlock verification gatewa
 ### Option A: Supabase
 1. Create a free project at [supabase.com](https://supabase.com).
 2. Open the **SQL Editor** in your Supabase dashboard.
-3. Paste and run the contents of [`bitloader-web/database/schema.sql`](file:///c:/Users/HD/Desktop/Bitloader/bitloader-web/database/schema.sql):
+3. Paste and run the contents of [`sidelink-web/database/schema.sql`](file:///c:/Users/HD/Desktop/Bitloader/sidelink-web/database/schema.sql):
    ```sql
    CREATE TABLE IF NOT EXISTS verification_sessions (
        session_id VARCHAR(64) PRIMARY KEY,
@@ -42,16 +42,16 @@ In your Vercel Project Settings (or via Vercel CLI), configure the following env
 
 | Variable Name | Example Value | Description |
 |---|---|---|
-| `VERIFICATION_BASE_URL` | `https://bitloader-web.vercel.app` | Public URL of your deployed verification website |
+| `VERIFICATION_BASE_URL` | `https://sidelink-web.vercel.app` | Public URL of your deployed verification website |
 | `DATABASE_URL` | `postgres://...` | Connection URI for Supabase or Neon |
-| `TOKEN_ISSUER` | `bitloader-verification` | JWT token issuer |
-| `TOKEN_AUDIENCE` | `bitloader-client` | JWT token audience |
+| `TOKEN_ISSUER` | `sidelink-verification` | JWT token issuer |
+| `TOKEN_AUDIENCE` | `sidelink-client` | JWT token audience |
 | `TOKEN_SIGNING_PRIVATE_KEY` | `YOUR_SECURE_RANDOM_KEY_AT_LEAST_32_BYTES` | Secret key used to sign authorization JWTs |
 
 ### Step 3: Deploy
-From the `bitloader-web/` directory:
+From the `sidelink-web/` directory:
 ```bash
-cd bitloader-web
+cd sidelink-web
 vercel --prod
 ```
 
@@ -59,13 +59,13 @@ vercel --prod
 
 ## 3. Configuring the Desktop Client
 
-By default, BitLoader connects to the local development server `http://localhost:3000` or the configured production gateway.
+By default, SideLink connects to the local development server `http://localhost:3000` or the configured production gateway.
 
 To configure the Windows client to point to your live Vercel deployment:
-1. Launch **BitLoader**.
+1. Launch **SideLink**.
 2. Navigate to the **Settings** page in the left navigation sidebar.
-3. In **Link Unlock Verification Gateway URL**, enter your Vercel URL (e.g. `https://your-bitloader.vercel.app`).
+3. In **Link Unlock Verification Gateway URL**, enter your Vercel URL (e.g. `https://your-sidelink.vercel.app`).
 4. Alternatively, set the environment variable:
    ```powershell
-   [Environment]::SetEnvironmentVariable("BITLOADER_BACKEND_URL", "https://your-bitloader.vercel.app", "User")
+   [Environment]::SetEnvironmentVariable("SIDELINK_BACKEND_URL", "https://your-sidelink.vercel.app", "User")
    ```

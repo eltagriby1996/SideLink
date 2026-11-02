@@ -1,4 +1,4 @@
-# BitLoader — Windows iOS IPA Sideloading & Refresh Manager
+# SideLink — Windows iOS IPA Sideloading & Refresh Manager
 
 [![.NET 8 Windows](https://img.shields.io/badge/.NET-8.0--windows-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
 [![Next.js 15](https://img.shields.io/badge/Next.js-15.1--AppRouter-000000?logo=next.js)](https://nextjs.org/)
@@ -6,9 +6,9 @@
 [![Tests Passing](https://img.shields.io/badge/Tests-12%20Passed-10B981)](#-automated-testing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**BitLoader** is a high-performance Windows desktop application and serverless web system for installing, managing, signing, and refreshing personal iOS IPA applications on user-owned iPhones and iPads.
+**SideLink** is a high-performance Windows desktop application and serverless web system for installing, managing, signing, and refreshing personal iOS IPA applications on user-owned iPhones and iPads.
 
-Equipped with a secure, server-verified **Link Unlock** system, BitLoader authorizes each application launch via a single-step human verification gateway hosted on **Vercel** with persistent PostgreSQL session storage.
+Equipped with a secure, server-verified **Link Unlock** system, SideLink authorizes each application launch via a single-step human verification gateway hosted on **Vercel** with persistent PostgreSQL session storage.
 
 ---
 
@@ -26,11 +26,11 @@ Equipped with a secure, server-verified **Link Unlock** system, BitLoader author
 ## 📁 Repository Structure
 
 ```
-Bitloader/
-├── BitLoader.sln                         # Visual Studio / .NET Solution
+SideLink/
+├── SideLink.sln                         # Visual Studio / .NET Solution
 ├── build-installer.ps1                   # Automated build and packaging script
 ├── installer/
-│   └── BitLoaderSetup.iss                # Inno Setup Windows Installer script
+│   └── SideLinkSetup.iss                # Inno Setup Windows Installer script
 ├── dist/                                 # Published binaries and distributions
 ├── docs/                                 # Technical documentation
 │   ├── API_CONTRACTS.md                  # Verification REST API schema
@@ -40,18 +40,18 @@ Bitloader/
 │   ├── TROUBLESHOOTING.md                # Diagnostic resolution steps
 │   └── DEPENDENCIES_AND_LICENSES.md      # Dependency inventory
 ├── src/                                  # Windows Desktop Modules
-│   ├── BitLoader.App/                    # WPF Application (MVVM, Dark Theme)
-│   ├── BitLoader.Core/                   # Domain Models & Service Interfaces
-│   ├── BitLoader.Device/                 # Usbmuxd & Lockdown TCP Client
-│   ├── BitLoader.IPA/                    # Zip, Binary Plist, & MobileProvision
-│   ├── BitLoader.Signing/                # CodeResources Manifest & Signing
-│   ├── BitLoader.Installation/           # Installation Proxy & Staging
-│   ├── BitLoader.Refresh/                # 7-Day Expiration Tracking & Refresh
-│   ├── BitLoader.Verification/           # Link Unlock Client & JWT Validator
-│   └── BitLoader.Infrastructure/         # SQLite Repository & DPAPI Store
+│   ├── SideLink.App/                    # WPF Application (MVVM, Dark Theme)
+│   ├── SideLink.Core/                   # Domain Models & Service Interfaces
+│   ├── SideLink.Device/                 # Usbmuxd & Lockdown TCP Client
+│   ├── SideLink.IPA/                    # Zip, Binary Plist, & MobileProvision
+│   ├── SideLink.Signing/                # CodeResources Manifest & Signing
+│   ├── SideLink.Installation/           # Installation Proxy & Staging
+│   ├── SideLink.Refresh/                # 7-Day Expiration Tracking & Refresh
+│   ├── SideLink.Verification/           # Link Unlock Client & JWT Validator
+│   └── SideLink.Infrastructure/         # SQLite Repository & DPAPI Store
 ├── tests/
-│   └── BitLoader.Tests/                  # xUnit Automated Test Suite
-└── bitloader-web/                        # Next.js 15+ Verification Web & API
+│   └── SideLink.Tests/                  # xUnit Automated Test Suite
+└── sidelink-web/                        # Next.js 15+ Verification Web & API
     ├── app/
     │   ├── api/health/                   # Health Check Endpoint
     │   ├── api/verification/sessions/   # Session Creation & Polling Routes
@@ -76,7 +76,7 @@ Bitloader/
 
 ### 1. Build and Run the Verification Web Backend
 ```bash
-cd bitloader-web
+cd sidelink-web
 npm install
 npm run dev
 ```
@@ -85,23 +85,23 @@ The verification web server will start at `http://localhost:3000`.
 ### 2. Build the Desktop Client
 In the root directory:
 ```bash
-dotnet restore BitLoader.sln
-dotnet build BitLoader.sln -c Release
+dotnet restore SideLink.sln
+dotnet build SideLink.sln -c Release
 ```
 
 ### 3. Run Automated Tests
 ```bash
 # Run all .NET unit and integration tests
-dotnet test BitLoader.sln
+dotnet test SideLink.sln
 
 # Run backend verification and security tests
-cd bitloader-web
+cd sidelink-web
 npm test
 ```
 
-### 4. Launch BitLoader
+### 4. Launch SideLink
 ```bash
-dotnet run --project src\BitLoader.App\BitLoader.App.csproj
+dotnet run --project src\SideLink.App\SideLink.App.csproj
 ```
 
 ---
@@ -110,9 +110,9 @@ dotnet run --project src\BitLoader.App\BitLoader.App.csproj
 
 The web verification backend is fully optimized for **Vercel**:
 1. Fork or push this repository to GitHub.
-2. Import the `bitloader-web/` project in the [Vercel Dashboard](https://vercel.com/new).
+2. Import the `sidelink-web/` project in the [Vercel Dashboard](https://vercel.com/new).
 3. Set your environment variables in Vercel:
-   - `VERIFICATION_BASE_URL`: `https://your-bitloader.vercel.app`
+   - `VERIFICATION_BASE_URL`: `https://your-sidelink.vercel.app`
    - `DATABASE_URL`: Your Supabase or Neon PostgreSQL connection URI
    - `TOKEN_SIGNING_PRIVATE_KEY`: A secure 32+ byte secret key
 4. Deploy! Your verification gateway and APIs are instantly live.
@@ -128,15 +128,15 @@ To create a release build and portable distribution archive:
 .\build-installer.ps1
 ```
 This generates:
-- Standalone binaries in `dist\BitLoader\`
-- Compressed portable distribution: `dist\BitLoader-v1.0.0-win-x64.zip`
-- Setup executable installer (if Inno Setup is installed): `dist\Installer\BitLoader-v1.0.0-Setup.exe`
+- Standalone binaries in `dist\SideLink\`
+- Compressed portable distribution: `dist\SideLink-v1.0.0-win-x64.zip`
+- Setup executable installer (if Inno Setup is installed): `dist\Installer\SideLink-v1.0.0-Setup.exe`
 
 ---
 
 ## 🔒 Security & Privacy Model
 
-- **No Secrets Transmitted**: Apple ID credentials are never transmitted over the internet to BitLoader servers.
+- **No Secrets Transmitted**: Apple ID credentials are never transmitted over the internet to SideLink servers.
 - **In-Memory Launch Gating**: Verification authorization is strictly ephemeral. Closing the application clears the authorization state from RAM.
 - **Cryptographic Token Binding**: All authorization tokens are cryptographically signed and bound to the specific `sessionId`.
 - **Sensitive Data Redaction**: Log files and diagnostic export reports automatically mask passwords, bearer tokens, and private keys.

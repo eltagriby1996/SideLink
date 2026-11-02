@@ -1,4 +1,4 @@
-# BitLoader Troubleshooting and Diagnostics Guide
+# SideLink Troubleshooting and Diagnostics Guide
 
 This document provides actionable solutions for common installation, connection, driver, and signing issues.
 
@@ -22,20 +22,20 @@ This document provides actionable solutions for common installation, connection,
 
 ### Problem: "Cannot connect to verification server"
 - **Cause**: Network unreachable or Vercel backend server is down.
-  - **Fix**: Open the **Diagnostics** tab in BitLoader to check connectivity to the verification gateway.
+  - **Fix**: Open the **Diagnostics** tab in SideLink to check connectivity to the verification gateway.
   - Ensure your internet connection is active.
-  - In local development mode, ensure the Next.js dev server is running (`npm run dev` in `bitloader-web/`).
+  - In local development mode, ensure the Next.js dev server is running (`npm run dev` in `sidelink-web/`).
 
 ### Problem: "Session Expired"
 - **Cause**: Verification sessions are valid for 10 minutes.
-  - **Fix**: In the BitLoader verification window, click **Start New Verification Session** or restart the app.
+  - **Fix**: In the SideLink verification window, click **Start New Verification Session** or restart the app.
 
 ---
 
 ## 3. Signing and Provisioning
 
 ### Problem: "An IPA file is required to re-sign and refresh"
-- **Cause**: BitLoader needs the original `.ipa` package to rebuild and re-sign Mach-O binaries when refreshing 7-day certificates.
+- **Cause**: SideLink needs the original `.ipa` package to rebuild and re-sign Mach-O binaries when refreshing 7-day certificates.
   - **Fix**: Keep the original `.ipa` file in your downloads or documents folder. If the file was moved, re-add it through the **IPA Library** tab.
 
 ### Problem: "Maximum number of apps reached"
