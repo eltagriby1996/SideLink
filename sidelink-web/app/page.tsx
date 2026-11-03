@@ -63,6 +63,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <a
               href="/downloads/SideLink-v1.0.0-win-x64.zip"
+              download="SideLink-v1.0.0-win-x64.zip"
               className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition text-xs sm:text-sm shadow-lg shadow-blue-600/25 active:scale-95"
             >
               <Download className="w-4 h-4" />
@@ -94,6 +95,7 @@ export default function HomePage() {
         <div id="download" className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
             href="/downloads/SideLink-v1.0.0-win-x64.zip"
+            download="SideLink-v1.0.0-win-x64.zip"
             className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 transition active:scale-95 border border-blue-400/30 group"
           >
             <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
@@ -169,19 +171,21 @@ export default function HomePage() {
 
             <div className="mt-6 pt-4 border-t border-slate-800 space-y-2">
               <a
-                href="https://secure-appldnld.apple.com/itunes12/001-80053-20210422-E8A3B28C-A3EB-11EB-A3C9-A48041042A68/iTunes64Setup.exe"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-md shadow-blue-600/20"
+                href="https://www.apple.com/itunes/download/win64"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition shadow-md shadow-blue-600/20 active:scale-95"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>تحميل iTunes (رابط أبل المباشر)</span>
+                <span>تحميل iTunes (رابط أبل الرسمي المباشر)</span>
               </a>
               <a
-                href="https://support.apple.com/HT210384"
+                href="https://support.apple.com/en-us/106372"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 text-xs transition"
               >
-                <span>صفحة دعم Apple الرسمية</span>
+                <span>صفحة تعليمات Apple الرسمية</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -204,19 +208,21 @@ export default function HomePage() {
 
             <div className="mt-6 pt-4 border-t border-slate-800 space-y-2">
               <a
-                href="https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8109-AE4E4138F9D0/iCloudSetup.exe"
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-md shadow-indigo-600/20"
+                href="https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition shadow-md shadow-indigo-600/20 active:scale-95"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>تحميل iCloud (رابط أبل المباشر)</span>
+                <span>تحميل iCloud (رابط أبل الرسمي المباشر)</span>
               </a>
               <a
-                href="https://support.apple.com/HT204283"
+                href="https://support.apple.com/en-us/102670"
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 text-xs transition"
               >
-                <span>صفحة دعم Apple الرسمية</span>
+                <span>صفحة تعليمات Apple الرسمية</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -382,6 +388,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
             <a
               href="/downloads/SideLink-v1.0.0-win-x64.zip"
+              download="SideLink-v1.0.0-win-x64.zip"
               className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-base shadow-lg shadow-blue-600/30 transition active:scale-95"
             >
               <Download className="w-5 h-5" />
