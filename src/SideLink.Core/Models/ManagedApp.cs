@@ -48,8 +48,11 @@ public record SigningConfiguration
     public string? TeamId { get; init; }
     public string? TeamName { get; init; }
     public string? P12Path { get; init; }
+    public string? P12Password { get; init; } = "sidelink";
     public string? MobileProvisionPath { get; init; }
     public SigningMethodType Method { get; init; } = SigningMethodType.PersonalTeam;
+    public string? CustomBundleId { get; init; }
+    public bool ModifyBundleId { get; init; } = true;
 }
 
 public enum DiagnosticSeverity

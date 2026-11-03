@@ -70,6 +70,9 @@ public partial class MainViewModel : ObservableObject
 
         // Initialize verification session
         await LinkUnlock.InitializeSessionAsync();
+
+        // Initialize signing & accounts in background
+        _ = SigningRefresh.InitializeAsync();
     }
 
     private void OnVerificationCompleted()
@@ -77,11 +80,16 @@ public partial class MainViewModel : ObservableObject
         IsAppUnlocked = true;
         _ = Dashboard.InitializeAsync();
         _ = InstalledApps.InitializeAsync();
+        _ = SigningRefresh.InitializeAsync();
     }
 
     [RelayCommand]
     public void Navigate(string pageName)
     {
         CurrentPage = pageName;
+        if (pageName == "SigningRefresh")
+        {
+            _ = SigningRefresh.InitializeAsync();
+        }
     }
 }

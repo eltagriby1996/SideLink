@@ -127,6 +127,7 @@ public interface IAppleIdentityService
     Task<IReadOnlyList<string>> DiscoverSystemAppleAccountsAsync();
     Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null);
     Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid);
+    Task<string?> GetSystemSavedPasswordAsync(string appleId);
 }
 
 

@@ -91,18 +91,20 @@ public class IpaInspectorService : IIpaInspectorService
                 if (entry.FullName.Contains(".."))
                     continue;
 
-                if (infoPlistEntry == null && 
-                    entry.FullName.StartsWith("Payload/", StringComparison.OrdinalIgnoreCase) && 
-                    entry.FullName.EndsWith("/Info.plist", StringComparison.OrdinalIgnoreCase))
+                string[] parts = entry.FullName.Split('/');
+                // Main app Info.plist and embedded.mobileprovision are exactly 3 segments: Payload/<app>.app/<file>
+                if (parts.Length == 3 && 
+                    parts[0].Equals("Payload", StringComparison.OrdinalIgnoreCase) && 
+                    parts[1].EndsWith(".app", StringComparison.OrdinalIgnoreCase))
                 {
-                    infoPlistEntry = entry;
-                }
-
-                if (provisionEntry == null && 
-                    entry.FullName.StartsWith("Payload/", StringComparison.OrdinalIgnoreCase) && 
-                    entry.FullName.EndsWith("/embedded.mobileprovision", StringComparison.OrdinalIgnoreCase))
-                {
-                    provisionEntry = entry;
+                    if (parts[2].Equals("Info.plist", StringComparison.OrdinalIgnoreCase))
+                    {
+                        infoPlistEntry = entry;
+                    }
+                    else if (parts[2].Equals("embedded.mobileprovision", StringComparison.OrdinalIgnoreCase))
+                    {
+                        provisionEntry = entry;
+                    }
                 }
 
                 if (iconEntry == null && 

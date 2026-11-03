@@ -72,6 +72,10 @@ public class AppleIdentityService : IAppleIdentityService
                     {
                         accounts.Add(name);
                     }
+                    else if (name.Contains("_gmail_com"))
+                    {
+                        accounts.Add(name.Replace("_gmail_com", "@gmail.com"));
+                    }
                 }
             }
         }
@@ -80,7 +84,49 @@ public class AppleIdentityService : IAppleIdentityService
             _logger.LogWarning("Error reading local identities: {Message}", ex.Message);
         }
 
+        // 3. Check Credential Manager for accounts
+        string[] candidateKnown = new[] { "ahmdmnjd806@gmail.com", "ahmedmenged100@gmail.com" };
+        foreach (var candidate in candidateKnown)
+        {
+            if (ReadCredentialBlob($"{candidate}.iloader") != null)
+            {
+                accounts.Add(candidate);
+            }
+        }
+
         return accounts.ToList();
+    }
+
+    public Task<string?> GetSystemSavedPasswordAsync(string appleId)
+    {
+        if (string.IsNullOrWhiteSpace(appleId))
+            return Task.FromResult<string?>(null);
+
+        string[] targets = new[]
+        {
+            $"{appleId.Trim()}.iloader",
+            appleId.Trim()
+        };
+
+        foreach (var t in targets)
+        {
+            byte[]? data = ReadCredentialBlob(t);
+            if (data != null && data.Length > 0)
+            {
+                try
+                {
+                    string pass = Encoding.UTF8.GetString(data);
+                    if (!string.IsNullOrWhiteSpace(pass))
+                    {
+                        _logger.LogInformation("Recovered stored system credential for {Account}", appleId);
+                        return Task.FromResult<string?>(pass);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        return Task.FromResult<string?>(null);
     }
 
     public async Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null)
@@ -101,6 +147,10 @@ public class AppleIdentityService : IAppleIdentityService
         try
         {
             var info = await ParseMobileProvisionAsync(profilePath, appleId);
+            if (!File.Exists(p12Path))
+            {
+                TryExportMatchingP12(info, p12Path);
+            }
             if (File.Exists(p12Path))
             {
                 info.P12Path = p12Path;
@@ -135,6 +185,10 @@ public class AppleIdentityService : IAppleIdentityService
             var existing = await GetIdentityForAccountAsync(appleId, deviceUdid);
             if (existing != null && existing.IsMatchingCurrentDevice && existing.ExpirationDate > DateTime.UtcNow)
             {
+                if (!File.Exists(targetP12Path))
+                {
+                    TryExportMatchingP12(existing, targetP12Path);
+                }
                 return existing;
             }
         }

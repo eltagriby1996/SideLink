@@ -308,9 +308,28 @@
                                         <ColumnDefinition Width="140" />
                                         <ColumnDefinition Width="*" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Bundle Identifier:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" />
-                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.BundleIdentifier, TargetNullValue='—'}" FontFamily="Consolas" FontSize="12" Foreground="White" />
+                                    <TextBlock Text="Original Bundle ID:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.BundleIdentifier, TargetNullValue='—'}" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                 </Grid>
+
+                                <!-- Distinct Bundle ID Management Card -->
+                                <Border Background="#131D31" BorderBrush="#2563EB" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <CheckBox IsChecked="{Binding IpaLibrary.AutoModifyBundleId}" Foreground="White" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6" Cursor="Hand">
+                                            <TextBlock Text="🛡️ تثبيت بمعرّف مختلف عن الرسمي (تجنب تعارض App Store)" Foreground="White" FontWeight="SemiBold" />
+                                        </CheckBox>
+                                        <TextBlock Text="يتيح تشغيل نسختين وتفادي رفض نظام iOS للتطبيق في حال وجود النسخة الرسمية على الهاتف." FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="24,0,0,8" TextWrapping="Wrap" />
+
+                                        <Grid Margin="24,0,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="140" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="معرّف التثبيت (Target ID):" FontSize="12" Foreground="#93C5FD" VerticalAlignment="Center" />
+                                            <TextBox Grid.Column="1" Text="{Binding IpaLibrary.TargetBundleId, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12" Padding="8,5" Background="#0F172A" Foreground="White" BorderBrush="#334155" BorderThickness="1" IsEnabled="{Binding IpaLibrary.AutoModifyBundleId}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
 
                                 <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
@@ -352,6 +371,23 @@
                                         </Style>
                                     </ProgressBar.Style>
                                 </ProgressBar>
+
+                                <!-- Operation Status Alert -->
+                                <Border BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IpaLibrary.HasError}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Setter Property="Background" Value="#450A0A" />
+                                                    <Setter Property="BorderBrush" Value="#DC2626" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="{Binding IpaLibrary.StatusMessage}" FontSize="12" Foreground="White" TextWrapping="Wrap" />
+                                </Border>
 
                                 <!-- Install Action Button -->
                                 <Button Style="{StaticResource PrimaryButtonStyle}" Content="🚀 Sign &amp; Install Application" Command="{Binding IpaLibrary.InstallSelectedIpaCommand}" HorizontalAlignment="Left" Padding="20,10" />

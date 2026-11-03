@@ -229,24 +229,46 @@ public static class NativeMobileDevice
                 try
                 {
                     // 4. Transfer package to iPhone staging
+                    var ipaFi = new FileInfo(ipaPath);
+                    double sizeMb = ipaFi.Exists ? (ipaFi.Length / (1024.0 * 1024.0)) : 0;
+                    string sizeText = sizeMb > 0 ? $" ({sizeMb:F1} ميجابايت)" : "";
+
                     progress?.Report(new AppOperationProgress
                     {
                         Title = "تثبيت التطبيق على الآيفون",
-                        CurrentStep = "نقل حزمة التطبيق (IPA) إلى مساحة التثبيت على الآيفون...",
+                        CurrentStep = $"جاري نقل حزمة التطبيق إلى الآيفون عبر منفذ USB{sizeText}... يرجى الانتظار",
                         PercentComplete = 15
+                    });
+
+                    // Heartbeat timer to keep progress bar alive and moving during USB transfer
+                    using var transferCts = new CancellationTokenSource();
+                    int transferPct = 15;
+                    var transferTimer = Task.Run(async () =>
+                    {
+                        while (!transferCts.Token.IsCancellationRequested && transferPct < 44)
+                        {
+                            try
+                            {
+                                await Task.Delay(2000, transferCts.Token);
+                                transferPct += 3;
+                                progress?.Report(new AppOperationProgress
+                                {
+                                    Title = "تثبيت التطبيق على الآيفون",
+                                    CurrentStep = $"جاري نقل حزمة التطبيق إلى مساحة التثبيت على الآيفون{sizeText}... ({transferPct}%)",
+                                    PercentComplete = transferPct
+                                });
+                            }
+                            catch { break; }
+                        }
                     });
 
                     IntPtr cfPath = CreateCFString(ipaPath);
                     IntPtr cfUrl = CFURLCreateWithFileSystemPath(IntPtr.Zero, cfPath, 2 /* Windows Path */, false);
                     CFRelease(cfPath);
 
-                    AMInstallCallback transferCb = (dict, arg) =>
-                    {
-                        // Progress during transfer
-                    };
-
-                    int tRet = AMDeviceSecureTransferPath(0, devicePtr, cfUrl, IntPtr.Zero, transferCb, IntPtr.Zero);
+                    int tRet = AMDeviceSecureTransferPath(0, devicePtr, cfUrl, IntPtr.Zero, null, IntPtr.Zero);
                     CFRelease(cfUrl);
+                    transferCts.Cancel();
 
                     if (tRet != 0)
                     {
@@ -256,9 +278,20 @@ public static class NativeMobileDevice
                     progress?.Report(new AppOperationProgress
                     {
                         Title = "تثبيت التطبيق على الآيفون",
-                        CurrentStep = "بدء خدمة التثبيت في نظام iOS (Installation Proxy)...",
+                        CurrentStep = "اكتمل نقل الملف! جاري إعادة تهيئة جلسة التثبيت في نظام iOS...",
                         PercentComplete = 45
                     });
+
+                    // Reset session after transfer: Apple MobileDevice requires resetting the lockdown session after AFC file transfer
+                    AMDeviceStopSession(devicePtr);
+                    AMDeviceDisconnect(devicePtr);
+
+                    int reconnRet = AMDeviceConnect(devicePtr);
+                    int reSessionRet = AMDeviceStartSession(devicePtr);
+                    if (reconnRet != 0 || reSessionRet != 0)
+                    {
+                        logger.LogWarning("Session reset warning: connect=0x{C:X8}, session=0x{S:X8}", reconnRet, reSessionRet);
+                    }
 
                     // 5. Start com.apple.mobile.installation_proxy
                     IntPtr serviceName = CreateCFString("com.apple.mobile.installation_proxy");
@@ -603,8 +636,13 @@ public static class NativeMobileDevice
     {
         if (string.Equals(errorCode, "ApplicationVerificationFailed", StringComparison.OrdinalIgnoreCase))
         {
-            return "❌ فشل التثبيت من نظام iOS: [ApplicationVerificationFailed]\n" +
+            string msg = "❌ فشل التثبيت من نظام iOS: [ApplicationVerificationFailed]\n" +
                    "رفض نظام iOS التوقيع الرقمي للتطبيق. يجب توقيع التطبيق بحساب Apple ID أو شهادة مطور صالحة (P12) تحتوي على معرّف هذا الجهاز (UDID)، أو تثبيت AppSync Unified إذا كان الجهاز به جيلبريك.";
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                msg += $"\n\nتفاصيل الخطأ من نظام iOS:\n{description}";
+            }
+            return msg;
         }
 
         if (string.Equals(errorCode, "UpgradeDoNotAllowToDowngrade", StringComparison.OrdinalIgnoreCase))
@@ -624,6 +662,13 @@ public static class NativeMobileDevice
 
         if (string.Equals(errorCode, "APIInternalError", StringComparison.OrdinalIgnoreCase))
         {
+            if (description != null && (description.Contains("IXErrorDomain Code=46") || (description.Contains("already exists") && description.Contains("App Store"))))
+            {
+                return "⚠️ فشل التثبيت: تطبيق Spotify (أو نسخته الرسمية) مثبت بالفعل حالياً على جهاز الآيفون من متجر App Store!\n\n" +
+                       "📌 سبب الخطأ: نظام iOS يمنع استبدال تطبيق رسمي من متجر App Store بتطبيق خارجي (Sideloaded) يحمل نفس المعرّف (com.spotify.client).\n\n" +
+                       "💡 الحل: يرجى إلغاء تثبيت (حذف) تطبيق Spotify الموجود حالياً على شاشة الآيفون، ثم الضغط مجدداً على 'Sign & Install Application'.";
+            }
+
             return $"❌ خطأ من نظام iOS [APIInternalError]:\n{description ?? "حدث خطأ غير متوقع أثناء تثبيت الحزمة."}";
         }
 

@@ -41,6 +41,50 @@ public partial class IpaLibraryViewModel : ObservableObject
     [ObservableProperty]
     private string _errorMessage = string.Empty;
 
+    [ObservableProperty]
+    private string _targetBundleId = string.Empty;
+
+    [ObservableProperty]
+    private bool _autoModifyBundleId = true;
+
+    partial void OnSelectedIpaChanged(IpaMetadata? value)
+    {
+        if (value != null)
+        {
+            TargetBundleId = AutoModifyBundleId
+                ? GenerateDistinctBundleId(value.BundleIdentifier)
+                : value.BundleIdentifier;
+        }
+        else
+        {
+            TargetBundleId = string.Empty;
+        }
+    }
+
+    partial void OnAutoModifyBundleIdChanged(bool value)
+    {
+        if (SelectedIpa != null)
+        {
+            TargetBundleId = value
+                ? GenerateDistinctBundleId(SelectedIpa.BundleIdentifier)
+                : SelectedIpa.BundleIdentifier;
+        }
+    }
+
+    public static string GenerateDistinctBundleId(string originalBundleId)
+    {
+        if (string.IsNullOrWhiteSpace(originalBundleId))
+            return "com.sidelink.app";
+
+        if (originalBundleId.EndsWith(".sidelink", StringComparison.OrdinalIgnoreCase) ||
+            originalBundleId.EndsWith(".sl", StringComparison.OrdinalIgnoreCase))
+        {
+            return originalBundleId;
+        }
+
+        return $"{originalBundleId}.sidelink";
+    }
+
     public IpaLibraryViewModel(
         IIpaInspectorService ipaInspector,
         ISigningService signingService,
@@ -169,7 +213,11 @@ public partial class IpaLibraryViewModel : ObservableObject
             var config = new SigningConfiguration 
             { 
                 Method = SigningMethodType.PersonalTeam,
-                AppleId = activeAppleId ?? string.Empty
+                AppleId = activeAppleId ?? string.Empty,
+                CustomBundleId = AutoModifyBundleId && !string.IsNullOrWhiteSpace(TargetBundleId) 
+                    ? TargetBundleId.Trim() 
+                    : null,
+                ModifyBundleId = AutoModifyBundleId
             };
             string signedIpa = await _signingService.SignIpaAsync(SelectedIpa.FilePath, config, device, progress);
 
@@ -179,11 +227,19 @@ public partial class IpaLibraryViewModel : ObservableObject
             {
                 StatusMessage = $"✓ تم تثبيت {SelectedIpa.EffectiveTitle} بنجاح على جهاز الآيفون!";
                 HasError = false;
+                ErrorMessage = string.Empty;
             }
             else
             {
                 HasError = true;
-                StatusMessage = "فشل تثبيت التطبيق على جهاز الآيفون.";
+                if (!string.IsNullOrWhiteSpace(ErrorMessage) && ErrorMessage != "Operation failed.")
+                {
+                    StatusMessage = ErrorMessage;
+                }
+                else
+                {
+                    StatusMessage = "فشل تثبيت التطبيق على جهاز الآيفون.";
+                }
             }
         }
         catch (Exception ex)
@@ -191,7 +247,7 @@ public partial class IpaLibraryViewModel : ObservableObject
             _logger.LogError(ex, "Installation process failed");
             HasError = true;
             ErrorMessage = ex.Message;
-            StatusMessage = "Installation failed.";
+            StatusMessage = "❌ فشل التثبيت: " + ex.Message;
         }
         finally
         {

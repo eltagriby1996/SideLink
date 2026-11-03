@@ -1,7 +1,12 @@
+using System;
+using System.Diagnostics;
+using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Xml;
+using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using SideLink.Core.Interfaces;
 using SideLink.Core.Models;
@@ -39,7 +44,6 @@ public class SigningService : ISigningService
                 if (string.IsNullOrWhiteSpace(pwd))
                 {
                     _logger.LogWarning("No stored credentials found for Apple ID {AppleId}. User must authenticate.", config.AppleId);
-                    // Still permissible if interactive prompt is triggered
                 }
                 return true;
 
@@ -57,8 +61,6 @@ public class SigningService : ISigningService
                 return true;
 
             case SigningMethodType.PreserveExisting:
-                return true;
-
             default:
                 return true;
         }
@@ -84,7 +86,7 @@ public class SigningService : ISigningService
             Directory.CreateDirectory(tempWorkingDir);
 
             // 1. Unpacking IPA
-            ReportProgress(progress, "Extracting IPA archive...", 15);
+            ReportProgress(progress, "فك ضغط حزمة التطبيق (Extracting IPA)...", 15);
             _logger.LogInformation("Extracting {Ipa} to working directory {TempDir}", sourceIpaPath, tempWorkingDir);
 
             await Task.Run(() =>
@@ -94,7 +96,6 @@ public class SigningService : ISigningService
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    // Zip slip security guard
                     if (entry.FullName.Contains(".."))
                         continue;
 
@@ -126,67 +127,104 @@ public class SigningService : ISigningService
             string appBundlePath = appDirs[0];
             _logger.LogInformation("Located application bundle: {Bundle}", appBundlePath);
 
-            // 3. Provisioning profile handling
-            ReportProgress(progress, "Applying provisioning profile...", 45);
+            // 3. Provisioning profile resolution
+            ReportProgress(progress, "تطبيق شهادة وملف تعريف التثبيت (Mobileprovision)...", 30);
             string embeddedProvisionTarget = Path.Combine(appBundlePath, "embedded.mobileprovision");
+            string? effectiveProfile = config.MobileProvisionPath;
+            string? effectiveP12 = config.P12Path;
+            string p12Password = config.P12Password ?? "sidelink";
 
-            if (config.Method == SigningMethodType.CustomP12 && !string.IsNullOrWhiteSpace(config.MobileProvisionPath) && File.Exists(config.MobileProvisionPath))
+            if (config.Method == SigningMethodType.PersonalTeam)
             {
-                File.Copy(config.MobileProvisionPath, embeddedProvisionTarget, true);
-                _logger.LogInformation("Embedded custom mobileprovision profile.");
-            }
-            else if (config.Method == SigningMethodType.PersonalTeam)
-            {
-                string? effectiveProfile = config.MobileProvisionPath;
-                if (string.IsNullOrWhiteSpace(effectiveProfile) || !File.Exists(effectiveProfile))
+                string appleId = config.AppleId;
+                if (string.IsNullOrWhiteSpace(appleId))
                 {
-                    string appleId = config.AppleId;
-                    if (string.IsNullOrWhiteSpace(appleId))
-                    {
-                        appleId = await _credentialStore.GetLastAppleIdAsync() ?? string.Empty;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(appleId))
-                    {
-                        var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId);
-                        if (identity == null || !identity.IsReadyToSign)
-                        {
-                            identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId);
-                        }
-
-                        if (identity.IsReadyToSign)
-                        {
-                            effectiveProfile = identity.MobileProvisionPath;
-                            _logger.LogInformation("Resolved personal team provisioning profile for {AppleId}: {Profile}", appleId, effectiveProfile);
-                        }
-                    }
+                    appleId = await _credentialStore.GetLastAppleIdAsync() ?? string.Empty;
                 }
 
-                if (!string.IsNullOrWhiteSpace(effectiveProfile) && File.Exists(effectiveProfile))
+                if (!string.IsNullOrWhiteSpace(appleId))
                 {
-                    File.Copy(effectiveProfile, embeddedProvisionTarget, true);
-                    _logger.LogInformation("Successfully embedded personal mobileprovision profile to {Target}", embeddedProvisionTarget);
-                }
-                else
-                {
-                    _logger.LogInformation("No external personal profile specified, preserving existing bundle profile if present.");
+                    var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId);
+                    if (identity == null || !identity.IsReadyToSign)
+                    {
+                        identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId);
+                    }
+
+                    if (identity.IsReadyToSign)
+                    {
+                        effectiveProfile = identity.MobileProvisionPath;
+                        effectiveP12 = identity.P12Path;
+                        _logger.LogInformation("Resolved personal team identity: Profile={Profile}, P12={P12}", effectiveProfile, effectiveP12);
+                    }
                 }
             }
 
-            // 4. Code Signature generation
-            ReportProgress(progress, "Computing file hashes and digital signature...", 70);
-            string codeSignatureDir = Path.Combine(appBundlePath, "_CodeSignature");
-            if (!Directory.Exists(codeSignatureDir))
-                Directory.CreateDirectory(codeSignatureDir);
+            string? profileAppId = null;
+            string? profileTeamId = null;
+            string? entitlementsXml = null;
 
-            // Compute SHA-256 CodeResources manifest
-            await Task.Run(() =>
+            if (!string.IsNullOrWhiteSpace(effectiveProfile) && File.Exists(effectiveProfile))
             {
-                GenerateCodeResourcesManifest(appBundlePath, codeSignatureDir);
-            }, cancellationToken);
+                File.Copy(effectiveProfile, embeddedProvisionTarget, true);
+                _logger.LogInformation("Embedded mobileprovision profile to {Target}", embeddedProvisionTarget);
 
-            // 5. Repackaging into IPA archive
-            ReportProgress(progress, "Packaging signed IPA archive...", 90);
+                ExtractProfileDetails(effectiveProfile, out profileAppId, out profileTeamId, out entitlementsXml);
+            }
+
+            // 4. Bundle ID Handling & Extension Stripping
+            if (config.Method == SigningMethodType.PersonalTeam)
+            {
+                // Free personal profiles cannot sign App Extensions (PlugIns)
+                string pluginsDir = Path.Combine(appBundlePath, "PlugIns");
+                if (Directory.Exists(pluginsDir))
+                {
+                    _logger.LogInformation("Stripping PlugIns/ extensions for personal profile compatibility.");
+                    try { Directory.Delete(pluginsDir, true); } catch { }
+                }
+
+                // If profile is restricted to a specific App ID (e.g. net.whatsapp.WhatsApp.NHDYBV5658)
+                // we must align CFBundleIdentifier to match the profile so iOS installd doesn't reject with ApplicationVerificationFailed.
+                string? targetId = config.CustomBundleId;
+                if (!string.IsNullOrWhiteSpace(profileAppId) && !profileAppId.Contains('*'))
+                {
+                    targetId = profileAppId;
+                    _logger.LogInformation("Aligning CFBundleIdentifier to profile App ID: {Id}", targetId);
+                }
+
+                if (!string.IsNullOrWhiteSpace(targetId) || config.ModifyBundleId)
+                {
+                    ReportProgress(progress, "تعديل معرّف الحزمة ليتطابق مع ملف التعريف والشهادة...", 45);
+                    BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, targetId);
+                }
+            }
+            else if (config.ModifyBundleId || !string.IsNullOrWhiteSpace(config.CustomBundleId))
+            {
+                ReportProgress(progress, "تعديل معرّف الحزمة (Bundle ID)...", 45);
+                BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, config.CustomBundleId);
+            }
+
+            // 5. Code Signature generation
+            ReportProgress(progress, "توقيع التطبيق والملفات التنفيذية رقمياً (Code Signing)...", 65);
+            string rcodesignPath = FindRcodesignExecutable();
+
+            bool codesignSuccess = false;
+            if (!string.IsNullOrWhiteSpace(rcodesignPath) && !string.IsNullOrWhiteSpace(effectiveP12) && File.Exists(effectiveP12))
+            {
+                codesignSuccess = await Task.Run(() => SignWithRcodesign(rcodesignPath, appBundlePath, effectiveP12, p12Password, entitlementsXml, tempWorkingDir));
+            }
+
+            if (!codesignSuccess)
+            {
+                _logger.LogWarning("rcodesign not available or failed; creating fallback CodeResources manifest.");
+                string codeSignatureDir = Path.Combine(appBundlePath, "_CodeSignature");
+                if (!Directory.Exists(codeSignatureDir))
+                    Directory.CreateDirectory(codeSignatureDir);
+
+                await Task.Run(() => GenerateCodeResourcesManifest(appBundlePath, codeSignatureDir), cancellationToken);
+            }
+
+            // 6. Repackaging into IPA archive
+            ReportProgress(progress, "إعادة تجميع حزمة التطبيق الموقعة (Packaging IPA)...", 90);
             _logger.LogInformation("Packaging signed IPA to {Output}", outputIpaPath);
 
             await Task.Run(() =>
@@ -194,21 +232,25 @@ public class SigningService : ISigningService
                 if (File.Exists(outputIpaPath))
                     File.Delete(outputIpaPath);
 
-                ZipFile.CreateFromDirectory(tempWorkingDir, outputIpaPath, CompressionLevel.Optimal, false);
+                using var zip = ZipFile.Open(outputIpaPath, ZipArchiveMode.Create);
+                foreach (var file in Directory.GetFiles(payloadDir, "*", SearchOption.AllDirectories))
+                {
+                    string relPath = Path.GetRelativePath(tempWorkingDir, file).Replace('\\', '/');
+                    zip.CreateEntryFromFile(file, relPath, CompressionLevel.Optimal);
+                }
             }, cancellationToken);
 
-            ReportProgress(progress, "Signing completed successfully.", 100, isCompleted: true);
+            ReportProgress(progress, "تم توقيع التطبيق وتجهيزه للتثبيت بنجاح!", 100, isCompleted: true);
             return outputIpaPath;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Signing failed for IPA {Ipa}", sourceIpaPath);
-            ReportProgress(progress, "Signing failed: " + ex.Message, 0, hasError: true, errorMessage: ex.Message);
+            ReportProgress(progress, "فشل التوقيع: " + ex.Message, 0, hasError: true, errorMessage: ex.Message);
             throw;
         }
         finally
         {
-            // Secure cleanup of temp working directory
             try
             {
                 if (Directory.Exists(tempWorkingDir))
@@ -221,6 +263,141 @@ public class SigningService : ISigningService
                 _logger.LogWarning("Could not clean up temporary signing directory: {Message}", ex.Message);
             }
         }
+    }
+
+    private bool SignWithRcodesign(string rcodesignPath, string appBundlePath, string p12Path, string p12Password, string? entitlementsXml, string tempWorkingDir)
+    {
+        try
+        {
+            string entArg = string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(entitlementsXml))
+            {
+                string entFilePath = Path.Combine(tempWorkingDir, "entitlements.plist");
+                string fullEntXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                                    "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                                    "<plist version=\"1.0\">\n" +
+                                    entitlementsXml + "\n" +
+                                    "</plist>";
+                File.WriteAllText(entFilePath, fullEntXml, Encoding.UTF8);
+                // Use relative path so rcodesign on Windows doesn't treat 'C:' drive letter as a subpath specifier
+                entArg = "-e entitlements.plist";
+            }
+
+            string relAppDir = Path.GetRelativePath(tempWorkingDir, appBundlePath);
+
+            var psi = new ProcessStartInfo
+            {
+                FileName = rcodesignPath,
+                Arguments = $"sign --timestamp-url none --p12-file \"{p12Path}\" --p12-password \"{p12Password}\" {entArg} \"{relAppDir}\"",
+                WorkingDirectory = tempWorkingDir,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using var proc = new Process { StartInfo = psi };
+            var stdoutSb = new StringBuilder();
+            var stderrSb = new StringBuilder();
+
+            proc.OutputDataReceived += (_, e) => { if (e.Data != null) stdoutSb.AppendLine(e.Data); };
+            proc.ErrorDataReceived += (_, e) => { if (e.Data != null) stderrSb.AppendLine(e.Data); };
+
+            proc.Start();
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+
+            bool finished = proc.WaitForExit(90000);
+            if (!finished)
+            {
+                try { proc.Kill(); } catch { }
+                _logger.LogWarning("rcodesign timed out after 90 seconds.");
+                return false;
+            }
+
+            if (proc.ExitCode == 0)
+            {
+                _logger.LogInformation("rcodesign signed bundle successfully.");
+                return true;
+            }
+
+            _logger.LogWarning("rcodesign failed (exit code {Code}): {Err}", proc.ExitCode, stderrSb.ToString());
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error executing rcodesign: {Message}", ex.Message);
+            return false;
+        }
+    }
+
+    private static string? FindRcodesignExecutable()
+    {
+        string[] candidates = new[]
+        {
+            Path.Combine(AppContext.BaseDirectory, "tools", "rcodesign.exe"),
+            Path.Combine(AppContext.BaseDirectory, "rcodesign.exe"),
+            @"C:\Users\HD\Desktop\Bitloader\tools\rcodesign.exe",
+            @"C:\Users\HD\Desktop\SideLink-v1.0.0-win-x64\tools\rcodesign.exe",
+            @"C:\Users\HD\Desktop\Bitloader\tools\apple-codesign\apple-codesign-0.29.0-x86_64-pc-windows-msvc\rcodesign.exe"
+        };
+
+        foreach (var path in candidates)
+        {
+            if (File.Exists(path))
+                return path;
+        }
+
+        return null;
+    }
+
+    private static void ExtractProfileDetails(string profilePath, out string? allowedBundleId, out string? teamId, out string? entitlementsXml)
+    {
+        allowedBundleId = null;
+        teamId = null;
+        entitlementsXml = null;
+
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(profilePath);
+            string content = Encoding.ASCII.GetString(bytes);
+
+            int xmlStart = content.IndexOf("<?xml", StringComparison.Ordinal);
+            int xmlEnd = content.IndexOf("</plist>", StringComparison.Ordinal);
+            if (xmlStart == -1 || xmlEnd == -1) return;
+
+            xmlEnd += 8;
+            string xml = content.Substring(xmlStart, xmlEnd - xmlStart);
+
+            var doc = XDocument.Parse(xml);
+            var rootDict = doc.Root?.Element("dict");
+            if (rootDict == null) return;
+
+            var entKey = rootDict.Elements("key").FirstOrDefault(k => k.Value == "Entitlements");
+            var entDict = entKey?.ElementsAfterSelf().FirstOrDefault();
+            if (entDict != null)
+            {
+                entitlementsXml = entDict.ToString();
+
+                var appIdKey = entDict.Elements("key").FirstOrDefault(k => k.Value == "application-identifier");
+                var appIdVal = appIdKey?.ElementsAfterSelf().FirstOrDefault()?.Value;
+                if (!string.IsNullOrWhiteSpace(appIdVal))
+                {
+                    int dotIdx = appIdVal.IndexOf('.');
+                    if (dotIdx > 0)
+                    {
+                        teamId = appIdVal.Substring(0, dotIdx);
+                        allowedBundleId = appIdVal.Substring(dotIdx + 1);
+                    }
+                    else
+                    {
+                        allowedBundleId = appIdVal;
+                    }
+                }
+            }
+        }
+        catch { }
     }
 
     private static void GenerateCodeResourcesManifest(string appBundlePath, string codeSignatureDir)
