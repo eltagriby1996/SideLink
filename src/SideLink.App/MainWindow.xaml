@@ -6,48 +6,151 @@
         xmlns:local="clr-namespace:SideLink.App"
         xmlns:vm="clr-namespace:SideLink.App.ViewModels"
         mc:Ignorable="d"
-        Title="SideLink — iOS IPA Sideloading &amp; Refresh Manager" 
-        Height="720" Width="1100"
-        MinHeight="600" MinWidth="900"
+        Title="SideLink — Modern iOS IPA Sideloading &amp; 7-Day Refresh Manager" 
+        Height="760" Width="1140"
+        MinHeight="640" MinWidth="940"
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
         Background="{StaticResource BgDarkBrush}">
 
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" CornerRadius="0" GlassFrameThickness="0" ResizeBorderThickness="6" UseAeroCaptionButtons="False" />
+        <WindowChrome CaptionHeight="48" CornerRadius="12" GlassFrameThickness="0" ResizeBorderThickness="8" UseAeroCaptionButtons="False" />
     </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <!-- Nav Button Active State Styles based on CurrentPage -->
+        <Style x:Key="NavBtnIpa" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="IpaLibrary">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnDashboard" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="Dashboard">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnInstalled" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="InstalledApps">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnDevices" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="Devices">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnSigning" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="SigningRefresh">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnDiagnostics" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="Diagnostics">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnLogs" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="Logs">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NavBtnSettings" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CurrentPage}" Value="Settings">
+                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
+                    <Setter Property="Foreground" Value="#38BDF8" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="BorderThickness" Value="3,0,0,0" />
+                    <Setter Property="BorderBrush" Value="#38BDF8" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
 
     <!-- Outer Window Border -->
     <Border Background="{StaticResource BgDarkBrush}" 
             BorderBrush="{StaticResource CardBorderBrush}" 
             BorderThickness="1" 
-            CornerRadius="0">
+            CornerRadius="10">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="46" /> <!-- Custom Title Bar -->
+                <RowDefinition Height="50" /> <!-- Custom Modern Title Bar -->
                 <RowDefinition Height="*" />  <!-- Main Work Area -->
             </Grid.RowDefinitions>
 
-            <!-- Custom Title Bar -->
+            <!-- Custom Modern Title Bar -->
             <Grid Grid.Row="0" Background="{StaticResource SidebarBgBrush}">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="240" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <!-- Brand Header with Official Logo -->
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0,0,0">
-                    <Image Source="/Assets/logo.png" Width="26" Height="26" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-                    <TextBlock Text="SideLink" FontWeight="Bold" FontSize="15" Foreground="White" VerticalAlignment="Center" />
-                    <TextBlock Text="v1.0" FontSize="11" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <Border Width="28" Height="28" CornerRadius="8" Background="#1D2A45" Margin="0,0,10,0" VerticalAlignment="Center">
+                        <Image Source="/Assets/logo.png" Width="22" Height="22" VerticalAlignment="Center" HorizontalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+                    </Border>
+                    <TextBlock Text="SideLink" FontWeight="Black" FontSize="16" Foreground="White" VerticalAlignment="Center" />
+                    <Border Background="#1E3A8A" CornerRadius="6" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="v1.0 STABLE" FontSize="9" FontWeight="Bold" Foreground="#93C5FD" />
+                    </Border>
                 </StackPanel>
 
                 <!-- Connected Device Indicator Bar -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Border Background="#1E293B" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="16" Padding="12,4">
+                    <Border Background="#101728" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="20" Padding="14,5">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <Ellipse Width="8" Height="8" Margin="0,0,8,0">
+                            <Ellipse Width="9" Height="9" Margin="0,0,8,0">
                                 <Ellipse.Style>
                                     <Style TargetType="Ellipse">
                                         <Setter Property="Fill" Value="#64748B" />
@@ -59,23 +162,23 @@
                                     </Style>
                                 </Ellipse.Style>
                             </Ellipse>
-                            <TextBlock Text="{Binding Dashboard.DeviceStatusText}" FontSize="12" Foreground="{StaticResource TextWhiteBrush}" />
+                            <TextBlock Text="{Binding Dashboard.DeviceStatusText}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource TextWhiteBrush}" />
                         </StackPanel>
                     </Border>
                 </StackPanel>
 
                 <!-- Window Control Buttons (Minimize, Maximize, Close) -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0" WindowChrome.IsHitTestVisibleInChrome="True">
-                    <Button Width="36" Height="28" Background="Transparent" Foreground="{StaticResource TextMutedBrush}" BorderThickness="0" Content="—" Click="MinimizeButton_Click" Cursor="Hand" />
-                    <Button Width="36" Height="28" Background="Transparent" Foreground="{StaticResource TextMutedBrush}" BorderThickness="0" Content="☐" Click="MaximizeButton_Click" Cursor="Hand" />
-                    <Button Width="36" Height="28" Background="Transparent" Foreground="#F87171" BorderThickness="0" Content="✕" Click="CloseButton_Click" Cursor="Hand" />
+                    <Button Width="40" Height="30" Background="Transparent" Foreground="{StaticResource TextMutedBrush}" BorderThickness="0" Content="—" Click="MinimizeButton_Click" Cursor="Hand" FontSize="12" />
+                    <Button Width="40" Height="30" Background="Transparent" Foreground="{StaticResource TextMutedBrush}" BorderThickness="0" Content="☐" Click="MaximizeButton_Click" Cursor="Hand" FontSize="12" />
+                    <Button Width="40" Height="30" Background="Transparent" Foreground="#F87171" BorderThickness="0" Content="✕" Click="CloseButton_Click" Cursor="Hand" FontSize="13" />
                 </StackPanel>
             </Grid>
 
             <!-- Main Layout (Sidebar + Content) -->
             <Grid Grid.Row="1">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="220" /> <!-- Sidebar -->
+                    <ColumnDefinition Width="240" /> <!-- Sidebar -->
                     <ColumnDefinition Width="*" />   <!-- Content Views -->
                 </Grid.ColumnDefinitions>
 
@@ -83,31 +186,215 @@
                 <Border Grid.Column="0" Background="{StaticResource SidebarBgBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,1,0">
                     <DockPanel LastChildFill="True">
                         <!-- Navigation Items -->
-                        <StackPanel DockPanel.Dock="Top" Margin="0,12,0,0">
-                            <Button Style="{StaticResource NavButtonStyle}" Content="📊  Dashboard" Command="{Binding NavigateCommand}" CommandParameter="Dashboard" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="📱  Devices" Command="{Binding NavigateCommand}" CommandParameter="Devices" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="📦  IPA Library" Command="{Binding NavigateCommand}" CommandParameter="IpaLibrary" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="📱  Installed Apps" Command="{Binding NavigateCommand}" CommandParameter="InstalledApps" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="🔑  Signing &amp; Refresh" Command="{Binding NavigateCommand}" CommandParameter="SigningRefresh" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="🩺  Diagnostics" Command="{Binding NavigateCommand}" CommandParameter="Diagnostics" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="📜  Logs" Command="{Binding NavigateCommand}" CommandParameter="Logs" />
-                            <Button Style="{StaticResource NavButtonStyle}" Content="⚙️  Settings" Command="{Binding NavigateCommand}" CommandParameter="Settings" />
-                        </StackPanel>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" DockPanel.Dock="Top">
+                            <StackPanel Margin="0,14,0,0">
+                                <!-- Group 1: Core -->
+                                <TextBlock Text="الرئيسية (MAIN)" FontSize="10" FontWeight="Bold" Foreground="#475569" Margin="18,0,0,6" />
+                                <Button Style="{StaticResource NavBtnIpa}" Content="📦  تثبيت التطبيقات (IPA)" Command="{Binding NavigateCommand}" CommandParameter="IpaLibrary" />
+                                <Button Style="{StaticResource NavBtnDashboard}" Content="📊  لوحة التحكم (Dashboard)" Command="{Binding NavigateCommand}" CommandParameter="Dashboard" />
+                                <Button Style="{StaticResource NavBtnInstalled}" Content="📱  التطبيقات المثبتة" Command="{Binding NavigateCommand}" CommandParameter="InstalledApps" />
 
-                        <!-- Bottom Version Info -->
-                        <Border DockPanel.Dock="Bottom" Margin="14,14,14,14" Padding="10" Background="#141E33" CornerRadius="8" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                                <!-- Group 2: Devices & Signing -->
+                                <TextBlock Text="الأجهزة والشهادات" FontSize="10" FontWeight="Bold" Foreground="#475569" Margin="18,14,0,6" />
+                                <Button Style="{StaticResource NavBtnDevices}" Content="📲  الأجهزة المتصلة" Command="{Binding NavigateCommand}" CommandParameter="Devices" />
+                                <Button Style="{StaticResource NavBtnSigning}" Content="🔑  التوقيع والحسابات" Command="{Binding NavigateCommand}" CommandParameter="SigningRefresh" />
+
+                                <!-- Group 3: System -->
+                                <TextBlock Text="النظام والإعدادات" FontSize="10" FontWeight="Bold" Foreground="#475569" Margin="18,14,0,6" />
+                                <Button Style="{StaticResource NavBtnDiagnostics}" Content="🩺  فحص النظام والتعريفات" Command="{Binding NavigateCommand}" CommandParameter="Diagnostics" />
+                                <Button Style="{StaticResource NavBtnLogs}" Content="📜  السجلات (Logs)" Command="{Binding NavigateCommand}" CommandParameter="Logs" />
+                                <Button Style="{StaticResource NavBtnSettings}" Content="⚙️  الإعدادات (Settings)" Command="{Binding NavigateCommand}" CommandParameter="Settings" />
+                            </StackPanel>
+                        </ScrollViewer>
+
+                        <!-- Bottom Device / Info Card -->
+                        <Border DockPanel.Dock="Bottom" Margin="12" Padding="12" Background="#101726" CornerRadius="10" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
                             <StackPanel>
-                                <TextBlock Text="SideLink Desktop" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextWhiteBrush}" />
-                                <TextBlock Text="iOS Sideload Manager" FontSize="10" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                                <TextBlock Text="Verified Launch Mode" FontSize="9" Foreground="{StaticResource SuccessGreenBrush}" Margin="0,4,0,0" />
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="SideLink Pro Engine" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextWhiteBrush}" />
+                                    <Border Grid.Column="1" Background="#064E3B" CornerRadius="4" Padding="4,1">
+                                        <TextBlock Text="READY" FontSize="8" FontWeight="Bold" Foreground="#34D399" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="توقيع محلي مشفر 100%" FontSize="10" Foreground="{StaticResource TextMutedBrush}" />
                             </StackPanel>
                         </Border>
                     </DockPanel>
                 </Border>
 
                 <!-- Content Area -->
-                <Grid Grid.Column="1" Background="{StaticResource BgDarkBrush}" Margin="20">
-                    <!-- Page 1: Dashboard -->
+                <Grid Grid.Column="1" Background="{StaticResource BgDarkBrush}" Margin="24">
+
+                    <!-- ======================================================== -->
+                    <!-- PAGE 1: IPA LIBRARY (Primary App Experience) -->
+                    <!-- ======================================================== -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPage}" Value="IpaLibrary">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <!-- Header -->
+                            <TextBlock Text="تثبيت وتوقيع تطبيقات iOS (IPA Package)" FontSize="24" FontWeight="Black" Foreground="White" />
+                            <TextBlock Text="اسحب أي تطبيق أو لعبة بصيغة .ipa لتوقيعها بشهادتك الشخصية وتثبيتها مباشرة على هاتفك" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,20" />
+
+                            <!-- Interactive Drag & Drop Zone -->
+                            <Border Background="#101728" 
+                                    BorderBrush="#2563EB" 
+                                    BorderThickness="1.5" 
+                                    CornerRadius="16" 
+                                    Padding="28,24" 
+                                    Margin="0,0,0,20" 
+                                    AllowDrop="True" 
+                                    Drop="IpaDropzone_Drop"
+                                    Cursor="Hand">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Glowing Upload Icon -->
+                                    <Border Width="56" Height="56" CornerRadius="14" Background="#1D2A45" Margin="0,0,20,0" VerticalAlignment="Center">
+                                        <TextBlock Text="📦" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="اسحب وأفلت ملف IPA هنا للبدء فوراً" FontSize="16" FontWeight="Bold" Foreground="White" />
+                                        <TextBlock Text="أو اضغط على زر الاختيار لتحديد ملف التطبيق من جهاز الكمبيوتر الخاص بك" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,3,0,0" />
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2" Style="{StaticResource PrimaryButtonStyle}" Content="📂 اختيار ملف IPA..." Command="{Binding IpaLibrary.BrowseForIpaCommand}" VerticalAlignment="Center" Padding="18,10" />
+                                </Grid>
+                            </Border>
+
+                            <!-- Inspected Application Card -->
+                            <Border Style="{StaticResource CardStyle}">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="تفاصيل ومعلومات التطبيق (Application Info)" FontSize="15" FontWeight="Bold" Foreground="White" VerticalAlignment="Center" />
+                                        <Border Grid.Column="1" Background="#1E2C48" CornerRadius="6" Padding="8,3">
+                                            <TextBlock Text="{Binding IpaLibrary.SelectedIpa.FormattedFileSize, TargetNullValue='No File'}" FontSize="11" FontWeight="SemiBold" Foreground="#38BDF8" />
+                                        </Border>
+                                    </Grid>
+
+                                    <!-- App Hero Row -->
+                                    <Border Background="#0D1322" CornerRadius="12" Padding="16" Margin="0,0,0,14" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- App Squircle Frame -->
+                                            <Border Width="60" Height="60" CornerRadius="14" Background="#1E3A8A" Margin="0,0,16,0" VerticalAlignment="Center">
+                                                <TextBlock Text="📱" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding IpaLibrary.SelectedIpa.EffectiveTitle, TargetNullValue='يرجى اختيار أو إفلات ملف IPA أعلاه'}" FontSize="18" FontWeight="Black" Foreground="White" />
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                    <TextBlock Text="Bundle ID: " FontSize="12" Foreground="{StaticResource TextSubtleBrush}" />
+                                                    <TextBlock Text="{Binding IpaLibrary.SelectedIpa.BundleIdentifier, TargetNullValue='—'}" FontSize="12" FontWeight="SemiBold" Foreground="#93C5FD" FontFamily="Consolas" />
+                                                    <TextBlock Text="  •  الإصدار: " FontSize="12" Foreground="{StaticResource TextSubtleBrush}" Margin="10,0,0,0" />
+                                                    <TextBlock Text="{Binding IpaLibrary.SelectedIpa.Version, TargetNullValue='—'}" FontSize="12" FontWeight="SemiBold" Foreground="White" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Distinct Bundle ID Option (Duplicate App Mode) -->
+                                    <Border Background="#101A2D" BorderBrush="#2563EB" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <CheckBox IsChecked="{Binding IpaLibrary.AutoModifyBundleId}" Foreground="White" FontWeight="Bold" FontSize="13" Margin="0,0,0,6" Cursor="Hand">
+                                                <TextBlock Text="🛡️ تثبيت التطبيق كنسخة مكررة بمعرّف مختلف (تجنب تعارض App Store)" Foreground="White" FontWeight="Bold" />
+                                            </CheckBox>
+                                            <TextBlock Text="ميزة حصرية: تتيح تثبيت نسختين من أي تطبيق (مثل واتساب أو ألعاب) وتفادي رفض نظام iOS للتطبيق في حال وجود النسخة الرسمية على الهاتف." FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="24,0,0,10" TextWrapping="Wrap" LineHeight="16" />
+
+                                            <Grid Margin="24,0,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="150" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="معرّف التثبيت (Target ID):" FontSize="12" Foreground="#93C5FD" VerticalAlignment="Center" />
+                                                <TextBox Grid.Column="1" Text="{Binding IpaLibrary.TargetBundleId, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12" Padding="10,6" IsEnabled="{Binding IpaLibrary.AutoModifyBundleId}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Live Installation Progress & Status -->
+                                    <StackPanel Margin="0,0,0,14">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IpaLibrary.IsInstalling}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding IpaLibrary.StatusMessage}" FontSize="12" FontWeight="SemiBold" Foreground="#38BDF8" />
+                                            <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.InstallProgress, StringFormat='{}{0}%'}" FontSize="12" FontWeight="Bold" Foreground="White" />
+                                        </Grid>
+                                        <ProgressBar Value="{Binding IpaLibrary.InstallProgress}" Maximum="100" Height="8" />
+                                    </StackPanel>
+
+                                    <!-- Operation Status / Error Alert -->
+                                    <Border BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IpaLibrary.HasError}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                        <Setter Property="Background" Value="#450A0A" />
+                                                        <Setter Property="BorderBrush" Value="#DC2626" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding IpaLibrary.StatusMessage}" FontSize="12" Foreground="#FCA5A5" TextWrapping="Wrap" />
+                                    </Border>
+
+                                    <!-- Install CTA Button -->
+                                    <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                            Content="🚀  توقيع وتثبيت التطبيق على الآيفون (Sign &amp; Install)" 
+                                            Command="{Binding IpaLibrary.InstallSelectedIpaCommand}" 
+                                            Padding="24,12" 
+                                            FontSize="14" 
+                                            FontWeight="Bold" 
+                                            HorizontalAlignment="Left" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ======================================================== -->
+                    <!-- PAGE 2: DASHBOARD -->
+                    <!-- ======================================================== -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <StackPanel.Style>
@@ -122,8 +409,8 @@
                             </StackPanel.Style>
 
                             <!-- Welcome Banner -->
-                            <TextBlock Text="Application Dashboard" FontSize="22" FontWeight="Bold" Foreground="White" />
-                            <TextBlock Text="Overview of your connected iOS device, sideloaded applications, and 7-day refresh cycles." FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,20" />
+                            <TextBlock Text="لوحة التحكم الرئيسية (Dashboard)" FontSize="24" FontWeight="Black" Foreground="White" />
+                            <TextBlock Text="نظرة عامة على حالة جهازك والتطبيقات المثبتة ودورات التجديد لشهادات الـ 7 أيام" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,20" />
 
                             <!-- Quick Stat Cards Grid -->
                             <Grid Margin="0,0,0,20">
@@ -136,27 +423,27 @@
                                 <!-- Card 1: Total Managed Apps -->
                                 <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,10,0">
                                     <StackPanel>
-                                        <TextBlock Text="MANAGED APPS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}" />
-                                        <TextBlock Text="{Binding Dashboard.TotalAppsCount}" FontSize="28" FontWeight="Bold" Foreground="White" Margin="0,6,0,0" />
-                                        <TextBlock Text="Installed via SideLink" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
+                                        <TextBlock Text="التطبيقات المثبتة" FontSize="11" FontWeight="Bold" Foreground="{StaticResource TextMutedBrush}" />
+                                        <TextBlock Text="{Binding Dashboard.TotalAppsCount}" FontSize="32" FontWeight="Black" Foreground="White" Margin="0,6,0,0" />
+                                        <TextBlock Text="مثبتة عبر SideLink" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
                                     </StackPanel>
                                 </Border>
 
                                 <!-- Card 2: Expiring Soon -->
                                 <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="5,0,5,0">
                                     <StackPanel>
-                                        <TextBlock Text="EXPIRING SOON (&lt;= 3 DAYS)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WarningAmberBrush}" />
-                                        <TextBlock Text="{Binding Dashboard.ExpiringSoonCount}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource WarningAmberBrush}" Margin="0,6,0,0" />
-                                        <TextBlock Text="Requires 7-day refresh" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
+                                        <TextBlock Text="تنتهي قريباً (خلال 3 أيام)" FontSize="11" FontWeight="Bold" Foreground="{StaticResource WarningAmberBrush}" />
+                                        <TextBlock Text="{Binding Dashboard.ExpiringSoonCount}" FontSize="32" FontWeight="Black" Foreground="{StaticResource WarningAmberBrush}" Margin="0,6,0,0" />
+                                        <TextBlock Text="تحتاج للتجديد التلقائي" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
                                     </StackPanel>
                                 </Border>
 
                                 <!-- Card 3: Expired -->
                                 <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="10,0,0,0">
                                     <StackPanel>
-                                        <TextBlock Text="EXPIRED" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource DangerRedBrush}" />
-                                        <TextBlock Text="{Binding Dashboard.ExpiredCount}" FontSize="28" FontWeight="Bold" Foreground="{StaticResource DangerRedBrush}" Margin="0,6,0,0" />
-                                        <TextBlock Text="Needs immediate re-signing" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
+                                        <TextBlock Text="منتهية الصلاحية" FontSize="11" FontWeight="Bold" Foreground="{StaticResource DangerRedBrush}" />
+                                        <TextBlock Text="{Binding Dashboard.ExpiredCount}" FontSize="32" FontWeight="Black" Foreground="{StaticResource DangerRedBrush}" Margin="0,6,0,0" />
+                                        <TextBlock Text="تتطلب إعادة التوقيع" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
                                     </StackPanel>
                                 </Border>
                             </Grid>
@@ -169,12 +456,12 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <StackPanel VerticalAlignment="Center">
-                                        <TextBlock Text="Quick Actions" FontSize="15" FontWeight="SemiBold" Foreground="White" />
+                                        <TextBlock Text="العمليات السريعة" FontSize="15" FontWeight="Bold" Foreground="White" />
                                         <TextBlock Text="{Binding Dashboard.OperationStatusText}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                        <Button Style="{StaticResource PrimaryButtonStyle}" Content="📦 Install IPA..." Command="{Binding Dashboard.NavigateToCommand}" CommandParameter="IpaLibrary" Margin="0,0,10,0" />
-                                        <Button Style="{StaticResource SecondaryButtonStyle}" Content="🔄 Refresh All Apps" Command="{Binding Dashboard.RefreshAllAppsCommand}" />
+                                        <Button Style="{StaticResource PrimaryButtonStyle}" Content="📦 تثبيت تطبيق (IPA)..." Command="{Binding Dashboard.NavigateToCommand}" CommandParameter="IpaLibrary" Margin="0,0,10,0" />
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" Content="🔄 تجديد كافة التطبيقات" Command="{Binding Dashboard.RefreshAllAppsCommand}" />
                                     </StackPanel>
                                 </Grid>
                             </Border>
@@ -182,220 +469,16 @@
                             <!-- Recent Activities -->
                             <Border Style="{StaticResource CardStyle}">
                                 <StackPanel>
-                                    <TextBlock Text="Recent Operations" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
+                                    <TextBlock Text="سجل العمليات والنشاط الأخير" FontSize="15" FontWeight="Bold" Foreground="White" Margin="0,0,0,12" />
                                     <ListBox ItemsSource="{Binding Dashboard.RecentActivities}" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextMutedBrush}" MaxHeight="220" />
                                 </StackPanel>
                             </Border>
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Page 2: Devices View -->
-                    <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentPage}" Value="Devices">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="Connected iOS Devices" FontSize="22" FontWeight="Bold" Foreground="White" />
-                                <TextBlock Text="{Binding Devices.StatusMessage}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 Refresh Devices" Command="{Binding Devices.RefreshDevicesCommand}" />
-                        </Grid>
-
-                        <!-- Devices List -->
-                        <ItemsControl ItemsSource="{Binding Devices.Devices}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- Phone Icon -->
-                                            <Border Width="48" Height="48" Background="#141E33" CornerRadius="10" Margin="0,0,16,0" VerticalAlignment="Center">
-                                                <TextBlock Text="📱" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding DisplayTitle}" FontSize="16" FontWeight="Bold" Foreground="White" />
-                                                <TextBlock Text="{Binding ProductVersion, StringFormat='iOS Version: {0}'}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                                                <TextBlock Text="{Binding DeviceId, StringFormat='UDID: {0}'}" FontSize="11" Foreground="#64748B" FontFamily="Consolas" Margin="0,2,0,0" />
-                                            </StackPanel>
-
-                                            <!-- Trust Status Badge -->
-                                            <Border Grid.Column="2" Background="#141E33" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,6" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding IsTrusted, ConverterParameter='Paired', Converter={x:Null}}" FontWeight="SemiBold" FontSize="12" Foreground="{StaticResource SuccessGreenBrush}" />
-                                            </Border>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- Guidance Card -->
-                        <Border Style="{StaticResource CardStyle}" Margin="0,10,0,0">
-                            <StackPanel>
-                                <TextBlock Text="💡 Troubleshooting Device Connection:" FontSize="13" FontWeight="Bold" Foreground="White" Margin="0,0,0,6" />
-                                <TextBlock Text="• Unlock your iPhone using your Passcode before plugging in." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                                <TextBlock Text="• When prompted on screen, tap 'Trust This Computer' and confirm with passcode." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                                <TextBlock Text="• Ensure Apple Mobile Device Service is running (check Diagnostics tab)." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Page 3: IPA Library View -->
-                    <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentPage}" Value="IpaLibrary">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-
-                        <TextBlock Text="IPA Package Management" FontSize="22" FontWeight="Bold" Foreground="White" />
-                        <TextBlock Text="Inspect application metadata, provisioning profiles, and install to connected iOS device." FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
-
-                        <!-- File Picker Dropzone Card -->
-                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16" AllowDrop="True" Drop="IpaDropzone_Drop">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Select or Drag &amp; Drop an iOS IPA Package" FontSize="15" FontWeight="SemiBold" Foreground="White" />
-                                    <TextBlock Text="{Binding IpaLibrary.StatusMessage}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,3,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource PrimaryButtonStyle}" Content="📂 Browse for IPA..." Command="{Binding IpaLibrary.BrowseForIpaCommand}" VerticalAlignment="Center" />
-                            </Grid>
-                        </Border>
-
-                        <!-- Metadata Inspection Card -->
-                        <Border Style="{StaticResource CardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Application Archive Metadata" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
-
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="App Name:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" />
-                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.EffectiveTitle, TargetNullValue='No archive selected'}" FontWeight="SemiBold" FontSize="13" Foreground="White" />
-                                </Grid>
-
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Original Bundle ID:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.BundleIdentifier, TargetNullValue='—'}" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
-                                </Grid>
-
-                                <!-- Distinct Bundle ID Management Card -->
-                                <Border Background="#131D31" BorderBrush="#2563EB" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
-                                    <StackPanel>
-                                        <CheckBox IsChecked="{Binding IpaLibrary.AutoModifyBundleId}" Foreground="White" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,6" Cursor="Hand">
-                                            <TextBlock Text="🛡️ تثبيت بمعرّف مختلف عن الرسمي (تجنب تعارض App Store)" Foreground="White" FontWeight="SemiBold" />
-                                        </CheckBox>
-                                        <TextBlock Text="يتيح تشغيل نسختين وتفادي رفض نظام iOS للتطبيق في حال وجود النسخة الرسمية على الهاتف." FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="24,0,0,8" TextWrapping="Wrap" />
-
-                                        <Grid Margin="24,0,0,0">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="140" />
-                                                <ColumnDefinition Width="*" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Text="معرّف التثبيت (Target ID):" FontSize="12" Foreground="#93C5FD" VerticalAlignment="Center" />
-                                            <TextBox Grid.Column="1" Text="{Binding IpaLibrary.TargetBundleId, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12" Padding="8,5" Background="#0F172A" Foreground="White" BorderBrush="#334155" BorderThickness="1" IsEnabled="{Binding IpaLibrary.AutoModifyBundleId}" />
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Version / Build:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" />
-                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.Version, TargetNullValue='—'}" FontSize="13" Foreground="White" />
-                                </Grid>
-
-                                <Grid Margin="0,0,0,10">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="File Size:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" />
-                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.FormattedFileSize, TargetNullValue='—'}" FontSize="13" Foreground="White" />
-                                </Grid>
-
-                                <Grid Margin="0,0,0,16">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="140" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Provisioning Profile:" Foreground="{StaticResource TextMutedBrush}" FontSize="13" />
-                                    <TextBlock Grid.Column="1" Text="{Binding IpaLibrary.SelectedIpa.ProvisioningProfile.ExpirationStatusText, TargetNullValue='None (Will be signed with personal team)'}" FontSize="13" Foreground="{StaticResource PrimaryBlueHoverBrush}" />
-                                </Grid>
-
-                                <!-- Install Progress Bar -->
-                                <ProgressBar Height="6" Value="{Binding IpaLibrary.InstallProgress}" Maximum="100" Margin="0,0,0,12" Background="#0F172A" Foreground="{StaticResource PrimaryBlueBrush}" BorderThickness="0">
-                                    <ProgressBar.Style>
-                                        <Style TargetType="ProgressBar">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IpaLibrary.IsInstalling}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </ProgressBar.Style>
-                                </ProgressBar>
-
-                                <!-- Operation Status Alert -->
-                                <Border BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,12">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IpaLibrary.HasError}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                    <Setter Property="Background" Value="#450A0A" />
-                                                    <Setter Property="BorderBrush" Value="#DC2626" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding IpaLibrary.StatusMessage}" FontSize="12" Foreground="White" TextWrapping="Wrap" />
-                                </Border>
-
-                                <!-- Install Action Button -->
-                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="🚀 Sign &amp; Install Application" Command="{Binding IpaLibrary.InstallSelectedIpaCommand}" HorizontalAlignment="Left" Padding="20,10" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-
-                    <!-- Page 4: Installed Apps View -->
+                    <!-- ======================================================== -->
+                    <!-- PAGE 3: INSTALLED APPS -->
+                    <!-- ======================================================== -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
@@ -414,10 +497,10 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Managed Applications" FontSize="22" FontWeight="Bold" Foreground="White" />
+                                <TextBlock Text="التطبيقات المثبتة على الهاتف" FontSize="22" FontWeight="Black" Foreground="White" />
                                 <TextBlock Text="{Binding InstalledApps.StatusMessage}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 Reload Apps" Command="{Binding InstalledApps.LoadAppsCommand}" />
+                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 تحديث القائمة" Command="{Binding InstalledApps.LoadAppsCommand}" />
                         </Grid>
 
                         <ItemsControl ItemsSource="{Binding InstalledApps.Apps}">
@@ -432,8 +515,8 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
-                                            <!-- App Icon placeholder -->
-                                            <Border Width="42" Height="42" Background="#1E3A8A" CornerRadius="10" Margin="0,0,14,0" VerticalAlignment="Center">
+                                            <!-- App Icon -->
+                                            <Border Width="44" Height="44" Background="#1E3A8A" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
                                                 <TextBlock Text="📱" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                             </Border>
 
@@ -445,13 +528,13 @@
 
                                             <!-- Expiration Badge -->
                                             <Border Grid.Column="2" Background="#141E33" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,10,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding ExpirationDate, StringFormat='Expires: {0:yyyy-MM-dd}'}" FontSize="11" Foreground="{StaticResource WarningAmberBrush}" />
+                                                <TextBlock Text="{Binding ExpirationDate, StringFormat='Expires: {0:yyyy-MM-dd}'}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WarningAmberBrush}" />
                                             </Border>
 
                                             <!-- Action Buttons -->
                                             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="🔄 Refresh" Command="{Binding DataContext.InstalledApps.RefreshSingleAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,8,0" />
-                                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="✕ Remove" Command="{Binding DataContext.InstalledApps.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" />
+                                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="🔄 تجديد" Command="{Binding DataContext.InstalledApps.RefreshSingleAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,8,0" Padding="12,6" FontSize="12" />
+                                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="✕ إزالة" Command="{Binding DataContext.InstalledApps.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,6" FontSize="12" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
@@ -460,225 +543,205 @@
                         </ItemsControl>
                     </StackPanel>
 
-                    <!-- Page 5: Signing & Refresh View -->
+                    <!-- ======================================================== -->
+                    <!-- PAGE 4: DEVICES VIEW -->
+                    <!-- ======================================================== -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentPage}" Value="SigningRefresh">
+                                    <DataTrigger Binding="{Binding CurrentPage}" Value="Devices">
                                         <Setter Property="Visibility" Value="Visible" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
 
-                        <TextBlock Text="Apple ID &amp; Signing Configuration" FontSize="22" FontWeight="Bold" Foreground="White" />
-                        <TextBlock Text="Configure legitimate personal developer signing credentials for 7-day refresh." FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
-
-                        <!-- Apple ID Credential Card -->
-                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                        <Grid Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="Apple ID Account Details" FontSize="15" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,4" />
-                                <TextBlock Text="Credentials are encrypted locally using Windows DPAPI. Never stored in plaintext." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,14" />
+                                <TextBlock Text="أجهزة iOS المتصلة (Connected Devices)" FontSize="22" FontWeight="Black" Foreground="White" />
+                                <TextBlock Text="{Binding Devices.StatusMessage}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 إعادة فحص الأجهزة" Command="{Binding Devices.RefreshDevicesCommand}" />
+                        </Grid>
 
-                                <!-- Active Saved Account Badge (Visible if HasStoredPassword == True) -->
-                                <Border Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SigningRefresh.HasStoredPassword}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <StackPanel>
-                                            <TextBlock Text="✓ الحساب محفوظ ومشفّر بنجاح في نظام ويندوز (Windows DPAPI)" FontWeight="Bold" FontSize="13" Foreground="#6EE7B7" />
-                                            <TextBlock Text="{Binding SigningRefresh.SavedAccountDisplay}" FontSize="12" Foreground="#A7F3D0" Margin="0,2,0,0" />
-                                        </StackPanel>
-                                        <Border Grid.Column="1" Background="#047857" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
-                                            <TextBlock Text="🔒 جاهز للتوقيع" FontSize="11" FontWeight="Bold" Foreground="White" />
-                                        </Border>
-                                    </Grid>
-                                </Border>
-
-                                <!-- Status / Feedback Message Alert -->
-                                <Border BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="#064E3B" />
-                                            <Setter Property="BorderBrush" Value="#059669" />
-                                            <Setter Property="Visibility" Value="Visible" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SigningRefresh.IsSuccessStatus}" Value="False">
-                                                    <Setter Property="Background" Value="#450A0A" />
-                                                    <Setter Property="BorderBrush" Value="#7F1D1D" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <TextBlock Text="{Binding SigningRefresh.StatusMessage}" FontSize="12" Foreground="White" TextWrapping="Wrap" />
-                                </Border>
-
-                                <!-- Discovered Accounts in System -->
-                                <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,12">
-                                    <StackPanel>
-                                        <TextBlock Text="⚡ حسابات Apple المكتشفة في النظام (iLoader / Credential Manager):" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,6" />
-                                        <ItemsControl ItemsSource="{Binding SigningRefresh.DiscoveredAccounts}">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel Orientation="Horizontal" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Button Content="{Binding}" 
-                                                            Command="{Binding DataContext.SigningRefresh.SelectDiscoveredAccountCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                            CommandParameter="{Binding}"
-                                                            Background="#0F172A" Foreground="#38BDF8" BorderBrush="#0284C7" BorderThickness="1" 
-                                                            Padding="10,4" Margin="0,0,8,6" Cursor="Hand" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </Border>
-
-                                <TextBlock Text="Apple ID (Email):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
-                                <TextBox Text="{Binding SigningRefresh.AppleId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
-
-                                <TextBlock Text="Password / App-Specific Password (كلمة المرور):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
-                                <PasswordBox x:Name="ApplePasswordInput" PasswordChanged="ApplePasswordInput_PasswordChanged" Background="#0F172A" Foreground="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" Padding="10,6" Margin="0,0,0,14" />
-
-                                <!-- Action Buttons -->
-                                <WrapPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                    <Button Style="{StaticResource PrimaryButtonStyle}" Content="💾 حفظ وتشفير (Save DPAPI)" Command="{Binding SigningRefresh.SaveCredentialsCommand}" Margin="0,0,10,8" />
-                                    <Button Style="{StaticResource PrimaryButtonStyle}" Background="#4338CA" Content="📲 إرسال رمز المصادقة (2FA) / تسجيل الدخول" Command="{Binding SigningRefresh.Request2FaCommand}" Margin="0,0,10,8" />
-                                    <Button Style="{StaticResource SecondaryButtonStyle}" Content="🗑️ مسح الحساب المخزن (Clear)" Command="{Binding SigningRefresh.ClearCredentialsCommand}" Margin="0,0,10,8" />
-                                </WrapPanel>
-
-                                <!-- Interactive 2FA Code Input Box (Visible when Is2FaPromptVisible == True) -->
-                                <Border Background="#1E1B4B" BorderBrush="#6366F1" BorderThickness="1.5" CornerRadius="10" Padding="16" Margin="0,10,0,0">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding SigningRefresh.Is2FaPromptVisible}" Value="True">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <StackPanel>
-                                        <TextBlock Text="🔐 رمز المصادقة الثنائية من Apple (Two-Factor Authentication)" FontWeight="Bold" FontSize="14" Foreground="#C7D2FE" />
-                                        <TextBlock Text="إذا ظهر لك إشعار Apple على هاتف الآيفون أو الآيباد، أدخل الرمز المكون من 6 أرقام هنا لتأكيد تفعيل الحساب للتوقيع:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,12" TextWrapping="Wrap" />
-
-                                        <Grid Margin="0,0,0,10">
+                        <ItemsControl ItemsSource="{Binding Devices.Devices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                                        <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-                                            <TextBox Text="{Binding SigningRefresh.TwoFactorCode, UpdateSourceTrigger=PropertyChanged}" 
-                                                     FontSize="16" FontWeight="Bold" 
-                                                     MaxLength="6" 
-                                                     Background="#0F172A" 
-                                                     Foreground="#38BDF8" 
-                                                     BorderBrush="#818CF8" 
-                                                     Padding="10,8" />
-                                            <Button Grid.Column="1" Style="{StaticResource PrimaryButtonStyle}" 
-                                                    Content="✓ تأكيد الرمز" 
-                                                    Command="{Binding SigningRefresh.Verify2FaCodeCommand}" 
-                                                    Margin="10,0,0,0" Padding="18,8" />
-                                            <Button Grid.Column="2" Style="{StaticResource SecondaryButtonStyle}" 
-                                                    Content="✕ إلغاء" 
-                                                    Command="{Binding SigningRefresh.Cancel2FaCommand}" 
-                                                    Margin="8,0,0,0" Padding="14,8" />
-                                        </Grid>
-                                    </StackPanel>
-                                </Border>
-
-                                <!-- Active iCloud Developer Certificate & Provisioning Card -->
-                                <Border Background="#0F172A" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="10" Padding="14" Margin="0,14,0,0">
-                                    <StackPanel>
-                                        <Grid Margin="0,0,0,8">
-                                            <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="🛡️ شهادة المطور وملف التخصيص (iCloud Provisioning Profile &amp; Certificate)" FontSize="13" FontWeight="Bold" Foreground="#38BDF8" VerticalAlignment="Center" />
-                                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" 
-                                                    Content="🔄 إعادة فحص الشهادة" 
-                                                    Command="{Binding SigningRefresh.RefreshCertificateStatusCommand}" 
-                                                    Padding="10,4" FontSize="11" />
+
+                                            <Border Width="50" Height="50" Background="#141E33" CornerRadius="12" Margin="0,0,16,0" VerticalAlignment="Center">
+                                                <TextBlock Text="📱" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayTitle}" FontSize="16" FontWeight="Bold" Foreground="White" />
+                                                <TextBlock Text="{Binding ProductVersion, StringFormat='iOS Version: {0}'}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                                                <TextBlock Text="{Binding DeviceId, StringFormat='UDID: {0}'}" FontSize="11" Foreground="#64748B" FontFamily="Consolas" Margin="0,2,0,0" />
+                                            </StackPanel>
+
+                                            <Border Grid.Column="2" Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="12,6" VerticalAlignment="Center">
+                                                <TextBlock Text="✓ متصل ومقترن بنجاح" FontWeight="Bold" FontSize="12" Foreground="#34D399" />
+                                            </Border>
                                         </Grid>
-
-                                        <TextBlock Text="{Binding SigningRefresh.ProvisioningStatusDisplay}" FontSize="12" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,10" />
-
-                                        <Border Background="#1E293B" CornerRadius="8" Padding="10,8" Margin="0,0,0,10">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <Grid.RowDefinitions>
-                                                    <RowDefinition Height="Auto" />
-                                                    <RowDefinition Height="Auto" />
-                                                </Grid.RowDefinitions>
-
-                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="الشهادة:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="4,4,8,4" />
-                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SigningRefresh.CertificateSubject}" FontSize="11" Foreground="White" Margin="0,4,8,4" TextTrimming="CharacterEllipsis" />
-
-                                                <TextBlock Grid.Row="0" Grid.Column="2" Text="فريق العمل:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="4,4,8,4" />
-                                                <TextBlock Grid.Row="0" Grid.Column="3" Text="{Binding SigningRefresh.TeamId}" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" Margin="0,4" />
-
-                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="الصلاحية:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="4,4,8,4" />
-                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SigningRefresh.ExpirationDisplay}" FontSize="11" Foreground="#34D399" Margin="0,4,8,4" />
-
-                                                <TextBlock Grid.Row="1" Grid.Column="2" Text="ملف P12:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="4,4,8,4" />
-                                                <TextBlock Grid.Row="1" Grid.Column="3" Text="{Binding SigningRefresh.P12Path}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="0,4" TextTrimming="CharacterEllipsis" />
-                                            </Grid>
-                                        </Border>
-
-                                        <WrapPanel Orientation="Horizontal">
-                                            <Button Style="{StaticResource SecondaryButtonStyle}" Content="📁 استيراد ملف P12 يدوياً..." Command="{Binding SigningRefresh.BrowseP12Command}" Margin="0,0,8,0" Padding="10,4" FontSize="11" />
-                                            <Button Style="{StaticResource SecondaryButtonStyle}" Content="📄 استيراد ملف MobileProvision..." Command="{Binding SigningRefresh.BrowseMobileProvisionCommand}" Margin="0,0,8,0" Padding="10,4" FontSize="11" />
-                                        </WrapPanel>
-                                    </StackPanel>
-                                </Border>
-
-                            </StackPanel>
-                        </Border>
-
-                        <!-- App-Specific Password Guidance Card -->
-                        <Border Background="#1E293B" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="10" Padding="16" Margin="0,0,0,16">
-                            <StackPanel>
-                                <TextBlock Text="💡 نصيحة هامة لتخطي رمز التحقق في كل مرة (App-Specific Password):" FontSize="13" FontWeight="Bold" Foreground="#60A5FA" Margin="0,0,0,6" />
-                                <TextBlock Text="إذا كان حسابك مفعّلاً به التحقق بخطوتين (2FA)، نوصي بإنشاء كلمة سر خاصة بالتطبيقات من موقع Apple الرسمي، حيث تسمح لك بتوقيع وتثبيت التطبيقات دون الحاجة لطلب رمز 2FA في كل عملية توقيع أو تحديث:" FontSize="12" Foreground="{StaticResource TextWhiteBrush}" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,8" />
-                                <TextBlock Text="1. توجه إلى موقع: appleid.apple.com وسجل الدخول." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,3" />
-                                <TextBlock Text="2. من قسم 'تسجيل الدخول والأمان' (Sign-In and Security) اختر 'كلمات السر الخاصة بالتطبيقات' (App-Specific Passwords)." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,3" />
-                                <TextBlock Text="3. اضغط إنشاء واكتب اسم (مثال: SideLink)، ثم انسخ كلمة السر المتولدة والصقها في خانة كلمة المرور أعلاه واضغط حفظ." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="8,0,0,0" />
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Method Notice Card -->
-                        <Border Style="{StaticResource CardStyle}">
-                            <StackPanel>
-                                <TextBlock Text="7-Day Personal Development Signing Policy" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,6" />
-                                <TextBlock Text="{Binding SigningRefresh.MethodExplanation}" TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource TextMutedBrush}" LineHeight="18" />
-                            </StackPanel>
-                        </Border>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
 
-                    <!-- Page 6: Diagnostics View -->
+                    <!-- ======================================================== -->
+                    <!-- PAGE 5: SIGNING & REFRESH CONFIGURATION -->
+                    <!-- ======================================================== -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPage}" Value="SigningRefresh">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <TextBlock Text="إعدادات الحسابات والتوقيع (Apple ID &amp; Signing)" FontSize="22" FontWeight="Black" Foreground="White" />
+                            <TextBlock Text="إدارة حسابات Apple ID المخصصة للتوقيع الرقمي والتجديد التلقائي لشهادات الـ 7 أيام" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
+
+                            <!-- Apple ID Credential Card -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <!-- Active Saved Account Banner -->
+                                    <Border Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,14">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SigningRefresh.HasStoredPassword}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="✓ الحساب محفوظ ومشفّر بنجاح في نظام ويندوز (Windows DPAPI)" FontWeight="Bold" FontSize="13" Foreground="#6EE7B7" />
+                                                <TextBlock Text="{Binding SigningRefresh.SavedAccountDisplay}" FontSize="12" Foreground="#A7F3D0" Margin="0,2,0,0" />
+                                            </StackPanel>
+                                            <Border Grid.Column="1" Background="#047857" CornerRadius="6" Padding="8,4" VerticalAlignment="Center">
+                                                <TextBlock Text="🔒 جاهز للتوقيع" FontSize="11" FontWeight="Bold" Foreground="White" />
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Status Message Alert -->
+                                    <Border BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,0,0,14">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Background" Value="#064E3B" />
+                                                <Setter Property="BorderBrush" Value="#059669" />
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SigningRefresh.IsSuccessStatus}" Value="False">
+                                                        <Setter Property="Background" Value="#450A0A" />
+                                                        <Setter Property="BorderBrush" Value="#7F1D1D" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <TextBlock Text="{Binding SigningRefresh.StatusMessage}" FontSize="12" Foreground="White" TextWrapping="Wrap" />
+                                    </Border>
+
+                                    <!-- Discovered Accounts in System -->
+                                    <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,12">
+                                        <StackPanel>
+                                            <TextBlock Text="⚡ حسابات Apple المكتشفة في النظام (iLoader / Windows Credentials):" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,6" />
+                                            <ItemsControl ItemsSource="{Binding SigningRefresh.DiscoveredAccounts}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Button Content="{Binding}" 
+                                                                Command="{Binding DataContext.SigningRefresh.SelectDiscoveredAccountCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
+                                                                CommandParameter="{Binding}"
+                                                                Background="#172238" Foreground="#38BDF8" BorderBrush="#0284C7" BorderThickness="1" 
+                                                                Padding="10,4" Margin="0,0,8,6" Cursor="Hand" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <TextBlock Text="Apple ID (Email):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding SigningRefresh.AppleId, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+
+                                    <TextBlock Text="كلمة المرور أو كلمة السر الخاصة بالتطبيقات (Password):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+                                    <PasswordBox x:Name="ApplePasswordInput" PasswordChanged="ApplePasswordInput_PasswordChanged" Background="{StaticResource InputBgBrush}" Foreground="White" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" Padding="12,8" Margin="0,0,0,14" />
+
+                                    <!-- Action Buttons -->
+                                    <WrapPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button Style="{StaticResource PrimaryButtonStyle}" Content="💾 حفظ وتشفير (Save DPAPI)" Command="{Binding SigningRefresh.SaveCredentialsCommand}" Margin="0,0,10,8" />
+                                        <Button Style="{StaticResource PrimaryButtonStyle}" Background="#4338CA" Content="📲 إرسال رمز المصادقة (2FA)" Command="{Binding SigningRefresh.Request2FaCommand}" Margin="0,0,10,8" />
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" Content="🗑️ مسح الحساب المخزن" Command="{Binding SigningRefresh.ClearCredentialsCommand}" Margin="0,0,10,8" />
+                                    </WrapPanel>
+
+                                    <!-- 2FA Code Input Box -->
+                                    <Border Background="#1E1B4B" BorderBrush="#6366F1" BorderThickness="1.5" CornerRadius="10" Padding="16" Margin="0,10,0,0">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SigningRefresh.Is2FaPromptVisible}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <StackPanel>
+                                            <TextBlock Text="🔐 رمز المصادقة الثنائية من Apple (2FA Code)" FontWeight="Bold" FontSize="14" Foreground="#C7D2FE" />
+                                            <TextBlock Text="أدخل الرمز المكون من 6 أرقام الظاهر على شاشة جهاز الآيفون:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,12" />
+
+                                            <Grid Margin="0,0,0,10">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox Text="{Binding SigningRefresh.TwoFactorCode, UpdateSourceTrigger=PropertyChanged}" 
+                                                         FontSize="16" FontWeight="Bold" MaxLength="6" 
+                                                         Background="{StaticResource InputBgBrush}" Foreground="#38BDF8" BorderBrush="#818CF8" Padding="10,8" />
+                                                <Button Grid.Column="1" Style="{StaticResource PrimaryButtonStyle}" Content="✓ تأكيد الرمز" Command="{Binding SigningRefresh.Verify2FaCodeCommand}" Margin="10,0,0,0" Padding="18,8" />
+                                                <Button Grid.Column="2" Style="{StaticResource SecondaryButtonStyle}" Content="✕ إلغاء" Command="{Binding SigningRefresh.Cancel2FaCommand}" Margin="8,0,0,0" Padding="14,8" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <!-- ======================================================== -->
+                    <!-- PAGE 6: DIAGNOSTICS & SYSTEM -->
+                    <!-- ======================================================== -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
@@ -697,67 +760,38 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="System &amp; Driver Diagnostics" FontSize="22" FontWeight="Bold" Foreground="White" />
-                                <TextBlock Text="{Binding Diagnostics.StatusSummary}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                                <TextBlock Text="فحص وتشخيص النظام والتعريفات" FontSize="22" FontWeight="Black" Foreground="White" />
+                                <TextBlock Text="التحقق من عمل خدمات Apple ومكتبات التوقيع وخادم usbmuxd" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="📄 Export Report" Command="{Binding Diagnostics.ExportReportCommand}" Margin="0,0,8,0" />
-                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="🩺 Run Diagnostics" Command="{Binding Diagnostics.RunDiagnosticsCommand}" />
-                            </StackPanel>
+                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 إعادة الفحص" Command="{Binding Diagnostics.RunDiagnosticsCommand}" />
                         </Grid>
 
-                        <ItemsControl ItemsSource="{Binding Diagnostics.Checks}">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,8" Padding="14,10">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto" />
-                                                <ColumnDefinition Width="*" />
-                                                <ColumnDefinition Width="Auto" />
-                                            </Grid.ColumnDefinitions>
-
-                                            <!-- Pass/Fail Icon -->
-                                            <TextBlock Text="{Binding Passed, ConverterParameter='✓', Converter={x:Null}}" FontSize="16" FontWeight="Bold" Margin="0,0,12,0" VerticalAlignment="Center">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="{StaticResource SuccessGreenBrush}" />
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding Passed}" Value="False">
-                                                                <Setter Property="Foreground" Value="{StaticResource WarningAmberBrush}" />
-                                                                <Setter Property="Text" Value="⚠️" />
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" Foreground="White" />
-                                                <TextBlock Text="{Binding Message}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,1,0,0" />
-                                                <TextBlock Text="{Binding ActionableGuidance, StringFormat='Guidance: {0}'}" FontSize="11" Foreground="#38BDF8" Margin="0,2,0,0">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="TextBlock">
-                                                            <Setter Property="Visibility" Value="Visible" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding ActionableGuidance}" Value="{x:Null}">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                            </StackPanel>
-
-                                            <TextBlock Grid.Column="2" Text="{Binding Category}" FontSize="11" Foreground="#64748B" VerticalAlignment="Center" />
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <Border Style="{StaticResource CardStyle}">
+                            <ItemsControl ItemsSource="{Binding Diagnostics.DiagnosticItems}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="0,0,0,1" Padding="0,10">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13" Foreground="White" />
+                                                    <TextBlock Text="{Binding Details}" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="1" Text="{Binding Status}" FontWeight="Bold" FontSize="12" Foreground="#34D399" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Border>
                     </StackPanel>
 
-                    <!-- Page 7: Logs View -->
+                    <!-- ======================================================== -->
+                    <!-- PAGE 7: LOGS -->
+                    <!-- ======================================================== -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
@@ -770,29 +804,17 @@
                             </Style>
                         </StackPanel.Style>
 
-                        <Grid Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="Structured Activity Logs" FontSize="22" FontWeight="Bold" Foreground="White" />
-                                <TextBlock Text="Real-time audit log with automatic secret and password redaction." FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="📋 Copy All" Command="{Binding Logs.CopyAllLogsCommand}" Margin="0,0,8,0" />
-                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="🗑️ Clear Logs" Command="{Binding Logs.ClearLogsCommand}" />
-                            </StackPanel>
-                        </Grid>
+                        <TextBlock Text="سجلات البرنامج والتشخيص (Logs)" FontSize="22" FontWeight="Black" Foreground="White" />
+                        <TextBlock Text="تتبع الأوامر وتفاصيل عمليات التوقيع وتثبيت ملفات الـ IPA" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
 
-                        <TextBox Text="{Binding Logs.FilterQuery, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,10" Tag="Search logs..." />
-
-                        <Border Style="{StaticResource CardStyle}" Height="400" Padding="8">
-                            <ListBox ItemsSource="{Binding Logs.FilteredLogs}" Background="Transparent" BorderThickness="0" FontFamily="Consolas" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                        <Border Style="{StaticResource CardStyle}">
+                            <TextBox Text="{Binding Logs.LogContent}" IsReadOnly="True" FontFamily="Consolas" FontSize="11" Height="420" Background="#0A0E1A" Foreground="#A7F3D0" BorderThickness="0" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
                         </Border>
                     </StackPanel>
 
-                    <!-- Page 8: Settings View -->
+                    <!-- ======================================================== -->
+                    <!-- PAGE 8: SETTINGS -->
+                    <!-- ======================================================== -->
                     <StackPanel>
                         <StackPanel.Style>
                             <Style TargetType="StackPanel">
@@ -805,8 +827,8 @@
                             </Style>
                         </StackPanel.Style>
 
-                        <TextBlock Text="Application Settings" FontSize="22" FontWeight="Bold" Foreground="White" />
-                        <TextBlock Text="Configure SideLink preferences and backend verification endpoints." FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
+                        <TextBlock Text="إعدادات البرنامج (Application Settings)" FontSize="22" FontWeight="Black" Foreground="White" />
+                        <TextBlock Text="تخصيص تفضيلات SideLink وبوابات الاتصال بالخادم" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
 
                         <Border Style="{StaticResource CardStyle}">
                             <StackPanel>
@@ -814,10 +836,10 @@
                                 <TextBox Text="{Binding Settings.VerificationBackendUrl}" Margin="0,0,0,16" />
 
                                 <TextBlock Text="Application Version:" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,2" />
-                                <TextBlock Text="{Binding Settings.VersionString}" FontWeight="SemiBold" FontSize="13" Foreground="White" Margin="0,0,0,16" />
+                                <TextBlock Text="SideLink v1.0.0 (Windows x64 Stable)" FontWeight="Bold" FontSize="13" Foreground="White" Margin="0,0,0,16" />
 
-                                <TextBlock Text="Privacy &amp; Security Policy:" FontSize="13" FontWeight="Bold" Foreground="White" Margin="0,0,0,4" />
-                                <TextBlock Text="SideLink does not harvest personal analytics or log plaintext credentials. All communications use TLS/HTTPS encryption." FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" />
+                                <TextBlock Text="سياسة الأمان والخصوصية:" FontSize="13" FontWeight="Bold" Foreground="White" Margin="0,0,0,4" />
+                                <TextBlock Text="البرنامج لا يقوم بجمع أو إرسال أي كلمات سر أو بيانات Apple ID إلى أي خادم خارجي. كافة التوقيعات وعمليات التثبيت تتم محلياً 100% على جهازك." FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" LineHeight="18" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -827,7 +849,7 @@
             <!-- ======================================================== -->
             <!-- MANDATORY LINK UNLOCK LAUNCH GATE (Full Modal Overlay) -->
             <!-- ======================================================== -->
-            <Grid Grid.Row="1" Background="#F0090F1E" Panel.ZIndex="999">
+            <Grid Grid.Row="1" Background="#E6080C15" Panel.ZIndex="999">
                 <Grid.Style>
                     <Style TargetType="Grid">
                         <Setter Property="Visibility" Value="Visible" />
@@ -840,35 +862,35 @@
                 </Grid.Style>
 
                 <!-- Center Modal Card -->
-                <Border Width="520" 
+                <Border Width="500" 
                         Background="{StaticResource CardBgBrush}" 
                         BorderBrush="{StaticResource CardBorderBrush}" 
                         BorderThickness="1" 
-                        CornerRadius="16" 
+                        CornerRadius="18" 
                         Padding="36" 
                         HorizontalAlignment="Center" 
                         VerticalAlignment="Center">
                     <StackPanel HorizontalAlignment="Center">
                         <!-- Official SideLink Logo -->
-                        <Border Width="80" Height="80" CornerRadius="18" Margin="0,0,0,16" HorizontalAlignment="Center" ClipToBounds="True">
-                            <Image Source="/Assets/logo.png" RenderOptions.BitmapScalingMode="HighQuality" Stretch="UniformToFill" />
+                        <Border Width="72" Height="72" CornerRadius="18" Background="#1D2A45" Margin="0,0,0,16" HorizontalAlignment="Center">
+                            <Image Source="/Assets/logo.png" Width="52" Height="52" RenderOptions.BitmapScalingMode="HighQuality" Stretch="Uniform" VerticalAlignment="Center" HorizontalAlignment="Center" />
                         </Border>
 
-                        <TextBlock Text="SideLink Launch Verification" FontSize="22" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                        <TextBlock Text="One-step web verification is required to authorize this application session." FontSize="13" Foreground="{StaticResource TextMutedBrush}" TextAlignment="Center" Margin="0,8,0,20" TextWrapping="Wrap" />
+                        <TextBlock Text="تأكيد التحقق السريع من SideLink" FontSize="20" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                        <TextBlock Text="يلزم إجراء خطوة تحقق سريعة عبر المتصفح لمرة واحدة عند بدء التشغيل لتأمين جلسة العمل." FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextAlignment="Center" Margin="0,6,0,20" TextWrapping="Wrap" />
 
                         <!-- Session Info Box -->
-                        <Border Background="#0F172A" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,20">
+                        <Border Background="{StaticResource InputBgBrush}" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="14,10" Margin="0,0,0,20">
                             <StackPanel>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="Session Status:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock Grid.Column="1" Text="10:00 Remaining" FontSize="11" Foreground="#38BDF8" FontFamily="Consolas" />
+                                    <TextBlock Text="حالة الجلسة:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
+                                    <TextBlock Grid.Column="1" Text="10:00 متبقية" FontSize="11" Foreground="#38BDF8" FontFamily="Consolas" />
                                 </Grid>
-                                <TextBlock Text="{Binding LinkUnlock.StatusText}" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextWhiteBrush}" Margin="0,4,0,0" />
+                                <TextBlock Text="{Binding LinkUnlock.StatusText}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextWhiteBrush}" Margin="0,4,0,0" />
                                 <TextBlock Text="{Binding LinkUnlock.SessionId, StringFormat='ID: {0}'}" FontSize="10" Foreground="#64748B" FontFamily="Consolas" Margin="0,4,0,0" />
                             </StackPanel>
                         </Border>
@@ -890,19 +912,20 @@
 
                         <!-- Action Buttons -->
                         <Button Style="{StaticResource PrimaryButtonStyle}" 
-                                Content="🌐 Open Verification Page in Browser" 
+                                Content="🌐 فتح صفحة التحقق في المتصفح" 
                                 Command="{Binding LinkUnlock.OpenBrowserCommand}" 
                                 Padding="20,12" 
                                 FontSize="14" 
+                                FontWeight="Bold"
                                 Margin="0,0,0,10" />
 
                         <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                Content="🔄 Check Verification Status Now" 
+                                Content="🔄 فحص حالة التحقق الآن" 
                                 Command="{Binding LinkUnlock.CheckStatusNowCommand}" 
                                 Padding="16,9" />
 
                         <!-- Retry button when expired -->
-                        <Button Content="🔁 Start New Verification Session" 
+                        <Button Content="🔁 بدء جلسة تحقق جديدة" 
                                 Command="{Binding LinkUnlock.RestartVerificationCommand}" 
                                 Margin="0,10,0,0">
                             <Button.Style>

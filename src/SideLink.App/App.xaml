@@ -7,47 +7,77 @@
     <Application.Resources>
         <ResourceDictionary>
             <!-- Modern Color Palette -->
-            <SolidColorBrush x:Key="BgDarkBrush" Color="#0B1120" />
-            <SolidColorBrush x:Key="CardBgBrush" Color="#1E293B" />
-            <SolidColorBrush x:Key="CardBorderBrush" Color="#334155" />
+            <SolidColorBrush x:Key="BgDarkBrush" Color="#080C15" />
+            <SolidColorBrush x:Key="SidebarBgBrush" Color="#0D1322" />
+            <SolidColorBrush x:Key="CardBgBrush" Color="#131B2E" />
+            <SolidColorBrush x:Key="CardBgElevatedBrush" Color="#1A243B" />
+            <SolidColorBrush x:Key="CardBorderBrush" Color="#1E2C48" />
+            <SolidColorBrush x:Key="CardBorderHoverBrush" Color="#3B82F6" />
             <SolidColorBrush x:Key="PrimaryBlueBrush" Color="#2563EB" />
             <SolidColorBrush x:Key="PrimaryBlueHoverBrush" Color="#3B82F6" />
+            <SolidColorBrush x:Key="AccentIndigoBrush" Color="#4F46E5" />
             <SolidColorBrush x:Key="TextWhiteBrush" Color="#F8FAFC" />
             <SolidColorBrush x:Key="TextMutedBrush" Color="#94A3B8" />
+            <SolidColorBrush x:Key="TextSubtleBrush" Color="#64748B" />
             <SolidColorBrush x:Key="SuccessGreenBrush" Color="#10B981" />
             <SolidColorBrush x:Key="WarningAmberBrush" Color="#F59E0B" />
             <SolidColorBrush x:Key="DangerRedBrush" Color="#EF4444" />
-            <SolidColorBrush x:Key="SidebarBgBrush" Color="#0F172A" />
+            <SolidColorBrush x:Key="InputBgBrush" Color="#0A0E1A" />
+
+            <!-- Gradients -->
+            <LinearGradientBrush x:Key="PrimaryGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#2563EB" Offset="0" />
+                <GradientStop Color="#4F46E5" Offset="1" />
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="PrimaryHoverGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#3B82F6" Offset="0" />
+                <GradientStop Color="#6366F1" Offset="1" />
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="CardGradient" StartPoint="0,0" EndPoint="0,1">
+                <GradientStop Color="#16223A" Offset="0" />
+                <GradientStop Color="#101728" Offset="1" />
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="ActiveNavGradient" StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#1D2A45" Offset="0" />
+                <GradientStop Color="#131D33" Offset="1" />
+            </LinearGradientBrush>
 
             <!-- Global Control Styles -->
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}" />
-                <Setter Property="FontFamily" Value="Segoe UI, Segoe UI Variable, Arial" />
+                <Setter Property="FontFamily" Value="Segoe UI Variable Text, Segoe UI, SF Pro Display, Arial" />
             </Style>
 
-            <!-- Modern Flat Button -->
+            <!-- Modern Primary Button -->
             <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="{StaticResource PrimaryBlueBrush}" />
+                <Setter Property="Background" Value="{StaticResource PrimaryGradient}" />
                 <Setter Property="Foreground" Value="White" />
                 <Setter Property="FontWeight" Value="SemiBold" />
                 <Setter Property="FontSize" Value="13" />
-                <Setter Property="Padding" Value="14,8" />
+                <Setter Property="Padding" Value="16,9" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}"
-                                    CornerRadius="8"
+                            <Border x:Name="btnBorder"
+                                    Background="{TemplateBinding Background}"
+                                    CornerRadius="10"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{StaticResource PrimaryBlueHoverBrush}" />
+                                    <Setter TargetName="btnBorder" Property="Background" Value="{StaticResource PrimaryHoverGradient}" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="btnBorder" Property="Opacity" Value="0.85" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="Opacity" Value="0.5" />
+                                    <Setter TargetName="btnBorder" Property="Opacity" Value="0.45" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -55,28 +85,37 @@
                 </Setter>
             </Style>
 
-            <!-- Secondary Outline Button -->
+            <!-- Modern Secondary / Outline Button -->
             <Style x:Key="SecondaryButtonStyle" TargetType="Button">
-                <Setter Property="Background" Value="#1E293B" />
+                <Setter Property="Background" Value="#131D31" />
                 <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="FontSize" Value="13" />
-                <Setter Property="Padding" Value="12,7" />
+                <Setter Property="FontWeight" Value="Medium" />
+                <Setter Property="Padding" Value="14,8" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="8"
+                                    CornerRadius="10"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#334155" />
+                                    <Setter TargetName="border" Property="Background" Value="#1E2C48" />
+                                    <Setter TargetName="border" Property="BorderBrush" Value="#3B82F6" />
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.85" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter TargetName="border" Property="Opacity" Value="0.4" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -84,35 +123,45 @@
                 </Setter>
             </Style>
 
-            <!-- Modern TextBox -->
+            <!-- Modern Input TextBox -->
             <Style TargetType="TextBox">
-                <Setter Property="Background" Value="#0F172A" />
+                <Setter Property="Background" Value="{StaticResource InputBgBrush}" />
                 <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="Padding" Value="10,6" />
+                <Setter Property="Padding" Value="12,8" />
                 <Setter Property="FontSize" Value="13" />
+                <Setter Property="CaretBrush" Value="#38BDF8" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="TextBox">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="txtBorder"
+                                    Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="6">
+                                    CornerRadius="8">
                                 <ScrollViewer x:Name="PART_ContentHost" Margin="2" />
                             </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="txtBorder" Property="BorderBrush" Value="#334B75" />
+                                </Trigger>
+                                <Trigger Property="IsFocused" Value="True">
+                                    <Setter TargetName="txtBorder" Property="BorderBrush" Value="#3B82F6" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
             </Style>
 
-            <!-- Nav Button -->
+            <!-- Base Nav Button -->
             <Style x:Key="NavButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
-                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontWeight" Value="Medium" />
                 <Setter Property="FontSize" Value="13" />
-                <Setter Property="Padding" Value="16,11" />
+                <Setter Property="Padding" Value="14,10" />
                 <Setter Property="HorizontalContentAlignment" Value="Left" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="BorderThickness" Value="0" />
@@ -121,15 +170,17 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="border"
                                     Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
                                     CornerRadius="8"
-                                    Margin="6,2"
+                                    Margin="8,2"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" 
                                                   VerticalAlignment="Center" />
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#1E293B" />
+                                    <Setter TargetName="border" Property="Background" Value="#172138" />
                                     <Setter Property="Foreground" Value="White" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
@@ -138,13 +189,61 @@
                 </Setter>
             </Style>
 
-            <!-- Card Border -->
+            <!-- Card Style -->
             <Style x:Key="CardStyle" TargetType="Border">
                 <Setter Property="Background" Value="{StaticResource CardBgBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource CardBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="12" />
-                <Setter Property="Padding" Value="18" />
+                <Setter Property="CornerRadius" Value="14" />
+                <Setter Property="Padding" Value="20" />
+            </Style>
+
+            <!-- Modern Progress Bar -->
+            <Style TargetType="ProgressBar">
+                <Setter Property="Height" Value="8" />
+                <Setter Property="Background" Value="#0A0E1A" />
+                <Setter Property="Foreground" Value="{StaticResource PrimaryGradient}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Border x:Name="PART_Track" 
+                                    Background="{TemplateBinding Background}" 
+                                    CornerRadius="4" 
+                                    ClipToBounds="True">
+                                <Border x:Name="PART_Indicator" 
+                                        Background="{TemplateBinding Foreground}" 
+                                        HorizontalAlignment="Left" 
+                                        CornerRadius="4" />
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- Minimalist Sleek ScrollBar Style -->
+            <Style TargetType="ScrollBar">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Width" Value="6" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ScrollBar">
+                            <Grid Background="Transparent">
+                                <Track x:Name="PART_Track" IsDirectionReversed="true">
+                                    <Track.Thumb>
+                                        <Thumb Background="#2A3B5E">
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Border Background="{TemplateBinding Background}" CornerRadius="3" />
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>
