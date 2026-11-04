@@ -72,6 +72,7 @@ public interface ILinkUnlockService
     VerificationSession? CurrentSession { get; }
     event EventHandler<bool>? SessionUnlockStateChanged;
 
+    bool IsMachineAlreadyAuthorized();
     Task<VerificationSession> CreateSessionAsync(CancellationToken cancellationToken = default);
     Task<VerificationStatus> CheckSessionStatusAsync(string sessionId, CancellationToken cancellationToken = default);
     Task<bool> AuthorizeAndUnlockAsync(string sessionId, CancellationToken cancellationToken = default);

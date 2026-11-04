@@ -270,56 +270,66 @@ public class EmbeddedVerificationServer : IDisposable
         res.ContentType = "text/html; charset=utf-8";
 
         string html = @"<!DOCTYPE html>
-<html lang=""en"">
+<html lang=""ar"" dir=""rtl"">
 <head>
     <meta charset=""UTF-8"">
-    <meta name=""viewport"" content=""width""=device-width, initial-scale=1.0"">
-    <title>SideLink — Launch Verification</title>
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>SideLink — تأكيد جلسة التشغيل</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        body { background: #090e17; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
-        .card { background: #131d2e; border: 1px solid #1e293b; border-radius: 20px; padding: 40px 32px; max-width: 460px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
-        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1, #06b6d4); }
-        .icon-circle { width: 68px; height: 68px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 20px; }
-        h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: #ffffff; }
-        p { font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px; }
-        .session-box { background: #0b111c; border: 1px solid #1e293b; border-radius: 10px; padding: 12px; font-size: 12px; color: #64748b; font-family: monospace; margin-bottom: 24px; word-break: break-all; }
-        .btn { background: #2563eb; color: white; border: none; border-radius: 12px; padding: 14px 24px; font-size: 15px; font-weight: 600; width: 100%; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(37,99,235,0.4); display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn:hover { background: #1d4ed8; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        body { background: #030712; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .card { background: #0f172a; border: 1px solid #1e293b; border-radius: 24px; padding: 36px 28px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7); position: relative; overflow: hidden; }
+        .accent-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #3b82f6, #6366f1, #06b6d4); }
+        .icon-circle { width: 68px; height: 68px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 18px; }
+        h1 { font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #ffffff; }
+        p { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px; }
+        .session-box { background: #020617; border: 1px solid #1e293b; border-radius: 10px; padding: 10px; font-size: 11px; color: #64748b; font-family: monospace; margin-bottom: 22px; word-break: break-all; }
+        .btn { background: linear-gradient(to right, #2563eb, #4f46e5); color: white; border: 1px solid rgba(147,197,253,0.3); border-radius: 14px; padding: 14px 20px; font-size: 14px; font-weight: 700; width: 100%; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 14px rgba(37,99,235,0.4); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:hover { opacity: 0.95; transform: scale(0.99); }
         .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .success-box { display: none; padding: 20px; text-align: center; }
-        .success-icon { width: 64px; height: 64px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 16px; color: #34d399; }
+        .success-box { display: none; padding: 10px 0; text-align: center; }
+        .success-icon { width: 72px; height: 72px; background: rgba(16,185,129,0.18); border: 2px solid rgba(52,211,153,0.6); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 34px; margin: 0 auto 16px; color: #34d399; }
         .footer { font-size: 11px; color: #475569; margin-top: 24px; }
+        .progress-bar { height: 4px; background: #1e293b; border-radius: 2px; overflow: hidden; margin-bottom: 16px; display: none; }
+        .progress-fill { height: 100%; width: 0%; background: #38bdf8; transition: width 0.4s ease; }
     </style>
 </head>
 <body>
     <div class=""card"">
+        <div class=""accent-bar""></div>
         <div id=""verifyView"">
             <div class=""icon-circle"">🛡️</div>
-            <h1>SideLink Verification</h1>
-            <p>One-step launch authorization gateway for SideLink iOS Sideloading &amp; Refresh Manager.</p>
-            <div class=""session-box"" id=""sessionDisplay"">Loading session...</div>
+            <h1>تأكيد جلسة تشغيل SideLink</h1>
+            <p>يلزم إجراء خطوة تحقق سريعة لمرة واحدة لتأمين جلسة العمل وفتح البرنامج على الكمبيوتر.</p>
+            <div class=""session-box"" id=""sessionDisplay"">جاري قراءة معرّف الجلسة...</div>
+            <div class=""progress-bar"" id=""progBar""><div class=""progress-fill"" id=""progFill""></div></div>
             <button class=""btn"" id=""verifyBtn"" onclick=""handleVerify()"">
-                <span>Complete Verification</span> ➔
+                <span>🛡️ تأكيد التحقق وفتح البرنامج الآن</span>
             </button>
         </div>
         <div id=""successView"" class=""success-box"">
             <div class=""success-icon"">✓</div>
-            <h2 style=""font-size:20px; font-weight:700; color:#fff; margin-bottom:8px;"">Application Unlocked!</h2>
-            <p style=""color:#cbd5e1;"">Verification confirmed. You can now close this browser tab and return to SideLink.</p>
+            <h2 style=""font-size:20px; font-weight:800; color:#fff; margin-bottom:8px;"">تم تأكيد الجلسة بنجاح!</h2>
+            <p style=""color:#a7f3d0;"">تم التحقق وفك قفل البرنامج محلياً. يمكنك الآن إغلاق هذه الصفحة والبدء في استخدام SideLink فوراً.</p>
         </div>
-        <div class=""footer"">SideLink &bull; Zero credentials stored on cloud &bull; End-to-end local security</div>
+        <div class=""footer"">SideLink &bull; أمان مشفر محلي بالكامل &bull; ترخيص دائم لهذا الجهاز</div>
     </div>
     <script>
         const params = new URLSearchParams(window.location.search);
         const session = params.get('session') || '';
         const nonce = params.get('nonce') || '';
-        document.getElementById('sessionDisplay').innerText = 'Session: ' + (session ? session.slice(0, 20) + '...' : 'Local');
+        document.getElementById('sessionDisplay').innerText = 'Session ID: ' + (session ? session.slice(0, 24) + '...' : 'Local');
 
         async function handleVerify() {
             const btn = document.getElementById('verifyBtn');
+            const pBar = document.getElementById('progBar');
+            const pFill = document.getElementById('progFill');
             btn.disabled = true;
-            btn.innerHTML = 'Verifying...';
+            btn.innerHTML = 'جاري التحقق والمصادقة المشفرة...';
+            pBar.style.display = 'block';
+            pFill.style.width = '35%';
+
+            setTimeout(() => { pFill.style.width = '70%'; }, 350);
 
             try {
                 const res = await fetch('/api/verification/sessions/' + session + '/complete', {
@@ -327,19 +337,24 @@ public class EmbeddedVerificationServer : IDisposable
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ nonce })
                 });
+                pFill.style.width = '100%';
                 const data = await res.json();
                 if (res.ok && data.success) {
-                    document.getElementById('verifyView').style.display = 'none';
-                    document.getElementById('successView').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('verifyView').style.display = 'none';
+                        document.getElementById('successView').style.display = 'block';
+                    }, 400);
                 } else {
-                    alert('Verification error: ' + (data.error || 'Server rejected'));
+                    alert('تعذر التحقق: ' + (data.error || 'Server rejected'));
                     btn.disabled = false;
-                    btn.innerHTML = 'Retry Verification';
+                    btn.innerHTML = 'إعادة المحاولة';
+                    pBar.style.display = 'none';
                 }
             } catch (err) {
-                alert('Network error connecting to verification service.');
+                alert('حدث خطأ أثناء الاتصال بمحرك التحقق المحلي.');
                 btn.disabled = false;
-                btn.innerHTML = 'Retry Verification';
+                btn.innerHTML = 'إعادة المحاولة';
+                pBar.style.display = 'none';
             }
         }
     </script>

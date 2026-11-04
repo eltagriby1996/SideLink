@@ -48,6 +48,17 @@ public partial class LinkUnlockViewModel : ObservableObject
         _logger = logger;
     }
 
+    public bool CheckMachineAuthorized()
+    {
+        if (_linkUnlockService.IsMachineAlreadyAuthorized())
+        {
+            IsUnlocked = true;
+            IsVerifying = false;
+            return true;
+        }
+        return false;
+    }
+
     public async Task InitializeSessionAsync()
     {
         try

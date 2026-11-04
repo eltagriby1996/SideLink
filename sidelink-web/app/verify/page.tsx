@@ -108,6 +108,15 @@ function VerifyContent() {
     }
 
     try {
+      // Notify both remote backend and local desktop embedded server for instant zero-latency unlock
+      try {
+        fetch(`http://127.0.0.1:5055/api/verification/sessions/${sessionId}/complete`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nonce }),
+        }).catch(() => {});
+      } catch {}
+
       const resPromise = fetch(`/api/verification/sessions/${sessionId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

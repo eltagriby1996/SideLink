@@ -59,7 +59,7 @@ public partial class App : Application
 
             string backendBaseUrl = Environment.GetEnvironmentVariable("SIDELINK_BACKEND_URL") 
                 ?? Environment.GetEnvironmentVariable("SideLink_BACKEND_URL") 
-                ?? "https://sidelink-web.vercel.app";
+                ?? "http://127.0.0.1:5055";
             string verificationKey = Environment.GetEnvironmentVariable("SIDELINK_VERIFY_KEY") 
                 ?? Environment.GetEnvironmentVariable("SideLink_VERIFY_KEY") 
                 ?? "SideLink-Secure-Verification-MasterKey-2026-X89!";

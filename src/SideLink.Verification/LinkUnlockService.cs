@@ -1,3 +1,4 @@
+using System.IO;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -75,41 +76,87 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         _embeddedServer = new EmbeddedVerificationServer(_verificationKey, logger);
     }
 
+    private static string GetLicenseFilePath()
+    {
+        string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideLink");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "unlocked.lic");
+    }
+
+    public bool IsMachineAlreadyAuthorized()
+    {
+        try
+        {
+            string licensePath = GetLicenseFilePath();
+            if (!File.Exists(licensePath))
+                return false;
+
+            byte[] encrypted = File.ReadAllBytes(licensePath);
+            byte[] entropy = Encoding.UTF8.GetBytes("SideLink-Machine-Unlock-v1");
+            byte[] plainBytes = ProtectedData.Unprotect(encrypted, entropy, DataProtectionScope.CurrentUser);
+            string plain = Encoding.UTF8.GetString(plainBytes);
+
+            string[] parts = plain.Split('|');
+            if (parts.Length >= 2)
+            {
+                string machine = parts[0];
+                string user = parts[1];
+                if (string.Equals(machine, Environment.MachineName, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(user, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                {
+                    _isUnlocked = true;
+                    _logger.LogInformation("Machine already permanently authorized via local DPAPI license.");
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error reading persistent license: {Msg}", ex.Message);
+        }
+
+        return false;
+    }
+
+    private void SavePersistentUnlockLicense(string token)
+    {
+        try
+        {
+            string licensePath = GetLicenseFilePath();
+            string machineInfo = $"{Environment.MachineName}|{Environment.UserName}|{DateTime.UtcNow:O}|{token}";
+            byte[] plainBytes = Encoding.UTF8.GetBytes(machineInfo);
+            byte[] entropy = Encoding.UTF8.GetBytes("SideLink-Machine-Unlock-v1");
+            byte[] encrypted = ProtectedData.Protect(plainBytes, entropy, DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(licensePath, encrypted);
+            _logger.LogInformation("Persistent machine authorization license saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to save persistent license: {Msg}", ex.Message);
+        }
+    }
+
     public async Task<VerificationSession> CreateSessionAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            _logger.LogInformation("Creating new Link Unlock verification session via {BaseUrl}...", _baseUrl);
+            // Ensure zero-latency local embedded server is running
+            EnsureEmbeddedServerStarted();
+            _baseUrl = _embeddedServer.BaseUrl;
 
-            HttpResponseMessage response;
-            try
-            {
-                using var quickCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                quickCts.CancelAfter(TimeSpan.FromSeconds(2));
-                response = await _httpClient.PostAsJsonAsync(
-                    $"{_baseUrl}/api/verification/sessions",
-                    new { clientVersion = "1.0.0", platform = "windows-x64" },
-                    quickCts.Token);
+            _logger.LogInformation("Creating reliable local verification session via {BaseUrl}...", _baseUrl);
 
-                response.EnsureSuccessStatusCode();
-            }
-            catch (Exception)
-            {
-                // If remote server unreachable, seamlessly fallback to built-in local verification server
-                EnsureEmbeddedServerStarted();
-                _logger.LogInformation("Remote server unreachable, seamlessly using embedded verification server at {Url}", _embeddedServer.BaseUrl);
-                _baseUrl = _embeddedServer.BaseUrl;
-                response = await _httpClient.PostAsJsonAsync(
-                    $"{_baseUrl}/api/verification/sessions",
-                    new { clientVersion = "1.0.0", platform = "windows-x64" },
-                    cancellationToken);
-                response.EnsureSuccessStatusCode();
-            }
+            var response = await _httpClient.PostAsJsonAsync(
+                $"{_baseUrl}/api/verification/sessions",
+                new { clientVersion = "1.0.0", platform = "windows-x64" },
+                cancellationToken);
+
+            response.EnsureSuccessStatusCode();
 
             var result = await response.Content.ReadFromJsonAsync<CreateSessionApiResponse>(cancellationToken: cancellationToken);
             if (result == null || string.IsNullOrWhiteSpace(result.SessionId))
             {
-                throw new InvalidOperationException("Invalid session creation response from backend.");
+                throw new InvalidOperationException("Invalid session creation response from embedded server.");
             }
 
             var session = new VerificationSession
@@ -126,7 +173,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
             lock (_lock)
             {
                 _currentSession = session;
-                _isUnlocked = false; // Always lock on new session
+                _isUnlocked = false;
             }
 
             _logger.LogInformation("Link Unlock session created: {SessionId}, expires at {Expires}", session.SessionId, session.ExpiresAt);
@@ -229,6 +276,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
                 }
 
                 IsSessionUnlocked = true;
+                SavePersistentUnlockLicense(authResult.Token);
                 _logger.LogInformation("Link Unlock verification validated. Application session is now UNLOCKED.");
                 return true;
             }

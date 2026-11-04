@@ -61,7 +61,19 @@ public partial class MainViewModel : ObservableObject
 
     public async Task InitializeAsync()
     {
-        // Fresh launch always requires verification
+        // Check if this machine is already permanently authorized
+        if (LinkUnlock.CheckMachineAuthorized())
+        {
+            IsAppUnlocked = true;
+            await _deviceService.StartMonitoringAsync();
+            CurrentDevice = _deviceService.CurrentDevice;
+            _ = Dashboard.InitializeAsync();
+            _ = InstalledApps.InitializeAsync();
+            _ = SigningRefresh.InitializeAsync();
+            return;
+        }
+
+        // First launch on new machine requires one-time unlock
         IsAppUnlocked = false;
 
         // Start device monitoring in background
