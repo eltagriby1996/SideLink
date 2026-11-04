@@ -82,16 +82,8 @@ export default function HomePage() {
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
           تثبيت تطبيقات iOS وتجديدها تلقائياً <br />
-          <span className="inline-flex items-baseline justify-center gap-2.5 sm:gap-4 mt-2">
-            <span className="animate-hero-word-1 bg-gradient-to-r from-blue-400 via-blue-300 to-indigo-300 bg-clip-text text-transparent drop-shadow-sm">
-              SideLink
-            </span>
-            <span className="animate-hero-word-2 text-indigo-200/80 font-bold text-3xl sm:text-5xl">
-              for
-            </span>
-            <span className="animate-hero-word-3 bg-gradient-to-r from-indigo-300 via-sky-300 to-cyan-400 bg-clip-text text-transparent drop-shadow-sm">
-              Windows
-            </span>
+          <span dir="ltr" className="hero-shimmer-text mt-2">
+            SideLink for Windows
           </span>
         </h1>
 
