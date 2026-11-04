@@ -1,4 +1,5 @@
 import React from 'react';
+import TypewriterTitle from '../components/TypewriterTitle';
 import {
   Smartphone,
   RefreshCw,
@@ -82,9 +83,7 @@ export default function HomePage() {
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
           تثبيت تطبيقات iOS وتجديدها تلقائياً <br />
-          <span dir="ltr" className="hero-shimmer-text mt-2">
-            SideLink for Windows
-          </span>
+          <TypewriterTitle text="SideLink for Windows" className="mt-2" />
         </h1>
 
         <p className="max-w-2xl mx-auto text-base sm:text-lg text-slate-300 leading-relaxed font-normal">
