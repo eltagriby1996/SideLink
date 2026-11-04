@@ -51,6 +51,9 @@ public partial class MainViewModel : ObservableObject
         LinkUnlock = linkUnlock;
         _deviceService = deviceService;
 
+        // Synchronously check persistent machine authorization on startup
+        _isAppUnlocked = linkUnlock.CheckMachineAuthorized();
+
         Dashboard.NavigationRequested += Navigate;
         LinkUnlock.VerificationCompleted += OnVerificationCompleted;
         _deviceService.DeviceStateChanged += (s, d) =>
@@ -64,9 +67,9 @@ public partial class MainViewModel : ObservableObject
         // Check if this machine is already permanently authorized
         if (LinkUnlock.CheckMachineAuthorized())
         {
-            IsAppUnlocked = true;
+            App.Current?.Dispatcher?.Invoke(() => IsAppUnlocked = true);
             await _deviceService.StartMonitoringAsync();
-            CurrentDevice = _deviceService.CurrentDevice;
+            App.Current?.Dispatcher?.Invoke(() => CurrentDevice = _deviceService.CurrentDevice);
             _ = Dashboard.InitializeAsync();
             _ = InstalledApps.InitializeAsync();
             _ = SigningRefresh.InitializeAsync();
@@ -74,11 +77,11 @@ public partial class MainViewModel : ObservableObject
         }
 
         // First launch on new machine requires one-time unlock
-        IsAppUnlocked = false;
+        App.Current?.Dispatcher?.Invoke(() => IsAppUnlocked = false);
 
         // Start device monitoring in background
         await _deviceService.StartMonitoringAsync();
-        CurrentDevice = _deviceService.CurrentDevice;
+        App.Current?.Dispatcher?.Invoke(() => CurrentDevice = _deviceService.CurrentDevice);
 
         // Initialize verification session
         await LinkUnlock.InitializeSessionAsync();
@@ -89,7 +92,7 @@ public partial class MainViewModel : ObservableObject
 
     private void OnVerificationCompleted()
     {
-        IsAppUnlocked = true;
+        App.Current?.Dispatcher?.Invoke(() => IsAppUnlocked = true);
         _ = Dashboard.InitializeAsync();
         _ = InstalledApps.InitializeAsync();
         _ = SigningRefresh.InitializeAsync();

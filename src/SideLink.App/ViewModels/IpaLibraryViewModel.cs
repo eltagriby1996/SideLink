@@ -104,15 +104,29 @@ public partial class IpaLibraryViewModel : ObservableObject
     [RelayCommand]
     public async Task BrowseForIpaAsync()
     {
-        var dialog = new OpenFileDialog
+        try
         {
-            Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",
-            Title = "Select iOS Application Archive (IPA)"
-        };
+            var dialog = new OpenFileDialog
+            {
+                Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",
+                Title = "اختر تطبيق الآيفون (Select iOS IPA Archive)"
+            };
 
-        if (dialog.ShowDialog() == true)
+            var owner = System.Windows.Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive) 
+                        ?? System.Windows.Application.Current?.MainWindow;
+            bool? result = owner != null ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+
+            if (result == true)
+            {
+                await LoadIpaFileAsync(dialog.FileName);
+            }
+        }
+        catch (Exception ex)
         {
-            await LoadIpaFileAsync(dialog.FileName);
+            _logger.LogError(ex, "Failed to open file dialog");
+            HasError = true;
+            ErrorMessage = "تعذر فتح نافذة اختيار الملفات: " + ex.Message;
+            StatusMessage = ErrorMessage;
         }
     }
 
@@ -124,7 +138,7 @@ public partial class IpaLibraryViewModel : ObservableObject
         IsInspecting = true;
         HasError = false;
         ErrorMessage = string.Empty;
-        StatusMessage = $"Inspecting archive: {Path.GetFileName(filePath)}...";
+        StatusMessage = $"جاري فحص حزمة التطبيق: {Path.GetFileName(filePath)}...";
 
         try
         {
@@ -132,22 +146,22 @@ public partial class IpaLibraryViewModel : ObservableObject
             if (!isValid)
             {
                 HasError = true;
-                ErrorMessage = "Invalid or corrupted IPA archive: missing Payload or Info.plist.";
-                StatusMessage = "Archive inspection failed.";
+                ErrorMessage = "ملف الـ IPA غير صالح أو تالف (مجلد Payload أو Info.plist غير موجود).";
+                StatusMessage = ErrorMessage;
                 return;
             }
 
             var metadata = await _ipaInspector.InspectIpaAsync(filePath);
             LoadedIpas.Insert(0, metadata);
             SelectedIpa = metadata;
-            StatusMessage = $"Loaded {metadata.EffectiveTitle} (v{metadata.Version}) successfully.";
+            StatusMessage = $"تم تحميل {metadata.EffectiveTitle} (الإصدار: {metadata.Version}) بنجاح!";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load IPA {Path}", filePath);
             HasError = true;
-            ErrorMessage = "Inspection error: " + ex.Message;
-            StatusMessage = "Failed to inspect IPA.";
+            ErrorMessage = "خطأ أثناء فحص التطبيق: " + ex.Message;
+            StatusMessage = ErrorMessage;
         }
         finally
         {
@@ -161,7 +175,8 @@ public partial class IpaLibraryViewModel : ObservableObject
         if (SelectedIpa == null)
         {
             HasError = true;
-            ErrorMessage = "No IPA file selected for installation.";
+            ErrorMessage = "يرجى اختيار أو سحب ملف IPA أولاً للتوقيع والتثبيت.";
+            StatusMessage = ErrorMessage;
             return;
         }
 
@@ -169,28 +184,31 @@ public partial class IpaLibraryViewModel : ObservableObject
         if (device == null || !device.IsConnected)
         {
             HasError = true;
-            ErrorMessage = "No iPhone connected. Connect your iPhone via USB first.";
+            ErrorMessage = "لا يوجد هاتف آيفون متصل. يرجى توصيل الآيفون بالكمبيوتر عبر كابل USB.";
+            StatusMessage = ErrorMessage;
             return;
         }
 
         if (device.IsLocked)
         {
             HasError = true;
-            ErrorMessage = "Your iPhone is locked with passcode. Please unlock your device.";
+            ErrorMessage = "الآيفون مقفل برمز مرور. يرجى فتح قفل الهاتف وإعادة المحاولة.";
+            StatusMessage = ErrorMessage;
             return;
         }
 
         if (!device.IsTrusted)
         {
             HasError = true;
-            ErrorMessage = "Your iPhone is not paired. Please unlock your iPhone and tap 'Trust This Computer'.";
+            ErrorMessage = "الهاتف غير مقترن. يرجى الضغط على 'الوثوق بهذا الكمبيوتر' على شاشة الآيفون.";
+            StatusMessage = ErrorMessage;
             return;
         }
 
         IsInstalling = true;
         HasError = false;
         InstallProgress = 0;
-        StatusMessage = "Preparing to sign and install application...";
+        StatusMessage = "جاري تحضير توقيع وتثبيت التطبيق على جهازك...";
 
         var progress = new Progress<AppOperationProgress>(p =>
         {

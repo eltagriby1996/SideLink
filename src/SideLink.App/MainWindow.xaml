@@ -233,18 +233,18 @@
                     <!-- PAGE 1: IPA LIBRARY (Primary App Experience) -->
                     <!-- ======================================================== -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPage}" Value="IpaLibrary">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentPage}" Value="IpaLibrary">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
 
+                        <StackPanel>
                             <!-- Header -->
                             <TextBlock Text="تثبيت وتوقيع تطبيقات iOS (IPA Package)" FontSize="24" FontWeight="Black" Foreground="White" />
                             <TextBlock Text="اسحب أي تطبيق أو لعبة بصيغة .ipa لتوقيعها بشهادتك الشخصية وتثبيتها مباشرة على هاتفك" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,20" />
@@ -258,6 +258,7 @@
                                     Margin="0,0,0,20" 
                                     AllowDrop="True" 
                                     Drop="IpaDropzone_Drop"
+                                    MouseLeftButtonUp="IpaDropzone_MouseLeftButtonUp"
                                     Cursor="Hand">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -376,7 +377,7 @@
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock Text="{Binding IpaLibrary.StatusMessage}" FontSize="12" Foreground="#FCA5A5" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding IpaLibrary.ErrorMessage}" FontSize="12" Foreground="#FCA5A5" TextWrapping="Wrap" />
                                     </Border>
 
                                     <!-- Install CTA Button -->
@@ -396,18 +397,18 @@
                     <!-- PAGE 2: DASHBOARD -->
                     <!-- ======================================================== -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPage}" Value="Dashboard">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentPage}" Value="Dashboard">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
 
+                        <StackPanel>
                             <!-- Welcome Banner -->
                             <TextBlock Text="لوحة التحكم الرئيسية (Dashboard)" FontSize="24" FontWeight="Black" Foreground="White" />
                             <TextBlock Text="نظرة عامة على حالة جهازك والتطبيقات المثبتة ودورات التجديد لشهادات الـ 7 أيام" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,20" />
@@ -605,18 +606,18 @@
                     <!-- PAGE 5: SIGNING & REFRESH CONFIGURATION -->
                     <!-- ======================================================== -->
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPage}" Value="SigningRefresh">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentPage}" Value="SigningRefresh">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ScrollViewer.Style>
 
+                        <StackPanel>
                             <TextBlock Text="إعدادات الحسابات والتوقيع (Apple ID &amp; Signing)" FontSize="22" FontWeight="Black" Foreground="White" />
                             <TextBlock Text="إدارة حسابات Apple ID المخصصة للتوقيع الرقمي والتجديد التلقائي لشهادات الـ 7 أيام" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,16" />
 
@@ -872,10 +873,12 @@
             <Grid Grid.Row="1" Background="#E6080C15" Panel.ZIndex="999">
                 <Grid.Style>
                     <Style TargetType="Grid">
-                        <Setter Property="Visibility" Value="Visible" />
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Setter Property="IsHitTestVisible" Value="False" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsAppUnlocked}" Value="True">
-                                <Setter Property="Visibility" Value="Collapsed" />
+                            <DataTrigger Binding="{Binding IsAppUnlocked}" Value="False">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Setter Property="IsHitTestVisible" Value="True" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>

@@ -63,4 +63,12 @@ public partial class MainWindow : Window
             }
         }
     }
+
+    private void IpaDropzone_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (DataContext is MainViewModel vm)
+        {
+            _ = vm.IpaLibrary.BrowseForIpaCommand.ExecuteAsync(null);
+        }
+    }
 }
