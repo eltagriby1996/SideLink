@@ -83,6 +83,8 @@ public partial class App : Application
             services.AddSingleton<IAppRepository>(sp =>
                 new SqliteAppRepository(dbPath, sp.GetRequiredService<ILogger<SqliteAppRepository>>()));
 
+            services.AddSingleton<ITelemetryClient, TelemetryClient>();
+
             // Domain Services
             services.AddSingleton<IDeviceDiscoveryService, DeviceDiscoveryService>();
             services.AddSingleton<IIpaInspectorService, IpaInspectorService>();

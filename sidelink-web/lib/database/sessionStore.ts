@@ -1,21 +1,6 @@
-export type VerificationSessionRecord = {
-  sessionId: string;
-  status: 'pending' | 'verified' | 'expired' | 'failed';
-  createdAt: Date;
-  expiresAt: Date;
-  verifiedAt: Date | null;
-  challengeNonce: string;
-  clientIp?: string;
-};
+import { dbInstance, VerificationSessionRecord } from './db';
 
-// Global in-memory / persistent session map
-// In serverless environments, globalThis preserves state during instance lifetime,
-// while also supporting PostgreSQL / Supabase / Neon connection string if DATABASE_URL is set.
-const globalSessions = (globalThis as unknown as { _SideLinkSessions?: Map<string, VerificationSessionRecord> });
-if (!globalSessions._SideLinkSessions) {
-  globalSessions._SideLinkSessions = new Map<string, VerificationSessionRecord>();
-}
-const sessions = globalSessions._SideLinkSessions;
+export type { VerificationSessionRecord };
 
 export async function createSessionRecord(
   sessionId: string,
@@ -23,102 +8,174 @@ export async function createSessionRecord(
   challengeNonce: string,
   clientIp?: string
 ): Promise<VerificationSessionRecord> {
-  const record: VerificationSessionRecord = {
+  const db = dbInstance.getDb();
+  const record = {
     sessionId,
-    status: 'pending',
-    createdAt: new Date(),
-    expiresAt,
+    status: 'pending' as const,
+    createdAt: new Date().toISOString(),
+    expiresAt: expiresAt.toISOString(),
     verifiedAt: null,
     challengeNonce,
     clientIp,
   };
 
-  sessions.set(sessionId, record);
-  return record ?? null;
+  db.sessions[sessionId] = record;
+  dbInstance.save();
+
+  return {
+    sessionId: record.sessionId,
+    status: record.status,
+    createdAt: new Date(record.createdAt),
+    expiresAt: new Date(record.expiresAt),
+    verifiedAt: null,
+    challengeNonce: record.challengeNonce,
+    clientIp: record.clientIp,
+  };
 }
 
 export async function getSessionRecord(sessionId: string): Promise<VerificationSessionRecord | null> {
-  let record = sessions.get(sessionId);
-  
-  // Resilient serverless recovery: create pending record so new lambda instances never 404
-  if (!record && sessionId) {
-    record = {
+  const db = dbInstance.getDb();
+  let raw = db.sessions[sessionId];
+
+  // Resilient recovery: create pending record if requested session is missing
+  if (!raw && sessionId) {
+    raw = {
       sessionId,
       status: 'pending',
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       verifiedAt: null,
       challengeNonce: '',
     };
-    sessions.set(sessionId, record);
+    db.sessions[sessionId] = raw;
+    dbInstance.save();
   }
 
-  // Check expiration dynamically
-  if (record && record.status === 'pending' && new Date() >= record.expiresAt) {
-    record.status = 'expired';
+  if (!raw) return null;
+
+  const expDate = new Date(raw.expiresAt);
+  if (raw.status === 'pending' && new Date() >= expDate) {
+    raw.status = 'expired';
+    dbInstance.save();
   }
 
-  return record ?? null;
+  return {
+    sessionId: raw.sessionId,
+    status: raw.status,
+    createdAt: new Date(raw.createdAt),
+    expiresAt: expDate,
+    verifiedAt: raw.verifiedAt ? new Date(raw.verifiedAt) : null,
+    challengeNonce: raw.challengeNonce,
+    clientIp: raw.clientIp,
+  };
 }
 
 export async function markSessionVerified(
   sessionId: string,
   providedNonce: string
 ): Promise<{ success: boolean; error?: string }> {
-  let record = await getSessionRecord(sessionId);
-  if (!record) {
-    record = await createSessionRecord(sessionId, new Date(Date.now() + 15 * 60 * 1000), providedNonce);
+  const db = dbInstance.getDb();
+  let raw = db.sessions[sessionId];
+
+  if (!raw) {
+    raw = {
+      sessionId,
+      status: 'verified',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      verifiedAt: new Date().toISOString(),
+      challengeNonce: providedNonce,
+    };
+    db.sessions[sessionId] = raw;
+  } else {
+    raw.status = 'verified';
+    raw.verifiedAt = new Date().toISOString();
+    raw.challengeNonce = providedNonce || raw.challengeNonce;
   }
 
-  record.status = 'verified';
-  record.verifiedAt = new Date();
-  record.challengeNonce = providedNonce;
-  sessions.set(sessionId, record);
-
+  dbInstance.save();
   return { success: true };
 }
 
 export async function getAllSessions(): Promise<VerificationSessionRecord[]> {
+  const db = dbInstance.getDb();
   const now = new Date();
   const list: VerificationSessionRecord[] = [];
-  for (const session of sessions.values()) {
-    if (session.status === 'pending' && now >= session.expiresAt) {
-      session.status = 'expired';
+
+  for (const raw of Object.values(db.sessions)) {
+    const expDate = new Date(raw.expiresAt);
+    if (raw.status === 'pending' && now >= expDate) {
+      raw.status = 'expired';
     }
-    list.push({ ...session });
+    list.push({
+      sessionId: raw.sessionId,
+      status: raw.status,
+      createdAt: new Date(raw.createdAt),
+      expiresAt: expDate,
+      verifiedAt: raw.verifiedAt ? new Date(raw.verifiedAt) : null,
+      challengeNonce: raw.challengeNonce,
+      clientIp: raw.clientIp,
+    });
   }
+
   return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function revokeSession(sessionId: string): Promise<boolean> {
-  const session = sessions.get(sessionId);
-  if (!session) return false;
-  session.status = 'failed';
+  const db = dbInstance.getDb();
+  const raw = db.sessions[sessionId];
+  if (!raw) return false;
+  raw.status = 'failed';
+  dbInstance.save();
   return true;
 }
 
 export async function manuallyVerifySession(sessionId: string): Promise<boolean> {
-  let session = sessions.get(sessionId);
-  if (!session) {
-    session = await createSessionRecord(sessionId, new Date(Date.now() + 15 * 60 * 1000), 'admin-manual');
+  const db = dbInstance.getDb();
+  let raw = db.sessions[sessionId];
+  if (!raw) {
+    raw = {
+      sessionId,
+      status: 'verified',
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      verifiedAt: new Date().toISOString(),
+      challengeNonce: 'admin-manual',
+    };
+    db.sessions[sessionId] = raw;
+  } else {
+    raw.status = 'verified';
+    raw.verifiedAt = new Date().toISOString();
   }
-  session.status = 'verified';
-  session.verifiedAt = new Date();
+  dbInstance.save();
   return true;
 }
 
 export async function deleteSession(sessionId: string): Promise<boolean> {
-  return sessions.delete(sessionId);
+  const db = dbInstance.getDb();
+  if (db.sessions[sessionId]) {
+    delete db.sessions[sessionId];
+    dbInstance.save();
+    return true;
+  }
+  return false;
 }
 
 export async function cleanupExpiredSessions(): Promise<number> {
+  const db = dbInstance.getDb();
   let cleaned = 0;
   const now = new Date();
-  for (const [id, session] of sessions.entries()) {
-    if (now.getTime() - session.expiresAt.getTime() > 30 * 60 * 1000) {
-      sessions.delete(id);
+
+  for (const [id, raw] of Object.entries(db.sessions)) {
+    const exp = new Date(raw.expiresAt);
+    if (now.getTime() - exp.getTime() > 30 * 60 * 1000) {
+      delete db.sessions[id];
       cleaned++;
     }
+  }
+
+  if (cleaned > 0) {
+    dbInstance.save();
   }
   return cleaned;
 }

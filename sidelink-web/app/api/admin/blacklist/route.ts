@@ -49,3 +49,4 @@ export async function DELETE(request: NextRequest) {
   const ok = removeBlacklistIp(ip);
   return NextResponse.json({ success: ok, message: ok ? `تم إلغاء حظر ${ip}.` : 'العنوان غير موجود في القائمة.' });
 }
+

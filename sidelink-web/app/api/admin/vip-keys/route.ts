@@ -54,3 +54,4 @@ export async function DELETE(request: NextRequest) {
   const ok = deleteVipKey(key);
   return NextResponse.json({ success: ok, message: ok ? 'تم مسح المفتاح نهائياً.' : 'المفتاح غير موجود.' });
 }
+

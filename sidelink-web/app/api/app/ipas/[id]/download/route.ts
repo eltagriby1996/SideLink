@@ -27,3 +27,4 @@ export async function GET(
     downloadsCount: ipa.downloadsCount + 1,
   });
 }
+

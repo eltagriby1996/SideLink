@@ -85,3 +85,4 @@ export async function DELETE(request: NextRequest) {
   const ok = deleteCuratedIpa(id);
   return NextResponse.json({ success: ok, message: ok ? 'تم حذف التطبيق بنجاح.' : 'التطبيق غير موجود.' });
 }
+

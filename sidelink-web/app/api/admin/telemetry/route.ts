@@ -24,3 +24,4 @@ export async function DELETE(request: NextRequest) {
   clearTelemetryEvents();
   return NextResponse.json({ success: true, message: 'تم مسح سجلات الـ Telemetry بنجاح.' });
 }
+

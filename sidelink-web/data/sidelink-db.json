@@ -1,0 +1,91 @@
+{
+  "config": {
+    "isVerificationEnabled": true,
+    "maintenanceMode": false,
+    "emergencyKillSwitch": false,
+    "killSwitchMessage": "تطبيق SideLink متوقف مؤقتاً لأعمال الصيانة والتطوير الأمني. سنعود للعمل قريباً.",
+    "latestVersion": "1.0.0",
+    "downloadUrl": "/downloads/SideLink-v1.0.0-win-x64.zip",
+    "forceUpdate": false,
+    "releaseNotes": "الإصدار الأول المستقر: دعم توقيع وتثبيت تطبيقات iOS بحسابات أبل الشخصية، مع شهادات RSA PKCS#8 ونظام التجديد التلقائي.",
+    "broadcastBanner": {
+      "enabled": true,
+      "message": "مرحباً بكم في SideLink v1.0.0! تم تفعيل دعم التوقيع الفوري لكافة أجهزة iOS 15 - 18.2.",
+      "type": "info",
+      "link": "https://github.com/eltagriby1996/SideLink",
+      "linkText": "عرض التحديثات"
+    }
+  },
+  "sessions": {},
+  "ipas": [
+    {
+      "id": "spotify-plus",
+      "name": "Spotify++",
+      "bundleId": "com.spotify.client",
+      "version": "9.0.56",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg",
+      "downloadUrl": "https://github.com/eltagriby1996/SideLink/releases/download/v1.0.0/Spotify.ipa",
+      "sizeMb": 80.8,
+      "category": "Music",
+      "description": "نسخة سبوتيفاي المعدلة مع تخطي الإعلانات وجودة الصوت القصوى بدون قيود.",
+      "downloadsCount": 0,
+      "isFeatured": true,
+      "createdAt": "2026-11-04T17:29:49.564Z"
+    },
+    {
+      "id": "sidestore",
+      "name": "SideStore Community",
+      "bundleId": "com.SideStore.SideStore",
+      "version": "0.5.8",
+      "iconUrl": "https://sidestore.io/images/logo.png",
+      "downloadUrl": "https://github.com/SideStore/SideStore/releases/latest",
+      "sizeMb": 24.1,
+      "category": "Utilities",
+      "description": "متجر التثبيت الذاتي والتجديد التلقائي عبر WireGuard VPN بدون حاسوب.",
+      "downloadsCount": 0,
+      "isFeatured": true,
+      "createdAt": "2026-11-04T17:29:49.565Z"
+    },
+    {
+      "id": "uyou-plus",
+      "name": "YouTube uYouEnhanced",
+      "bundleId": "com.google.ios.youtube",
+      "version": "19.45.2",
+      "iconUrl": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png",
+      "downloadUrl": "https://github.com/qnblackcat/uYouPlus/releases/latest",
+      "sizeMb": 125.4,
+      "category": "Social",
+      "description": "يوتيوب بدون إعلانات مع تشغيل في الخلفية وصورة داخل صورة وتنزيل المقاطع.",
+      "downloadsCount": 0,
+      "isFeatured": true,
+      "createdAt": "2026-11-04T17:29:49.565Z"
+    },
+    {
+      "id": "delta-emulator",
+      "name": "Delta Game Emulator",
+      "bundleId": "com.rileytestut.Delta",
+      "version": "1.6.2",
+      "iconUrl": "https://deltaemulator.com/assets/images/delta-icon.png",
+      "downloadUrl": "https://github.com/rileytestut/Delta/releases/latest",
+      "sizeMb": 58.2,
+      "category": "Emulators",
+      "description": "أفضل محاكي ألعاب ريترو لأجهزة iOS: يدعم GBA, GBC, SNES, N64, Nintendo DS.",
+      "downloadsCount": 0,
+      "isFeatured": false,
+      "createdAt": "2026-11-04T17:29:49.565Z"
+    }
+  ],
+  "vipKeys": [
+    {
+      "key": "SL-VIP-MASTER-2026",
+      "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
+      "createdAt": "2026-11-04T17:29:49.565Z",
+      "expiresAt": null,
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    }
+  ],
+  "blacklist": [],
+  "telemetry": []
+}

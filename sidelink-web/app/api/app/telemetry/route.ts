@@ -33,3 +33,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to record telemetry' }, { status: 500 });
   }
 }
+

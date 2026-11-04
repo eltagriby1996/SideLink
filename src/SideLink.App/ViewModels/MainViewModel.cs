@@ -8,6 +8,7 @@ namespace SideLink.App.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IDeviceDiscoveryService _deviceService;
+    private readonly ITelemetryClient _telemetryClient;
 
     [ObservableProperty]
     private string _currentPage = "Dashboard";
@@ -38,7 +39,8 @@ public partial class MainViewModel : ObservableObject
         LogsViewModel logs,
         SettingsViewModel settings,
         LinkUnlockViewModel linkUnlock,
-        IDeviceDiscoveryService deviceService)
+        IDeviceDiscoveryService deviceService,
+        ITelemetryClient telemetryClient)
     {
         Dashboard = dashboard;
         Devices = devices;
@@ -50,6 +52,7 @@ public partial class MainViewModel : ObservableObject
         Settings = settings;
         LinkUnlock = linkUnlock;
         _deviceService = deviceService;
+        _telemetryClient = telemetryClient;
 
         // Synchronously check persistent machine authorization on startup
         _isAppUnlocked = linkUnlock.CheckMachineAuthorized();
@@ -59,11 +62,16 @@ public partial class MainViewModel : ObservableObject
         _deviceService.DeviceStateChanged += (s, d) =>
         {
             App.Current?.Dispatcher?.Invoke(() => CurrentDevice = d);
+            if (d != null)
+            {
+                _ = _telemetryClient.TrackEventAsync("device_connected", "success", d.DeviceName, d.ProductVersion);
+            }
         };
     }
 
     public async Task InitializeAsync()
     {
+        _ = _telemetryClient.TrackEventAsync("app_launch", "success");
         // Check if this machine is already permanently authorized
         if (LinkUnlock.CheckMachineAuthorized())
         {
