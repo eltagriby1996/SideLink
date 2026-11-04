@@ -215,12 +215,11 @@ public class SigningService : ISigningService
 
             if (!codesignSuccess)
             {
-                _logger.LogWarning("rcodesign not available or failed; creating fallback CodeResources manifest.");
-                string codeSignatureDir = Path.Combine(appBundlePath, "_CodeSignature");
-                if (!Directory.Exists(codeSignatureDir))
-                    Directory.CreateDirectory(codeSignatureDir);
-
-                await Task.Run(() => GenerateCodeResourcesManifest(appBundlePath, codeSignatureDir), cancellationToken);
+                if (string.IsNullOrWhiteSpace(effectiveP12) || !File.Exists(effectiveP12))
+                {
+                    throw new InvalidOperationException($"لم يتم العثور على شهادة التوقيع والمفتاح الخاص (P12) لحساب ({config.AppleId}). يرجى التحقق من تسجيل الحساب أو استيراد ملف P12.");
+                }
+                throw new InvalidOperationException("فشلت عملية التوقيع الرقمي عبر rcodesign. يرجى التحقق من صحة الشهادة والملفات.");
             }
 
             // 6. Repackaging into IPA archive

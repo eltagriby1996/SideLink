@@ -121,7 +121,10 @@ public class AppleIdentityInfo
     public string? P12Path { get; set; }
     public List<string> ProvisionedDevices { get; set; } = new();
     public bool IsMatchingCurrentDevice { get; set; }
-    public bool IsReadyToSign => !string.IsNullOrEmpty(MobileProvisionPath) && System.IO.File.Exists(MobileProvisionPath);
+    public bool IsReadyToSign => !string.IsNullOrEmpty(MobileProvisionPath) && 
+                                 System.IO.File.Exists(MobileProvisionPath) &&
+                                 !string.IsNullOrEmpty(P12Path) &&
+                                 System.IO.File.Exists(P12Path);
 }
 
 public interface IAppleIdentityService

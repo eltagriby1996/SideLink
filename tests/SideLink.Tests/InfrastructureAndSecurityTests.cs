@@ -62,6 +62,47 @@ public class InfrastructureAndSecurityTests
     }
 
     [Fact]
+    public async Task AppleIdentityService_CanAutoConfigureAndExportP12()
+    {
+        string testCredDir = Path.Combine(Path.GetTempPath(), "sidelink_test_creds_" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            var store = new DpapiCredentialStore(testCredDir, NullLogger<DpapiCredentialStore>.Instance);
+            var identityService = new SideLink.Signing.AppleIdentityService(store, NullLogger<SideLink.Signing.AppleIdentityService>.Instance);
+            
+            var info = await identityService.AutoConfigureIdentityForAccountAsync("ahmedmenged100@gmail.com", "00008020-000E6D583C30003A");
+            info.Should().NotBeNull();
+            info.MobileProvisionPath.Should().NotBeNullOrEmpty();
+            File.Exists(info.MobileProvisionPath).Should().BeTrue();
+            info.P12Path.Should().NotBeNullOrEmpty();
+            File.Exists(info.P12Path).Should().BeTrue();
+            info.IsReadyToSign.Should().BeTrue();
+
+            // Test signing Spotify.ipa
+            if (File.Exists(@"E:\downloads\Spotify.ipa"))
+            {
+                var signingService = new SideLink.Signing.SigningService(store, identityService, NullLogger<SideLink.Signing.SigningService>.Instance);
+                var device = new SideLink.Core.Models.IosDevice { DeviceId = "00008020-000E6D583C30003A", DeviceName = "Ahmed iPhone" };
+                var cfg = new SideLink.Core.Models.SigningConfiguration
+                {
+                    Method = SideLink.Core.Models.SigningMethodType.PersonalTeam,
+                    AppleId = "ahmedmenged100@gmail.com",
+                    CustomBundleId = "com.spotify.client.sidelinkj",
+                    ModifyBundleId = true
+                };
+
+                string signedPath = await signingService.SignIpaAsync(@"E:\downloads\Spotify.ipa", cfg, device);
+                File.Exists(signedPath).Should().BeTrue();
+                new FileInfo(signedPath).Length.Should().BeGreaterThan(1000000);
+            }
+        }
+        finally
+        {
+            if (Directory.Exists(testCredDir)) Directory.Delete(testCredDir, true);
+        }
+    }
+
+    [Fact]
     public async Task DpapiCredentialStore_EncryptsAndDecryptsSecurely()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), $"SideLink_creds_{Guid.NewGuid():N}");

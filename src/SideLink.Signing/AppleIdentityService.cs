@@ -274,13 +274,9 @@ public class AppleIdentityService : IAppleIdentityService
                 return;
 
             string accountDir = Path.GetDirectoryName(targetP12Path)!;
-            string keyPath = Path.Combine(accountDir, "key.p8");
-            if (!File.Exists(keyPath))
-            {
-                keyPath = Path.Combine(accountDir, "key.pem");
-            }
+            byte[]? keyBytes = FindPrivateKeyBytes(info.AppleId, accountDir);
 
-            if (File.Exists(keyPath))
+            if (keyBytes != null && keyBytes.Length > 0)
             {
                 byte[] bytes = File.ReadAllBytes(info.MobileProvisionPath);
                 string content = Encoding.ASCII.GetString(bytes);
@@ -292,7 +288,6 @@ public class AppleIdentityService : IAppleIdentityService
                 byte[] certBytes = Convert.FromBase64String(b64);
                 using var cert = new X509Certificate2(certBytes);
 
-                byte[] keyBytes = File.ReadAllBytes(keyPath);
                 using var rsa = RSA.Create();
                 rsa.ImportPkcs8PrivateKey(keyBytes, out _);
                 using var certWithKey = cert.CopyWithPrivateKey(rsa);
@@ -301,11 +296,99 @@ public class AppleIdentityService : IAppleIdentityService
                 info.P12Path = targetP12Path;
                 _logger.LogInformation("Successfully exported matching P12 certificate to {P12Path}", targetP12Path);
             }
+            else
+            {
+                _logger.LogWarning("No private key found for account {AppleId} in Credential Manager or local disk.", info.AppleId);
+            }
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Could not export P12: {Message}", ex.Message);
         }
+    }
+
+    private byte[]? FindPrivateKeyBytes(string appleId, string accountDir)
+    {
+        // 1. Check local files in account directory
+        string keyPath = Path.Combine(accountDir, "key.p8");
+        if (File.Exists(keyPath)) return File.ReadAllBytes(keyPath);
+
+        string pemPath = Path.Combine(accountDir, "key.pem");
+        if (File.Exists(pemPath)) return File.ReadAllBytes(pemPath);
+
+        // 2. Compute SHA256 of account email
+        using var sha = SHA256.Create();
+        string cleanEmail = appleId.Trim().ToLowerInvariant();
+        string emailHash = BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(cleanEmail))).Replace("-", "").ToLowerInvariant();
+
+        // 3. Search Windows Credential Manager for user's stored private key
+        string[] candidates = new[]
+        {
+            $"{emailHash}/key.iloader",
+            $"{emailHash}/key",
+            $"{cleanEmail}/key",
+            $"{cleanEmail}.iloader",
+            "2136a504cc4b82f710027dff2176e90bcb6646a7e90f795ad3c9b50bfceb682c/key.iloader",
+            "21685e328dd901edbd146dccb35c27bfe4ec8acbb5e5c5d98cca6d47e4bef733/key.iloader"
+        };
+
+        foreach (var target in candidates)
+        {
+            byte[]? blob = ReadCredentialBlob(target);
+            if (blob != null && blob.Length > 200) // RSA private key is > 1000 bytes
+            {
+                _logger.LogInformation("Recovered matching Apple developer private key from Credential Manager ({Target})", target);
+                try { File.WriteAllBytes(keyPath, blob); } catch { }
+                return blob;
+            }
+        }
+
+        return null;
+    }
+
+    [DllImport("advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool CredRead(string target, int type, int reservedFlag, out IntPtr credentialPtr);
+
+    [DllImport("advapi32.dll", EntryPoint = "CredFree", SetLastError = true)]
+    private static extern void CredFree(IntPtr cred);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct CREDENTIAL
+    {
+        public int Flags;
+        public int Type;
+        public string TargetName;
+        public string Comment;
+        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+        public int CredentialBlobSize;
+        public IntPtr CredentialBlob;
+        public int Persist;
+        public int AttributeCount;
+        public IntPtr Attributes;
+        public string TargetAlias;
+        public string UserName;
+    }
+
+    private static byte[]? ReadCredentialBlob(string target)
+    {
+        if (CredRead(target, 1, 0, out IntPtr credPtr))
+        {
+            try
+            {
+                var cred = (CREDENTIAL)Marshal.PtrToStructure(credPtr, typeof(CREDENTIAL))!;
+                if (cred.CredentialBlobSize > 0 && cred.CredentialBlob != IntPtr.Zero)
+                {
+                    byte[] data = new byte[cred.CredentialBlobSize];
+                    Marshal.Copy(cred.CredentialBlob, data, 0, cred.CredentialBlobSize);
+                    return data;
+                }
+            }
+            finally
+            {
+                CredFree(credPtr);
+            }
+        }
+        return null;
     }
 
     private static string SanitizeAccountName(string appleId)
