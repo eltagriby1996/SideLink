@@ -1,16 +1,16 @@
 import React from 'react';
-import { 
-  Smartphone, 
-  RefreshCw, 
-  ShieldCheck, 
-  Download, 
-  AlertTriangle, 
-  ExternalLink, 
-  Cpu, 
-  Sparkles, 
-  Usb, 
-  Layers, 
-  KeyRound, 
+import {
+  Smartphone,
+  RefreshCw,
+  ShieldCheck,
+  Download,
+  AlertTriangle,
+  ExternalLink,
+  Cpu,
+  Sparkles,
+  Usb,
+  Layers,
+  KeyRound,
   ShieldAlert,
   HardDrive
 } from 'lucide-react';
@@ -30,10 +30,10 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img 
-              src="/logo.png" 
-              alt="SideLink Logo" 
-              className="w-9 h-9 rounded-xl shadow-lg shadow-blue-600/30 object-cover ring-1 ring-blue-500/30" 
+            <img
+              src="/logo.png"
+              alt="SideLink Logo"
+              className="w-9 h-9 rounded-xl shadow-lg shadow-blue-600/30 object-cover ring-1 ring-blue-500/30"
             />
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-xl tracking-tight text-white">
@@ -44,7 +44,7 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          
+
           <nav className="hidden md:flex items-center gap-6 text-sm text-slate-300 font-medium">
             <a href="#download" className="hover:text-white transition">
               تحميل الأداة

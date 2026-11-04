@@ -29,6 +29,9 @@ public partial class LinkUnlockViewModel : ObservableObject
     private bool _isUnlocked;
 
     [ObservableProperty]
+    private bool _isSuccessAnimation;
+
+    [ObservableProperty]
     private bool _hasError;
 
     [ObservableProperty]
@@ -194,23 +197,33 @@ public partial class LinkUnlockViewModel : ObservableObject
 
         bool authorized = await _linkUnlockService.AuthorizeAndUnlockAsync(SessionId);
 
-        App.Current?.Dispatcher?.Invoke(() =>
+        if (authorized)
         {
-            if (authorized)
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                IsSuccessAnimation = true;
+                IsVerifying = false;
+                StatusText = "✓ تم التحقق بنجاح! جاري فتح البرنامج...";
+            });
+
+            await Task.Delay(1300);
+
+            App.Current?.Dispatcher?.Invoke(() =>
             {
                 IsUnlocked = true;
-                IsVerifying = false;
-                StatusText = "Verification successful! Welcome to SideLink.";
                 VerificationCompleted?.Invoke();
-            }
-            else
+            });
+        }
+        else
+        {
+            App.Current?.Dispatcher?.Invoke(() =>
             {
                 HasError = true;
                 IsVerifying = false;
-                ErrorMessage = "Authorization token signature validation failed.";
-                StatusText = "Security validation failed.";
-            }
-        });
+                ErrorMessage = "فشل التحقق من توقيع تصريح الدخول الأمني.";
+                StatusText = "فشل التحقق الأمني.";
+            });
+        }
     }
 
     public void StopPolling()

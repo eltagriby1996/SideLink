@@ -910,35 +910,86 @@
                             <TextBlock Text="{Binding LinkUnlock.ErrorMessage}" FontSize="12" Foreground="#FCA5A5" TextWrapping="Wrap" />
                         </Border>
 
-                        <!-- Action Buttons -->
-                        <Button Style="{StaticResource PrimaryButtonStyle}" 
-                                Content="🌐 فتح صفحة التحقق في المتصفح" 
-                                Command="{Binding LinkUnlock.OpenBrowserCommand}" 
-                                Padding="20,12" 
-                                FontSize="14" 
-                                FontWeight="Bold"
-                                Margin="0,0,0,10" />
-
-                        <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                Content="🔄 فحص حالة التحقق الآن" 
-                                Command="{Binding LinkUnlock.CheckStatusNowCommand}" 
-                                Padding="16,9" />
-
-                        <!-- Retry button when expired -->
-                        <Button Content="🔁 بدء جلسة تحقق جديدة" 
-                                Command="{Binding LinkUnlock.RestartVerificationCommand}" 
-                                Margin="0,10,0,0">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                        <!-- Success Animation Card (Visible when verification completes) -->
+                        <Border Background="#064E3B" BorderBrush="#059669" BorderThickness="1.5" CornerRadius="14" Padding="20" Margin="0,0,0,16">
+                            <Border.Style>
+                                <Style TargetType="Border">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LinkUnlock.HasError}" Value="True">
+                                        <DataTrigger Binding="{Binding LinkUnlock.IsSuccessAnimation}" Value="True">
                                             <Setter Property="Visibility" Value="Visible" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </Button.Style>
-                        </Button>
+                            </Border.Style>
+                            <StackPanel HorizontalAlignment="Center">
+                                <Border Width="56" Height="56" CornerRadius="28" Background="#047857" BorderBrush="#34D399" BorderThickness="2" Margin="0,0,0,12" HorizontalAlignment="Center">
+                                    <TextBlock Text="✓" FontSize="28" FontWeight="Black" Foreground="#A7F3D0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock Text="تم تأكيد الجلسة بنجاح!" FontSize="17" FontWeight="Black" Foreground="White" HorizontalAlignment="Center" />
+                                <TextBlock Text="جاري فك قفل البرنامج والدخول إلى لوحة التحكم..." FontSize="12" Foreground="#A7F3D0" HorizontalAlignment="Center" Margin="0,6,0,10" />
+                                <ProgressBar IsIndeterminate="True" Height="4" Background="#064E3B" Foreground="#34D399" BorderThickness="0" Width="220" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Normal Action Buttons (Collapsed when SuccessAnimation == True) -->
+                        <StackPanel>
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LinkUnlock.IsSuccessAnimation}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                            <!-- Live Polling Progress Bar when verifying -->
+                            <StackPanel Margin="0,0,0,14">
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LinkUnlock.IsVerifying}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+                                <TextBlock Text="⚡ بانتظار إكمال التحقق في المتصفح تلقائياً..." FontSize="11" Foreground="#38BDF8" FontWeight="SemiBold" Margin="0,0,0,6" HorizontalAlignment="Center" />
+                                <ProgressBar IsIndeterminate="True" Height="4" Width="260" HorizontalAlignment="Center" />
+                            </StackPanel>
+
+                            <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                    Content="🌐 فتح صفحة التحقق في المتصفح" 
+                                    Command="{Binding LinkUnlock.OpenBrowserCommand}" 
+                                    Padding="20,12" 
+                                    FontSize="14" 
+                                    FontWeight="Bold"
+                                    Margin="0,0,0,10" />
+
+                            <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                    Content="🔄 فحص حالة التحقق الآن" 
+                                    Command="{Binding LinkUnlock.CheckStatusNowCommand}" 
+                                    Padding="16,9" />
+
+                            <!-- Retry button when expired -->
+                            <Button Content="🔁 بدء جلسة تحقق جديدة" 
+                                    Command="{Binding LinkUnlock.RestartVerificationCommand}" 
+                                    Margin="0,10,0,0">
+                                <Button.Style>
+                                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LinkUnlock.HasError}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </Grid>

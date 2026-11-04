@@ -7,15 +7,14 @@ import {
   Lock, 
   CheckCircle2, 
   Clock, 
-  ExternalLink, 
-  ArrowRight, 
   ArrowLeft,
   ShieldAlert, 
   Sparkles, 
-  Laptop, 
   Key, 
   RefreshCw,
-  Check
+  Check,
+  Cpu,
+  Fingerprint
 } from 'lucide-react';
 
 function VerifyContent() {
@@ -26,6 +25,8 @@ function VerifyContent() {
   const [status, setStatus] = useState<'pending' | 'verifying' | 'verified' | 'expired' | 'error'>('pending');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [secondsRemaining, setSecondsRemaining] = useState<number>(600); // 10 mins
+  const [verifyStep, setVerifyStep] = useState<number>(0);
+  const [verifyProgress, setVerifyProgress] = useState<number>(0);
 
   // Countdown timer
   useEffect(() => {
@@ -85,27 +86,44 @@ function VerifyContent() {
 
     setStatus('verifying');
     setErrorMessage('');
+    
+    // Step 1: Handshake
+    setVerifyStep(1);
+    setVerifyProgress(30);
 
-    // If demo preview, simulate smooth complete
+    await new Promise((r) => setTimeout(r, 550));
+    // Step 2: Validate Nonce
+    setVerifyStep(2);
+    setVerifyProgress(65);
+
+    // If demo preview, simulate smooth complete with full animation
     if (sessionId === 'demo-session-preview' || !nonce) {
-      await new Promise((r) => setTimeout(r, 700));
+      await new Promise((r) => setTimeout(r, 650));
+      // Step 3: Issue Token
+      setVerifyStep(3);
+      setVerifyProgress(100);
+      await new Promise((r) => setTimeout(r, 450));
       setStatus('verified');
       return;
     }
 
     try {
-      // Simulate light challenge verification delay for human interaction
-      await new Promise((r) => setTimeout(r, 600));
-
-      const res = await fetch(`/api/verification/sessions/${sessionId}/complete`, {
+      const resPromise = fetch(`/api/verification/sessions/${sessionId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nonce }),
       });
 
+      await new Promise((r) => setTimeout(r, 600));
+      setVerifyStep(3);
+      setVerifyProgress(90);
+
+      const res = await resPromise;
       const data = await res.json();
 
       if (res.ok && data.success) {
+        setVerifyProgress(100);
+        await new Promise((r) => setTimeout(r, 400));
         setStatus('verified');
       } else {
         setStatus('error');
@@ -165,7 +183,7 @@ function VerifyContent() {
         <div className="max-w-md w-full mx-auto space-y-6">
           
           {/* Main Verification Card */}
-          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-blue-950/60 backdrop-blur-2xl relative overflow-hidden transition-all duration-300">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-blue-950/60 backdrop-blur-2xl relative overflow-hidden transition-all duration-500">
             {/* Top Glowing Gradient Accent Bar */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400" />
 
@@ -192,28 +210,33 @@ function VerifyContent() {
             </div>
 
             {/* ======================================================== */}
-            {/* STATUS VIEW: VERIFIED (SUCCESS) */}
+            {/* STATUS VIEW: VERIFIED (SUCCESS WITH ANIMATED CELEBRATION) */}
             {/* ======================================================== */}
             {status === 'verified' && (
-              <div className="text-center py-4 space-y-5 animate-in fade-in duration-300">
-                <div className="mx-auto w-16 h-16 bg-emerald-500/15 border border-emerald-500/40 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+              <div className="text-center py-4 space-y-5 transition-all duration-700 ease-out transform scale-100 opacity-100">
+                {/* Animated Ripple Success Badge */}
+                <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-emerald-500/25 animate-ping duration-1000" />
+                  <div className="relative w-20 h-20 bg-emerald-500/20 border-2 border-emerald-400/80 rounded-full flex items-center justify-center shadow-xl shadow-emerald-500/30">
+                    <CheckCircle2 className="w-11 h-11 text-emerald-400" />
+                  </div>
                 </div>
                 
-                <div className="space-y-1">
-                  <h2 className="text-xl font-black text-white">تم تأكيد الجلسة بنجاح!</h2>
-                  <p className="text-xs sm:text-sm text-emerald-300 font-medium">
-                    Application Successfully Unlocked
-                  </p>
+                <div className="space-y-1.5">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>تم الترخيص بنجاح • Session Authorized</span>
+                  </div>
+                  <h2 className="text-2xl font-black text-white">تم فك قفل البرنامج بنجاح!</h2>
                 </div>
 
                 <div className="p-4 bg-slate-800/80 rounded-2xl border border-slate-700/80 text-xs sm:text-sm text-slate-300 leading-relaxed space-y-2">
                   <p>
-                    تم إرسال إشارة التأكيد إلى برنامج <strong>SideLink</strong> على حاسوبك، وسيتم فتح واجهة التطبيق فوراً.
+                    تم إرسال إشارة التأكيد إلى تطبيق <strong>SideLink</strong> على حاسوبك، وسيتم فتح واجهة التحكم فوراً.
                   </p>
-                  <div className="text-[11px] text-slate-400 pt-1 border-t border-slate-700/60 flex items-center justify-center gap-1.5">
+                  <div className="text-[11px] text-emerald-300 pt-2 border-t border-slate-700/60 flex items-center justify-center gap-1.5 font-medium">
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>يمكنك الآن إغلاق هذه الصفحة بأمان والعودة لبرنامج الكمبيوتر.</span>
+                    <span>يمكنك الآن إغلاق هذه الصفحة بأمان والعودة لشاشة البرنامج.</span>
                   </div>
                 </div>
 
@@ -227,10 +250,85 @@ function VerifyContent() {
             )}
 
             {/* ======================================================== */}
-            {/* STATUS VIEW: PENDING / VERIFYING */}
+            {/* STATUS VIEW: VERIFYING (STEPPED PROGRESS ANIMATION) */}
             {/* ======================================================== */}
-            {(status === 'pending' || status === 'verifying') && (
-              <div className="space-y-5">
+            {status === 'verifying' && (
+              <div className="py-2 space-y-5 transition-all duration-300 ease-out">
+                {/* Glowing Radar Icon */}
+                <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping duration-1000" />
+                  <div className="relative w-16 h-16 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <Fingerprint className="w-8 h-8 text-blue-400 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Progress Bar with Live % */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-blue-300">جاري التحقق الأمني من الجلسة...</span>
+                    <span className="font-mono text-cyan-400">{verifyProgress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 h-full transition-all duration-500 ease-out rounded-full shadow-sm shadow-blue-500/50" 
+                      style={{ width: `${verifyProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stepped Checklist */}
+                <div className="bg-slate-950/70 rounded-2xl border border-slate-800/80 p-4 space-y-3 text-xs">
+                  {/* Step 1 */}
+                  <div className={`flex items-center justify-between transition-colors duration-300 ${verifyStep >= 1 ? 'text-slate-200' : 'text-slate-500'}`}>
+                    <span className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-blue-400" />
+                      <span>تأمين بروتوكول التشفير مع السيرفر (Handshake)</span>
+                    </span>
+                    {verifyStep > 1 ? (
+                      <Check className="w-4 h-4 text-emerald-400 font-bold" />
+                    ) : (
+                      <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                    )}
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className={`flex items-center justify-between transition-colors duration-300 ${verifyStep >= 2 ? 'text-slate-200' : 'text-slate-500'}`}>
+                    <span className="flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-indigo-400" />
+                      <span>فحص ومطابقة مفتاح الـ Nonce السري للجلسة</span>
+                    </span>
+                    {verifyStep > 2 ? (
+                      <Check className="w-4 h-4 text-emerald-400 font-bold" />
+                    ) : verifyStep === 2 ? (
+                      <RefreshCw className="w-3.5 h-3.5 text-indigo-400 animate-spin" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-slate-700" />
+                    )}
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className={`flex items-center justify-between transition-colors duration-300 ${verifyStep >= 3 ? 'text-slate-200' : 'text-slate-500'}`}>
+                    <span className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                      <span>توليد وتوقيع تصريح التشغيل (HMAC-SHA256 Token)</span>
+                    </span>
+                    {verifyProgress === 100 ? (
+                      <Check className="w-4 h-4 text-emerald-400 font-bold" />
+                    ) : verifyStep === 3 ? (
+                      <RefreshCw className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-slate-700" />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ======================================================== */}
+            {/* STATUS VIEW: PENDING (INITIAL READY STATE) */}
+            {/* ======================================================== */}
+            {status === 'pending' && (
+              <div className="space-y-5 animate-in fade-in duration-300">
                 {/* Session Timer & Status Chip */}
                 <div className="flex items-center justify-between text-xs text-slate-400 bg-slate-950/70 p-3 rounded-xl border border-slate-800">
                   <span className="flex items-center gap-1.5 font-medium text-slate-300">
@@ -242,8 +340,8 @@ function VerifyContent() {
                   </span>
                 </div>
 
-                {/* Session ID display */}
-                <div className="text-xs text-slate-400 leading-relaxed text-center px-1">
+                {/* Session Explanation */}
+                <div className="text-xs text-slate-300 leading-relaxed text-center px-1">
                   اضغط على الزر أدناه لتأكيد الجلسة وفك قفل واجهة البرنامج للبدء في توقيع وتثبيت التطبيقات.
                   {sessionId && (
                     <div className="text-[11px] text-slate-500 font-mono mt-2 p-1.5 bg-slate-950/40 rounded border border-slate-800/60 truncate">
@@ -256,21 +354,12 @@ function VerifyContent() {
                 <button
                   type="button"
                   onClick={handleVerify}
-                  disabled={status === 'verifying' || !sessionId}
+                  disabled={!sessionId}
                   className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl text-white font-bold text-sm bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition-all shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 border border-blue-400/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer group"
                 >
-                  {status === 'verifying' ? (
-                    <>
-                      <RefreshCw className="w-5 h-5 text-white animate-spin" />
-                      <span>جاري تأكيد الجلسة مع الخادم...</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShieldCheck className="w-5 h-5 text-blue-200 group-hover:scale-110 transition-transform" />
-                      <span>تأكيد التحقق وفتح البرنامج الآن</span>
-                      <ArrowLeft className="w-4 h-4 text-blue-200 group-hover:-translate-x-1 transition-transform" />
-                    </>
-                  )}
+                  <ShieldCheck className="w-5 h-5 text-blue-200 group-hover:scale-110 transition-transform" />
+                  <span>تأكيد التحقق وفتح البرنامج الآن</span>
+                  <ArrowLeft className="w-4 h-4 text-blue-200 group-hover:-translate-x-1 transition-transform" />
                 </button>
 
                 {/* Security Feature Micro-Badges */}
