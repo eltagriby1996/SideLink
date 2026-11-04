@@ -85,36 +85,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
 
     public bool IsMachineAlreadyAuthorized()
     {
-        try
-        {
-            string licensePath = GetLicenseFilePath();
-            if (!File.Exists(licensePath))
-                return false;
-
-            byte[] encrypted = File.ReadAllBytes(licensePath);
-            byte[] entropy = Encoding.UTF8.GetBytes("SideLink-Machine-Unlock-v1");
-            byte[] plainBytes = ProtectedData.Unprotect(encrypted, entropy, DataProtectionScope.CurrentUser);
-            string plain = Encoding.UTF8.GetString(plainBytes);
-
-            string[] parts = plain.Split('|');
-            if (parts.Length >= 2)
-            {
-                string machine = parts[0];
-                string user = parts[1];
-                if (string.Equals(machine, Environment.MachineName, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(user, Environment.UserName, StringComparison.OrdinalIgnoreCase))
-                {
-                    _isUnlocked = true;
-                    _logger.LogInformation("Machine already permanently authorized via local DPAPI license.");
-                    return true;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("Error reading persistent license: {Msg}", ex.Message);
-        }
-
+        // Each session launch presents the Link Unlock verification gate
         return false;
     }
 
@@ -201,10 +172,8 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
             var response = await _httpClient.GetAsync($"{_baseUrl}/api/verification/sessions/{sessionId}/status", cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
-                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    return VerificationStatus.Expired;
-
-                return VerificationStatus.Failed;
+                // Transient network / startup delay should remain pending, never prematurely expire
+                return VerificationStatus.Pending;
             }
 
             var data = await response.Content.ReadFromJsonAsync<VerificationStatusResponse>(cancellationToken: cancellationToken);

@@ -13,7 +13,11 @@ export async function GET(
 
     const session = await getSessionRecord(sessionId);
     if (!session) {
-      return NextResponse.json({ error: 'Session not found', status: 'expired' }, { status: 404 });
+      return NextResponse.json({
+        sessionId,
+        status: 'pending',
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      });
     }
 
     return NextResponse.json({

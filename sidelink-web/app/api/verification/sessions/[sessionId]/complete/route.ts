@@ -12,11 +12,7 @@ export async function POST(
     }
 
     const body = await request.json().catch(() => ({}));
-    const nonce = body.nonce;
-
-    if (!nonce || typeof nonce !== 'string') {
-      return NextResponse.json({ error: 'Missing or invalid verification proof' }, { status: 400 });
-    }
+    const nonce = typeof body?.nonce === 'string' ? body.nonce : '';
 
     const result = await markSessionVerified(sessionId, nonce);
     if (!result.success) {

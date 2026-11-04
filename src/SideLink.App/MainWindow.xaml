@@ -911,7 +911,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="حالة الجلسة:" FontSize="11" Foreground="{StaticResource TextMutedBrush}" />
-                                    <TextBlock Grid.Column="1" Text="10:00 متبقية" FontSize="11" Foreground="#38BDF8" FontFamily="Consolas" />
+                                    <TextBlock Grid.Column="1" Text="{Binding LinkUnlock.TimeRemainingText}" FontSize="11" Foreground="#38BDF8" FontFamily="Consolas" />
                                 </Grid>
                                 <TextBlock Text="{Binding LinkUnlock.StatusText}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource TextWhiteBrush}" Margin="0,4,0,0" />
                                 <TextBlock Text="{Binding LinkUnlock.SessionId, StringFormat='ID: {0}'}" FontSize="10" Foreground="#64748B" FontFamily="Consolas" Margin="0,4,0,0" />

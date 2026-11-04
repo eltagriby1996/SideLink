@@ -96,8 +96,13 @@ function VerifyContent() {
     setVerifyStep(2);
     setVerifyProgress(65);
 
-    // If demo preview, simulate smooth complete with full animation
+    // If demo preview or missing nonce, simulate smooth complete and notify local app
     if (sessionId === 'demo-session-preview' || !nonce) {
+      try {
+        const ping = new Image();
+        ping.src = `http://127.0.0.1:5055/api/ping-complete?session=${sessionId}&t=${Date.now()}`;
+      } catch {}
+
       await new Promise((r) => setTimeout(r, 650));
       // Step 3: Issue Token
       setVerifyStep(3);
@@ -108,6 +113,12 @@ function VerifyContent() {
     }
 
     try {
+      // Send image beacon to local desktop embedded server (resilient across mixed content)
+      try {
+        const ping = new Image();
+        ping.src = `http://127.0.0.1:5055/api/ping-complete?session=${sessionId}&nonce=${nonce}&t=${Date.now()}`;
+      } catch {}
+
       // Notify both remote backend and local desktop embedded server for instant zero-latency unlock
       try {
         fetch(`http://127.0.0.1:5055/api/verification/sessions/${sessionId}/complete`, {

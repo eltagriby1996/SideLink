@@ -40,6 +40,9 @@ public partial class LinkUnlockViewModel : ObservableObject
     [ObservableProperty]
     private int _secondsRemaining = 600;
 
+    [ObservableProperty]
+    private string _timeRemainingText = "10:00 متبقية";
+
     public event Action? VerificationCompleted;
 
     public LinkUnlockViewModel(ILinkUnlockService linkUnlockService, ILogger<LinkUnlockViewModel> logger)
@@ -63,15 +66,23 @@ public partial class LinkUnlockViewModel : ObservableObject
     {
         try
         {
+            StopPolling();
             IsVerifying = false;
             HasError = false;
             ErrorMessage = string.Empty;
+            SecondsRemaining = 600;
+            TimeRemainingText = "10:00 متبقية";
             StatusText = "Connecting to verification gateway...";
 
             var session = await _linkUnlockService.CreateSessionAsync();
             SessionId = session.SessionId;
             VerificationUrl = session.VerificationUrl;
             StatusText = "جاهز للتحقق: يرجى النقر على الزر أدناه لفتح صفحة التحقق في المتصفح.";
+
+            if (!string.IsNullOrWhiteSpace(SessionId))
+            {
+                StartPollingLoop(SessionId);
+            }
         }
         catch (Exception ex)
         {
@@ -158,30 +169,45 @@ public partial class LinkUnlockViewModel : ObservableObject
 
         _ = Task.Run(async () =>
         {
+            DateTime startTime = DateTime.UtcNow;
+            int totalSeconds = 600;
+
             while (!token.IsCancellationRequested)
             {
                 try
                 {
-                    await Task.Delay(2000, token);
+                    await Task.Delay(800, token);
                     if (token.IsCancellationRequested) break;
+
+                    // Update live countdown
+                    var elapsed = (DateTime.UtcNow - startTime).TotalSeconds;
+                    int remaining = Math.Max(0, totalSeconds - (int)elapsed);
+                    
+                    App.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        SecondsRemaining = remaining;
+                        int mins = remaining / 60;
+                        int secs = remaining % 60;
+                        TimeRemainingText = $"{mins:D2}:{secs:D2} متبقية";
+                    });
+
+                    if (remaining <= 0)
+                    {
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            HasError = true;
+                            IsVerifying = false;
+                            ErrorMessage = "انتهت صلاحية جلسة التحقق. يرجى الضغط على زر بدء جلسة جديدة أدناه.";
+                            StatusText = "انتهت مهلة الجلسة.";
+                        });
+                        break;
+                    }
 
                     var status = await _linkUnlockService.CheckSessionStatusAsync(sessionId, token);
 
                     if (status == VerificationStatus.Verified)
                     {
                         await CompleteAuthorizationAsync();
-                        break;
-                    }
-
-                    if (status == VerificationStatus.Expired)
-                    {
-                        App.Current?.Dispatcher?.Invoke(() =>
-                        {
-                            HasError = true;
-                            IsVerifying = false;
-                            ErrorMessage = "Session has expired. Click below to start a new session.";
-                            StatusText = "Session expired.";
-                        });
                         break;
                     }
                 }
@@ -203,21 +229,16 @@ public partial class LinkUnlockViewModel : ObservableObject
 
         App.Current?.Dispatcher?.Invoke(() =>
         {
-            StatusText = "Validating cryptographic authorization token...";
+            StatusText = "✓ تم التحقق بنجاح من المتصفح! جاري فك قفل البرنامج...";
+            IsVerifying = false;
+            IsSuccessAnimation = true;
         });
 
         bool authorized = await _linkUnlockService.AuthorizeAndUnlockAsync(SessionId);
 
         if (authorized)
         {
-            App.Current?.Dispatcher?.Invoke(() =>
-            {
-                IsSuccessAnimation = true;
-                IsVerifying = false;
-                StatusText = "✓ تم التحقق بنجاح! جاري فتح البرنامج...";
-            });
-
-            await Task.Delay(1300);
+            await Task.Delay(1200);
 
             App.Current?.Dispatcher?.Invoke(() =>
             {
@@ -230,7 +251,7 @@ public partial class LinkUnlockViewModel : ObservableObject
             App.Current?.Dispatcher?.Invoke(() =>
             {
                 HasError = true;
-                IsVerifying = false;
+                IsSuccessAnimation = false;
                 ErrorMessage = "فشل التحقق من توقيع تصريح الدخول الأمني.";
                 StatusText = "فشل التحقق الأمني.";
             });
