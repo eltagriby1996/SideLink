@@ -12,11 +12,13 @@ namespace SideLink.Signing;
 
 public class AppleIdentityService : IAppleIdentityService
 {
+    private readonly ICredentialStore _credentialStore;
     private readonly ILogger<AppleIdentityService> _logger;
     private readonly string _baseIdentitiesPath;
 
-    public AppleIdentityService(ILogger<AppleIdentityService> logger)
+    public AppleIdentityService(ICredentialStore credentialStore, ILogger<AppleIdentityService> logger)
     {
+        _credentialStore = credentialStore;
         _logger = logger;
         _baseIdentitiesPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -28,105 +30,26 @@ public class AppleIdentityService : IAppleIdentityService
 
     public async Task<IReadOnlyList<string>> DiscoverSystemAppleAccountsAsync()
     {
-        var accounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // 1. Check iloader data.json
+        // Strictly return accounts stored and managed within SideLink's own secure credential store
         try
         {
-            string iloaderDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "me.nabdev.iloader",
-                "data.json");
-
-            if (File.Exists(iloaderDataPath))
-            {
-                string json = await File.ReadAllTextAsync(iloaderDataPath);
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("ids", out var idsProp) && idsProp.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var elem in idsProp.EnumerateArray())
-                    {
-                        string? id = elem.GetString();
-                        if (!string.IsNullOrWhiteSpace(id) && id.Contains("@"))
-                        {
-                            accounts.Add(id.Trim());
-                        }
-                    }
-                }
-            }
+            var saved = await _credentialStore.GetAllSavedAppleIdsAsync();
+            return saved;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning("Error reading iloader accounts: {Message}", ex.Message);
+            _logger.LogWarning("Error reading SideLink saved accounts: {Message}", ex.Message);
+            return Array.Empty<string>();
         }
-
-        // 2. Check local identities folders
-        try
-        {
-            if (Directory.Exists(_baseIdentitiesPath))
-            {
-                foreach (var dir in Directory.GetDirectories(_baseIdentitiesPath))
-                {
-                    string name = Path.GetFileName(dir);
-                    if (name.Contains("@"))
-                    {
-                        accounts.Add(name);
-                    }
-                    else if (name.Contains("_gmail_com"))
-                    {
-                        accounts.Add(name.Replace("_gmail_com", "@gmail.com"));
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("Error reading local identities: {Message}", ex.Message);
-        }
-
-        // 3. Check Credential Manager for accounts
-        string[] candidateKnown = new[] { "ahmdmnjd806@gmail.com", "ahmedmenged100@gmail.com" };
-        foreach (var candidate in candidateKnown)
-        {
-            if (ReadCredentialBlob($"{candidate}.iloader") != null)
-            {
-                accounts.Add(candidate);
-            }
-        }
-
-        return accounts.ToList();
     }
 
-    public Task<string?> GetSystemSavedPasswordAsync(string appleId)
+    public async Task<string?> GetSystemSavedPasswordAsync(string appleId)
     {
         if (string.IsNullOrWhiteSpace(appleId))
-            return Task.FromResult<string?>(null);
+            return null;
 
-        string[] targets = new[]
-        {
-            $"{appleId.Trim()}.iloader",
-            appleId.Trim()
-        };
-
-        foreach (var t in targets)
-        {
-            byte[]? data = ReadCredentialBlob(t);
-            if (data != null && data.Length > 0)
-            {
-                try
-                {
-                    string pass = Encoding.UTF8.GetString(data);
-                    if (!string.IsNullOrWhiteSpace(pass))
-                    {
-                        _logger.LogInformation("Recovered stored system credential for {Account}", appleId);
-                        return Task.FromResult<string?>(pass);
-                    }
-                }
-                catch { }
-            }
-        }
-
-        return Task.FromResult<string?>(null);
+        // Retrieve strictly from SideLink DPAPI encrypted storage
+        return await _credentialStore.GetApplePasswordAsync(appleId.Trim());
     }
 
     public async Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null)
@@ -347,91 +270,42 @@ public class AppleIdentityService : IAppleIdentityService
     {
         try
         {
-            byte[] bytes = File.ReadAllBytes(info.MobileProvisionPath!);
-            string content = Encoding.ASCII.GetString(bytes);
-            int dataStart = content.IndexOf("<data>", StringComparison.Ordinal);
-            int dataEnd = content.IndexOf("</data>", StringComparison.Ordinal);
-            if (dataStart == -1 || dataEnd == -1) return;
+            if (string.IsNullOrEmpty(info.MobileProvisionPath) || !File.Exists(info.MobileProvisionPath))
+                return;
 
-            string b64 = content.Substring(dataStart + 6, dataEnd - (dataStart + 6)).Replace("\r", "").Replace("\n", "").Trim();
-            byte[] certBytes = Convert.FromBase64String(b64);
-            using var cert = new X509Certificate2(certBytes);
-
-            string[] candidateKeyTargets = new[]
+            string accountDir = Path.GetDirectoryName(targetP12Path)!;
+            string keyPath = Path.Combine(accountDir, "key.p8");
+            if (!File.Exists(keyPath))
             {
-                "21685e328dd901edbd146dccb35c27bfe4ec8acbb5e5c5d98cca6d47e4bef733/key.iloader",
-                "2136a504cc4b82f710027dff2176e90bcb6646a7e90f795ad3c9b50bfceb682c/key.iloader"
-            };
+                keyPath = Path.Combine(accountDir, "key.pem");
+            }
 
-            foreach (var kt in candidateKeyTargets)
+            if (File.Exists(keyPath))
             {
-                byte[]? keyBytes = ReadCredentialBlob(kt);
-                if (keyBytes != null)
-                {
-                    try
-                    {
-                        using var rsa = RSA.Create();
-                        rsa.ImportPkcs8PrivateKey(keyBytes, out _);
-                        using var certWithKey = cert.CopyWithPrivateKey(rsa);
-                        byte[] pfx = certWithKey.Export(X509ContentType.Pfx, "sidelink");
-                        File.WriteAllBytes(targetP12Path, pfx);
-                        info.P12Path = targetP12Path;
-                        _logger.LogInformation("Successfully exported matching P12 certificate to {P12Path}", targetP12Path);
-                        break;
-                    }
-                    catch { }
-                }
+                byte[] bytes = File.ReadAllBytes(info.MobileProvisionPath);
+                string content = Encoding.ASCII.GetString(bytes);
+                int dataStart = content.IndexOf("<data>", StringComparison.Ordinal);
+                int dataEnd = content.IndexOf("</data>", StringComparison.Ordinal);
+                if (dataStart == -1 || dataEnd == -1) return;
+
+                string b64 = content.Substring(dataStart + 6, dataEnd - (dataStart + 6)).Replace("\r", "").Replace("\n", "").Trim();
+                byte[] certBytes = Convert.FromBase64String(b64);
+                using var cert = new X509Certificate2(certBytes);
+
+                byte[] keyBytes = File.ReadAllBytes(keyPath);
+                using var rsa = RSA.Create();
+                rsa.ImportPkcs8PrivateKey(keyBytes, out _);
+                using var certWithKey = cert.CopyWithPrivateKey(rsa);
+                byte[] pfx = certWithKey.Export(X509ContentType.Pfx, "sidelink");
+                File.WriteAllBytes(targetP12Path, pfx);
+                info.P12Path = targetP12Path;
+                _logger.LogInformation("Successfully exported matching P12 certificate to {P12Path}", targetP12Path);
             }
         }
         catch (Exception ex)
         {
             _logger.LogWarning("Could not export P12: {Message}", ex.Message);
         }
-    }
-
-    [DllImport("advapi32.dll", EntryPoint = "CredReadW", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern bool CredRead(string target, int type, int reservedFlag, out IntPtr credentialPtr);
-
-    [DllImport("advapi32.dll", EntryPoint = "CredFree", SetLastError = true)]
-    private static extern void CredFree(IntPtr cred);
-
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    private struct CREDENTIAL
-    {
-        public int Flags;
-        public int Type;
-        public string TargetName;
-        public string Comment;
-        public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
-        public int CredentialBlobSize;
-        public IntPtr CredentialBlob;
-        public int Persist;
-        public int AttributeCount;
-        public IntPtr Attributes;
-        public string TargetAlias;
-        public string UserName;
-    }
-
-    private static byte[]? ReadCredentialBlob(string target)
-    {
-        if (CredRead(target, 1, 0, out IntPtr credPtr))
-        {
-            try
-            {
-                var cred = (CREDENTIAL)Marshal.PtrToStructure(credPtr, typeof(CREDENTIAL))!;
-                if (cred.CredentialBlobSize > 0 && cred.CredentialBlob != IntPtr.Zero)
-                {
-                    byte[] data = new byte[cred.CredentialBlobSize];
-                    Marshal.Copy(cred.CredentialBlob, data, 0, cred.CredentialBlobSize);
-                    return data;
-                }
-            }
-            finally
-            {
-                CredFree(credPtr);
-            }
-        }
-        return null;
     }
 
     private static string SanitizeAccountName(string appleId)

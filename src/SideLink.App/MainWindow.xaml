@@ -668,10 +668,20 @@
                                         <TextBlock Text="{Binding SigningRefresh.StatusMessage}" FontSize="12" Foreground="White" TextWrapping="Wrap" />
                                     </Border>
 
-                                    <!-- Discovered Accounts in System -->
+                                    <!-- Saved Accounts in SideLink -->
                                     <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,12">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SigningRefresh.DiscoveredAccounts.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
                                         <StackPanel>
-                                            <TextBlock Text="⚡ حسابات Apple المكتشفة في النظام (iLoader / Windows Credentials):" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,6" />
+                                            <TextBlock Text="⚡ حسابات Apple المحفوظة في SideLink:" FontSize="11" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,6" />
                                             <ItemsControl ItemsSource="{Binding SigningRefresh.DiscoveredAccounts}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
@@ -699,9 +709,19 @@
 
                                     <!-- Action Buttons -->
                                     <WrapPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                        <Button Style="{StaticResource PrimaryButtonStyle}" Content="💾 حفظ وتشفير (Save DPAPI)" Command="{Binding SigningRefresh.SaveCredentialsCommand}" Margin="0,0,10,8" />
-                                        <Button Style="{StaticResource PrimaryButtonStyle}" Background="#4338CA" Content="📲 إرسال رمز المصادقة (2FA)" Command="{Binding SigningRefresh.Request2FaCommand}" Margin="0,0,10,8" />
-                                        <Button Style="{StaticResource SecondaryButtonStyle}" Content="🗑️ مسح الحساب المخزن" Command="{Binding SigningRefresh.ClearCredentialsCommand}" Margin="0,0,10,8" />
+                                        <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                                Background="#2563EB" 
+                                                Content="📲 تسجيل الدخول والتحقق من Apple (Sign-In &amp; 2FA)" 
+                                                Command="{Binding SigningRefresh.Request2FaCommand}" 
+                                                Margin="0,0,10,8" />
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                                Content="💾 حفظ الحساب محلياً (Save DPAPI)" 
+                                                Command="{Binding SigningRefresh.SaveCredentialsCommand}" 
+                                                Margin="0,0,10,8" />
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                                Content="🗑️ مسح هذا الحساب من SideLink" 
+                                                Command="{Binding SigningRefresh.ClearCredentialsCommand}" 
+                                                Margin="0,0,10,8" />
                                     </WrapPanel>
 
                                     <!-- 2FA Code Input Box -->

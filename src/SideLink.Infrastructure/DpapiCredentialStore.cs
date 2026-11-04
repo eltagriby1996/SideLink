@@ -28,18 +28,66 @@ public class DpapiCredentialStore : ICredentialStore
         return Path.Combine(_storageDir, $"{hash}.dat");
     }
 
+    private string GetAccountsListPath() => Path.Combine(_storageDir, "accounts.txt");
+
     public async Task SaveApplePasswordAsync(string appleId, string password)
     {
         if (string.IsNullOrWhiteSpace(appleId) || string.IsNullOrWhiteSpace(password))
             return;
 
+        string cleanId = appleId.Trim();
+
         await Task.Run(() =>
         {
             byte[] plaintextBytes = Encoding.UTF8.GetBytes(password);
             byte[] encrypted = ProtectedData.Protect(plaintextBytes, Entropy, DataProtectionScope.CurrentUser);
-            File.WriteAllBytes(GetFilePath(appleId), encrypted);
-            File.WriteAllText(Path.Combine(_storageDir, "last_account.txt"), appleId.Trim());
-            _logger.LogInformation("Securely stored credentials using Windows DPAPI for account {Account}", MaskAccount(appleId));
+            File.WriteAllBytes(GetFilePath(cleanId), encrypted);
+            File.WriteAllText(Path.Combine(_storageDir, "last_account.txt"), cleanId);
+
+            // Update accounts registry
+            var accounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var listPath = GetAccountsListPath();
+            if (File.Exists(listPath))
+            {
+                foreach (var line in File.ReadAllLines(listPath))
+                {
+                    if (!string.IsNullOrWhiteSpace(line)) accounts.Add(line.Trim());
+                }
+            }
+            accounts.Add(cleanId);
+            File.WriteAllLines(listPath, accounts);
+
+            _logger.LogInformation("Securely stored credentials using Windows DPAPI for account {Account}", MaskAccount(cleanId));
+        });
+    }
+
+    public async Task<IReadOnlyList<string>> GetAllSavedAppleIdsAsync()
+    {
+        return await Task.Run<IReadOnlyList<string>>(() =>
+        {
+            var listPath = GetAccountsListPath();
+            if (!File.Exists(listPath)) return Array.Empty<string>();
+
+            try
+            {
+                var validAccounts = new List<string>();
+                foreach (var line in File.ReadAllLines(listPath))
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    string acc = line.Trim();
+                    // Ensure the encrypted credential file actually exists
+                    if (File.Exists(GetFilePath(acc)))
+                    {
+                        validAccounts.Add(acc);
+                    }
+                }
+                return validAccounts;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to read accounts list: {Message}", ex.Message);
+                return Array.Empty<string>();
+            }
         });
     }
 
@@ -91,22 +139,38 @@ public class DpapiCredentialStore : ICredentialStore
         if (string.IsNullOrWhiteSpace(appleId))
             return;
 
-        var path = GetFilePath(appleId);
+        string cleanId = appleId.Trim();
+        var path = GetFilePath(cleanId);
         var lastAccPath = Path.Combine(_storageDir, "last_account.txt");
+        var listPath = GetAccountsListPath();
+
         await Task.Run(() =>
         {
             if (File.Exists(path))
             {
                 File.Delete(path);
-                _logger.LogInformation("Removed credentials for account {Account}", MaskAccount(appleId));
+                _logger.LogInformation("Removed credentials for account {Account}", MaskAccount(cleanId));
             }
+
             if (File.Exists(lastAccPath))
             {
                 var current = File.ReadAllText(lastAccPath).Trim();
-                if (string.Equals(current, appleId.Trim(), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(current, cleanId, StringComparison.OrdinalIgnoreCase))
                 {
                     File.Delete(lastAccPath);
                 }
+            }
+
+            if (File.Exists(listPath))
+            {
+                try
+                {
+                    var accounts = File.ReadAllLines(listPath)
+                        .Where(l => !string.IsNullOrWhiteSpace(l) && !string.Equals(l.Trim(), cleanId, StringComparison.OrdinalIgnoreCase))
+                        .ToList();
+                    File.WriteAllLines(listPath, accounts);
+                }
+                catch { }
             }
         });
     }

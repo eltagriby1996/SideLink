@@ -90,22 +90,27 @@ public partial class SigningRefreshViewModel : ObservableObject
         UpdateExplanation();
     }
 
-    public async Task InitializeAsync()
+    public async Task RefreshSavedAccountsListAsync()
     {
-        // 1. Discover accounts from system (iloader, etc.)
         try
         {
-            var discovered = await _identityService.DiscoverSystemAppleAccountsAsync();
+            var saved = await _credentialStore.GetAllSavedAppleIdsAsync();
             App.Current.Dispatcher.Invoke(() =>
             {
                 DiscoveredAccounts.Clear();
-                foreach (var acc in discovered)
+                foreach (var acc in saved)
                 {
                     DiscoveredAccounts.Add(acc);
                 }
             });
         }
         catch { }
+    }
+
+    public async Task InitializeAsync()
+    {
+        // 1. Load accounts strictly saved in SideLink's own DPAPI store
+        await RefreshSavedAccountsListAsync();
 
         // 2. Check last stored account
         var lastId = await _credentialStore.GetLastAppleIdAsync();
@@ -118,15 +123,6 @@ public partial class SigningRefreshViewModel : ObservableObject
         {
             AppleId = lastId;
             var stored = await _credentialStore.GetApplePasswordAsync(lastId);
-            if (string.IsNullOrWhiteSpace(stored))
-            {
-                stored = await _identityService.GetSystemSavedPasswordAsync(lastId);
-                if (!string.IsNullOrWhiteSpace(stored))
-                {
-                    await _credentialStore.SaveApplePasswordAsync(lastId, stored);
-                }
-            }
-
             HasStoredPassword = !string.IsNullOrWhiteSpace(stored);
             if (HasStoredPassword)
             {
@@ -137,6 +133,13 @@ public partial class SigningRefreshViewModel : ObservableObject
 
             await RefreshCertificateStatusAsync();
         }
+        else
+        {
+            HasStoredPassword = false;
+            SavedAccountDisplay = string.Empty;
+            StatusMessage = "جاهز. قم بتسجيل الدخول بحساب Apple ID أو إدخال كلمة سر التطبيقات.";
+            IsSuccessStatus = true;
+        }
     }
 
     [RelayCommand]
@@ -145,19 +148,11 @@ public partial class SigningRefreshViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(account)) return;
         AppleId = account.Trim();
         var stored = await _credentialStore.GetApplePasswordAsync(AppleId);
-        if (string.IsNullOrWhiteSpace(stored))
-        {
-            stored = await _identityService.GetSystemSavedPasswordAsync(AppleId);
-            if (!string.IsNullOrWhiteSpace(stored))
-            {
-                await _credentialStore.SaveApplePasswordAsync(AppleId, stored);
-            }
-        }
         HasStoredPassword = !string.IsNullOrWhiteSpace(stored);
         if (HasStoredPassword)
         {
             SavedAccountDisplay = $"الحساب النشط: {AppleId}";
-            StatusMessage = $"✓ تم تفعيل الحساب المكتشف ({AppleId}) وربطه بشهادة المطور المقترنة بالجهاز.";
+            StatusMessage = $"✓ تم تفعيل الحساب ({AppleId}) بنجاح.";
             IsSuccessStatus = true;
         }
         await RefreshCertificateStatusAsync();
@@ -236,11 +231,6 @@ public partial class SigningRefreshViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(effectivePassword))
         {
-            effectivePassword = await _identityService.GetSystemSavedPasswordAsync(AppleId.Trim()) ?? string.Empty;
-        }
-
-        if (string.IsNullOrWhiteSpace(effectivePassword))
-        {
             StatusMessage = "يرجى كتابة كلمة مرور Apple ID أو كلمة السر الخاصة بالتطبيق (App-Specific Password).";
             IsSuccessStatus = false;
             return;
@@ -251,11 +241,13 @@ public partial class SigningRefreshViewModel : ObservableObject
         SavedAccountDisplay = $"الحساب المحفوظ: {AppleId.Trim()}";
         Is2FaPromptVisible = false;
 
+        await RefreshSavedAccountsListAsync();
+
         string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
         await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
         await RefreshCertificateStatusAsync();
 
-        StatusMessage = "✓ تم حفظ وتشفير حساب Apple بنجاح داخل نظام ويندوز (Windows DPAPI)!\nالحساب وشهادة المطور جاهزان لتوقيع وتثبيت التطبيقات فوراً.";
+        StatusMessage = "✓ تم حفظ وتشفير حساب Apple بنجاح داخل SideLink (Windows DPAPI)!\nالحساب جاهز لتوقيع وتثبيت التطبيقات فوراً.";
         IsSuccessStatus = true;
     }
 
@@ -278,11 +270,6 @@ public partial class SigningRefreshViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(effectivePassword) && HasStoredPassword)
         {
             effectivePassword = await _credentialStore.GetApplePasswordAsync(AppleId.Trim()) ?? string.Empty;
-        }
-
-        if (string.IsNullOrWhiteSpace(effectivePassword))
-        {
-            effectivePassword = await _identityService.GetSystemSavedPasswordAsync(AppleId.Trim()) ?? string.Empty;
         }
 
         if (string.IsNullOrWhiteSpace(effectivePassword))
@@ -315,6 +302,8 @@ public partial class SigningRefreshViewModel : ObservableObject
                 Is2FaPromptVisible = false;
                 StatusMessage = authResult.Message;
                 IsSuccessStatus = true;
+
+                await RefreshSavedAccountsListAsync();
 
                 string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
                 await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
@@ -370,6 +359,8 @@ public partial class SigningRefreshViewModel : ObservableObject
                     SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
                 }
 
+                await RefreshSavedAccountsListAsync();
+
                 Is2FaPromptVisible = false;
                 StatusMessage = result.Message;
                 IsSuccessStatus = true;
@@ -408,18 +399,31 @@ public partial class SigningRefreshViewModel : ObservableObject
 
         try
         {
-            await _credentialStore.DeleteApplePasswordAsync(AppleId.Trim());
-            HasStoredPassword = false;
-            Password = string.Empty;
-            SavedAccountDisplay = string.Empty;
-            AppleId = string.Empty;
-            Is2FaPromptVisible = false;
-            StatusMessage = "تم حذف بيانات الحساب المشفرة بالكامل من جهازك.";
+            string removed = AppleId.Trim();
+            await _credentialStore.DeleteApplePasswordAsync(removed);
+            await RefreshSavedAccountsListAsync();
+
+            if (DiscoveredAccounts.Count > 0)
+            {
+                await SelectDiscoveredAccountAsync(DiscoveredAccounts[0]);
+            }
+            else
+            {
+                HasStoredPassword = false;
+                Password = string.Empty;
+                SavedAccountDisplay = string.Empty;
+                AppleId = string.Empty;
+                Is2FaPromptVisible = false;
+                HasActiveCertificate = false;
+                ProvisioningStatusDisplay = string.Empty;
+            }
+
+            StatusMessage = $"✓ تم مسح بيانات الحساب ({removed}) بالكامل من SideLink.";
             IsSuccessStatus = true;
         }
         catch (Exception ex)
         {
-            StatusMessage = "خطأ أثناء حذف البيانات: " + ex.Message;
+            StatusMessage = "خطأ أثناء مسح البيانات: " + ex.Message;
             IsSuccessStatus = false;
         }
     }

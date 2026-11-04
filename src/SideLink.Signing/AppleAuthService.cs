@@ -37,13 +37,14 @@ public class AppleAuthService : IAppleAuthService
         string trimmedId = appleId.Trim();
         string trimmedPwd = password.Trim();
 
-        // 1. Check if user provided an App-Specific Password (16 characters: xxxx-xxxx-xxxx-xxxx)
+        // 1. Check if user provided an App-Specific Password (standard 16 characters with hyphens: xxxx-xxxx-xxxx-xxxx)
         string cleanPwd = trimmedPwd.Replace("-", "").Replace(" ", "");
-        bool isAppSpecific = cleanPwd.Length == 16 && cleanPwd.All(char.IsLetterOrDigit);
+        bool isAppSpecific = (trimmedPwd.Contains("-") && cleanPwd.Length == 16 && cleanPwd.All(char.IsLetterOrDigit))
+                             || (cleanPwd.Length == 16 && cleanPwd.All(char.IsLower));
 
         if (isAppSpecific)
         {
-            _logger.LogInformation("Valid 16-character App-Specific Password accepted for {Account}", trimmedId);
+            _logger.LogInformation("Valid App-Specific Password format accepted for {Account}", trimmedId);
             return (true, false, "✓ تم قبول واعتماد كلمة السر الخاصة بالتطبيقات (App-Specific Password) بنجاح!\nالحساب معتمد وجاهز لتوقيع وتثبيت التطبيقات فوراً دون الحاجة لرمز 2FA.");
         }
 
@@ -201,6 +202,21 @@ public class AppleAuthService : IAppleAuthService
 
             var response = await client.PostAsync("https://idmsa.apple.com/appleauth/auth/verify/trusteddevice", content, cancellationToken);
             int statusCode = (int)response.StatusCode;
+
+            if (statusCode != 200 && statusCode != 204)
+            {
+                // Fallback attempt: SMS / Phone verification endpoint
+                try
+                {
+                    using var phoneContent = new StringContent(json, Encoding.UTF8, "application/json");
+                    var phoneResponse = await client.PostAsync("https://idmsa.apple.com/appleauth/auth/verify/phone", phoneContent, cancellationToken);
+                    if (phoneResponse.IsSuccessStatusCode)
+                    {
+                        statusCode = (int)phoneResponse.StatusCode;
+                    }
+                }
+                catch { }
+            }
 
             if (statusCode == 200 || statusCode == 204)
             {

@@ -101,6 +101,7 @@ public interface ICredentialStore
     Task<string?> GetApplePasswordAsync(string appleId);
     Task DeleteApplePasswordAsync(string appleId);
     Task<string?> GetLastAppleIdAsync();
+    Task<IReadOnlyList<string>> GetAllSavedAppleIdsAsync();
 }
 
 public interface IAppleAuthService
