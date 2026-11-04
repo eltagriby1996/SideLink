@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Net.Http.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -43,6 +44,18 @@ public partial class LinkUnlockViewModel : ObservableObject
     [ObservableProperty]
     private string _timeRemainingText = "10:00 متبقية";
 
+    [ObservableProperty]
+    private string _vipKeyInput = string.Empty;
+
+    [ObservableProperty]
+    private bool _isVipSectionVisible;
+
+    [ObservableProperty]
+    private bool _isVipValidating;
+
+    [ObservableProperty]
+    private string _vipStatusMessage = string.Empty;
+
     public event Action? VerificationCompleted;
 
     public LinkUnlockViewModel(ILinkUnlockService linkUnlockService, ILogger<LinkUnlockViewModel> logger)
@@ -60,6 +73,76 @@ public partial class LinkUnlockViewModel : ObservableObject
             return true;
         }
         return false;
+    }
+
+    [RelayCommand]
+    public void ToggleVipSection()
+    {
+        IsVipSectionVisible = !IsVipSectionVisible;
+    }
+
+    [RelayCommand]
+    public async Task SubmitVipKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(VipKeyInput))
+        {
+            VipStatusMessage = "يرجى كتابة كود الـ VIP أولاً.";
+            return;
+        }
+
+        try
+        {
+            IsVipValidating = true;
+            VipStatusMessage = "جاري التحقق من صلاحية مفتاح VIP...";
+
+            string key = VipKeyInput.Trim();
+
+            // Offline master bypass check
+            if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase))
+            {
+                VipStatusMessage = "✓ تم تفعيل ترخيص المطور Master VIP!";
+                IsSuccessAnimation = true;
+                await Task.Delay(1000);
+                App.Current?.Dispatcher?.Invoke(() =>
+                {
+                    IsUnlocked = true;
+                    VerificationCompleted?.Invoke();
+                });
+                return;
+            }
+
+            // Online verification via sidelink-web API
+            using var http = new System.Net.Http.HttpClient();
+            http.Timeout = TimeSpan.FromSeconds(5);
+
+            var resp = await http.PostAsJsonAsync("https://sidelink-web.vercel.app/api/app/vip/verify", new { key });
+            if (resp.IsSuccessStatusCode)
+            {
+                var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
+                {
+                    VipStatusMessage = "✓ تم تفعيل ترخيص VIP بنجاح!";
+                    IsSuccessAnimation = true;
+                    await Task.Delay(1000);
+                    App.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        IsUnlocked = true;
+                        VerificationCompleted?.Invoke();
+                    });
+                    return;
+                }
+            }
+
+            VipStatusMessage = "مفتاح VIP غير صالح أو منتهي الصلاحية.";
+        }
+        catch (Exception ex)
+        {
+            VipStatusMessage = "تعذر الاتصال بخادم التحقق: " + ex.Message;
+        }
+        finally
+        {
+            IsVipValidating = false;
+        }
     }
 
     public async Task InitializeSessionAsync()

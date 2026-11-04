@@ -78,6 +78,39 @@ export async function markSessionVerified(
   return { success: true };
 }
 
+export async function getAllSessions(): Promise<VerificationSessionRecord[]> {
+  const now = new Date();
+  const list: VerificationSessionRecord[] = [];
+  for (const session of sessions.values()) {
+    if (session.status === 'pending' && now >= session.expiresAt) {
+      session.status = 'expired';
+    }
+    list.push({ ...session });
+  }
+  return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+export async function revokeSession(sessionId: string): Promise<boolean> {
+  const session = sessions.get(sessionId);
+  if (!session) return false;
+  session.status = 'failed';
+  return true;
+}
+
+export async function manuallyVerifySession(sessionId: string): Promise<boolean> {
+  let session = sessions.get(sessionId);
+  if (!session) {
+    session = await createSessionRecord(sessionId, new Date(Date.now() + 15 * 60 * 1000), 'admin-manual');
+  }
+  session.status = 'verified';
+  session.verifiedAt = new Date();
+  return true;
+}
+
+export async function deleteSession(sessionId: string): Promise<boolean> {
+  return sessions.delete(sessionId);
+}
+
 export async function cleanupExpiredSessions(): Promise<number> {
   let cleaned = 0;
   const now = new Date();
