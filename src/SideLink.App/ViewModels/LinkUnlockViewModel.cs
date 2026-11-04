@@ -95,12 +95,14 @@ public partial class LinkUnlockViewModel : ObservableObject
             IsVipValidating = true;
             VipStatusMessage = "جاري التحقق من صلاحية مفتاح VIP...";
 
-            string key = VipKeyInput.Trim();
+            string key = VipKeyInput.Trim().ToUpperInvariant();
 
-            // Offline master bypass check
-            if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase))
+            // Offline master bypass check (instant lifetime license)
+            if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase) ||
+                key.Equals("SL-VIP-MASTER-2026", StringComparison.OrdinalIgnoreCase))
             {
-                VipStatusMessage = "✓ تم تفعيل ترخيص المطور Master VIP!";
+                _linkUnlockService.SavePersistentVipLicense(key);
+                VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص Master VIP الدائم بنجاح!";
                 IsSuccessAnimation = true;
                 await Task.Delay(1000);
                 App.Current?.Dispatcher?.Invoke(() =>
@@ -121,7 +123,8 @@ public partial class LinkUnlockViewModel : ObservableObject
                 var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                 if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
                 {
-                    VipStatusMessage = "✓ تم تفعيل ترخيص VIP بنجاح!";
+                    _linkUnlockService.SavePersistentVipLicense(key);
+                    VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP الدائم على جهازك بنجاح!";
                     IsSuccessAnimation = true;
                     await Task.Delay(1000);
                     App.Current?.Dispatcher?.Invoke(() =>

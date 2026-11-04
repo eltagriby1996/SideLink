@@ -54,3 +54,4 @@ public class TelemetryClient : ITelemetryClient
         return Task.CompletedTask;
     }
 }
+

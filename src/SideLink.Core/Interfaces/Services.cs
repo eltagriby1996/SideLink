@@ -73,6 +73,7 @@ public interface ILinkUnlockService
     event EventHandler<bool>? SessionUnlockStateChanged;
 
     bool IsMachineAlreadyAuthorized();
+    void SavePersistentVipLicense(string vipKey);
     Task<VerificationSession> CreateSessionAsync(CancellationToken cancellationToken = default);
     Task<VerificationStatus> CheckSessionStatusAsync(string sessionId, CancellationToken cancellationToken = default);
     Task<bool> AuthorizeAndUnlockAsync(string sessionId, CancellationToken cancellationToken = default);

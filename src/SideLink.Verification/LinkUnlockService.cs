@@ -83,10 +83,67 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         return Path.Combine(dir, "unlocked.lic");
     }
 
+    private static string GetVipLicenseFilePath()
+    {
+        string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideLink");
+        Directory.CreateDirectory(dir);
+        return Path.Combine(dir, "vip_license.lic");
+    }
+
     public bool IsMachineAlreadyAuthorized()
     {
-        // Each session launch presents the Link Unlock verification gate
+        try
+        {
+            string vipPath = GetVipLicenseFilePath();
+            if (File.Exists(vipPath))
+            {
+                byte[] encrypted = File.ReadAllBytes(vipPath);
+                byte[] entropy = Encoding.UTF8.GetBytes("SideLink-VIP-Machine-v1");
+                byte[] plainBytes = ProtectedData.Unprotect(encrypted, entropy, DataProtectionScope.CurrentUser);
+                string plain = Encoding.UTF8.GetString(plainBytes);
+
+                string[] parts = plain.Split('|');
+                if (parts.Length >= 3)
+                {
+                    string machine = parts[0];
+                    string user = parts[1];
+                    string key = parts[2];
+                    if (string.Equals(machine, Environment.MachineName, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(user, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _isUnlocked = true;
+                        _logger.LogInformation("Machine permanently authorized via local VIP license ({Key}).", key);
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error reading VIP license: {Msg}", ex.Message);
+        }
+
         return false;
+    }
+
+    public void SavePersistentVipLicense(string vipKey)
+    {
+        try
+        {
+            string vipPath = GetVipLicenseFilePath();
+            string machineInfo = $"{Environment.MachineName}|{Environment.UserName}|{vipKey}|{DateTime.UtcNow:O}";
+            byte[] plainBytes = Encoding.UTF8.GetBytes(machineInfo);
+            byte[] entropy = Encoding.UTF8.GetBytes("SideLink-VIP-Machine-v1");
+            byte[] encrypted = ProtectedData.Protect(plainBytes, entropy, DataProtectionScope.CurrentUser);
+            File.WriteAllBytes(vipPath, encrypted);
+
+            _isUnlocked = true;
+            _logger.LogInformation("Persistent VIP license successfully saved on this machine: {Key}", vipKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to save VIP license: {Msg}", ex.Message);
+        }
     }
 
     private void SavePersistentUnlockLicense(string token)

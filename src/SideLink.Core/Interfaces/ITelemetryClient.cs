@@ -10,3 +10,4 @@ public interface ITelemetryClient
         string? errorCode = null,
         string? errorMessage = null);
 }
+

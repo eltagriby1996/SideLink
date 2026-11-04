@@ -102,13 +102,6 @@ interface VerificationSession {
 }
 
 export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [authLoading, setAuthLoading] = useState<boolean>(true);
-  const [passwordInput, setPasswordInput] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [loginError, setLoginError] = useState<string>('');
-  const [loginLoading, setLoginLoading] = useState<boolean>(false);
-
   // Active Tab
   const [activeTab, setActiveTab] = useState<
     'overview' | 'config' | 'sessions' | 'ipas' | 'vip' | 'telemetry' | 'security'
@@ -151,28 +144,6 @@ export default function AdminPage() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3500);
   };
-
-  // Check initial auth status
-  const checkAuth = useCallback(async () => {
-    try {
-      setAuthLoading(true);
-      const res = await fetch('/api/admin/auth');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.authenticated) {
-          setIsAuthenticated(true);
-          return true;
-        }
-      }
-      setIsAuthenticated(false);
-      return false;
-    } catch {
-      setIsAuthenticated(false);
-      return false;
-    } finally {
-      setAuthLoading(false);
-    }
-  }, []);
 
   // Fetch all dashboard data
   const fetchAllData = useCallback(async () => {
@@ -221,52 +192,8 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    checkAuth().then((auth) => {
-      if (auth) {
-        fetchAllData();
-      }
-    });
-  }, [checkAuth, fetchAllData]);
-
-  // Login Handler
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!passwordInput.trim()) return;
-
-    setLoginLoading(true);
-    setLoginError('');
-
-    try {
-      const res = await fetch('/api/admin/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setIsAuthenticated(true);
-        setPasswordInput('');
-        fetchAllData();
-      } else {
-        setLoginError(data.error || 'كلمة المرور غير صحيحة.');
-      }
-    } catch {
-      setLoginError('تعذر الاتصال بالسيرفر.');
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
-  // Logout Handler
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/auth', { method: 'DELETE' });
-      setIsAuthenticated(false);
-    } catch {
-      setIsAuthenticated(false);
-    }
-  };
+    fetchAllData();
+  }, [fetchAllData]);
 
   // Save Remote Config
   const handleSaveConfig = async () => {
@@ -449,104 +376,7 @@ export default function AdminPage() {
   };
 
   // ----------------------------------------------------
-  // LOADING STATE
-  // ----------------------------------------------------
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400 font-mono text-sm" dir="rtl">
-        <div className="flex items-center gap-3">
-          <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
-          <span>جاري التحقق من صلاحيات المسؤول...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // ----------------------------------------------------
-  // LOGIN SCREEN
-  // ----------------------------------------------------
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 relative overflow-hidden" dir="rtl">
-        {/* Ambient Lights */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-600/20 blur-[140px] rounded-full" />
-          <div className="absolute bottom-10 right-10 w-[400px] h-[300px] bg-indigo-600/15 blur-[120px] rounded-full" />
-        </div>
-
-        <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-8 shadow-2xl backdrop-blur-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400" />
-
-          <div className="text-center space-y-3 mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-blue-600/20 border border-blue-500/40 mx-auto flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Lock className="w-8 h-8 text-blue-400" />
-            </div>
-            <h1 className="text-2xl font-black text-white">لوحة تحكم SideLink</h1>
-            <p className="text-xs text-slate-400">
-              بوابة الإدارة المركزية والتحكم في نظام التحقق والتطبيقات والتحديثات
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                كلمة مرور المسؤول (Admin Password)
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="أدخل كلمة مرور الآدمن..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 transition pr-10"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {loginError && (
-              <div className="p-3 bg-red-950/40 border border-red-900/60 rounded-xl text-red-400 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                <span>{loginError}</span>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loginLoading || !passwordInput.trim()}
-              className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-white font-bold text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition shadow-lg shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {loginLoading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>جاري تسجيل الدخول...</span>
-                </>
-              ) : (
-                <>
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>دخول لوحة التحكم</span>
-                </>
-              )}
-            </button>
-
-            <div className="text-[11px] text-slate-500 text-center pt-2">
-              كلمة المرور الافتراضية: <code className="text-blue-400 font-mono">admin@sidelink2026</code>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // ----------------------------------------------------
-  // AUTHENTICATED DASHBOARD
+  // ADMIN DASHBOARD
   // ----------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
@@ -593,13 +423,13 @@ export default function AdminPage() {
               <RefreshCw className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-900/40 text-red-300 text-xs font-semibold transition"
+            <a
+              href="/"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 text-xs font-semibold transition"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">تسجيل الخروج</span>
-            </button>
+              <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">عرض الموقع</span>
+            </a>
           </div>
         </div>
       </header>
