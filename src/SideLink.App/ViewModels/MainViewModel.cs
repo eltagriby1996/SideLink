@@ -55,7 +55,8 @@ public partial class MainViewModel : ObservableObject
         _deviceService = deviceService;
         _telemetryClient = telemetryClient;
 
-        _isAppUnlocked = false;
+        // Start in unlocked state only if machine already has a valid local license, preventing UI flicker
+        _isAppUnlocked = linkUnlock.CheckMachineAuthorized();
 
         Dashboard.NavigationRequested += Navigate;
         LinkUnlock.VerificationCompleted += OnVerificationCompleted;
@@ -88,6 +89,18 @@ public partial class MainViewModel : ObservableObject
                 _ = SigningRefresh.InitializeAsync();
                 StartAuthWatchdog();
                 return;
+            }
+            else
+            {
+                // Key was revoked/deactivated by admin! Lock app and notify user.
+                App.Current?.Dispatcher?.Invoke(() =>
+                {
+                    IsAppUnlocked = false;
+                    LinkUnlock.IsUnlocked = false;
+                    LinkUnlock.HasError = true;
+                    LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
+                    LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
+                });
             }
         }
 

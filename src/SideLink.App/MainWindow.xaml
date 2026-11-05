@@ -863,6 +863,18 @@
                                 <TextBlock Text="البرنامج لا يقوم بجمع أو إرسال أي كلمات سر أو بيانات Apple ID إلى أي خادم خارجي. كافة التوقيعات وعمليات التثبيت تتم محلياً 100% على جهازك." FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" LineHeight="18" />
                             </StackPanel>
                         </Border>
+
+                        <!-- VIP License Management Card -->
+                        <Border Style="{StaticResource CardStyle}" Margin="0,16,0,0">
+                            <StackPanel>
+                                <TextBlock Text="إدارة ترخيص VIP والتحقق:" FontSize="14" FontWeight="Bold" Foreground="White" Margin="0,0,0,6" />
+                                <TextBlock Text="{Binding Settings.CurrentVipStatus}" FontSize="12" Foreground="#38BDF8" FontFamily="Consolas" Margin="0,0,0,12" />
+                                <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                        Content="إلغاء ربط كود VIP من هذا الجهاز وحذفه" 
+                                        Command="{Binding Settings.UnlinkVipKeyCommand}" 
+                                        HorizontalAlignment="Left" Padding="14,8" />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Grid>
             </Grid>

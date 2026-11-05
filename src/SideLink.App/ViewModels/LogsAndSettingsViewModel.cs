@@ -67,6 +67,8 @@ public partial class LogsViewModel : ObservableObject
 
 public partial class SettingsViewModel : ObservableObject
 {
+    private readonly SideLink.Core.Interfaces.ILinkUnlockService _linkUnlockService;
+
     [ObservableProperty]
     private bool _isDarkTheme = true;
 
@@ -81,4 +83,31 @@ public partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _versionString = "SideLink v1.0.0 (x64 Release)";
+
+    [ObservableProperty]
+    private string _currentVipStatus = "جاري الفحص...";
+
+    public SettingsViewModel(SideLink.Core.Interfaces.ILinkUnlockService linkUnlockService)
+    {
+        _linkUnlockService = linkUnlockService;
+        UpdateVipStatus();
+    }
+
+    public void UpdateVipStatus()
+    {
+        string? key = _linkUnlockService.GetSavedVipKey();
+        CurrentVipStatus = !string.IsNullOrEmpty(key) ? $"مفعل ومربوط بهذا الجهاز (الكود: {key})" : "لا يوجد كود VIP محفوظ على هذا الجهاز";
+    }
+
+    [RelayCommand]
+    public void UnlinkVipKey()
+    {
+        _linkUnlockService.RevokeLocalVipLicense();
+        UpdateVipStatus();
+        MessageBox.Show(
+            "تم إلغاء ترخيص الـ VIP وحذف بياناته من هذا الجهاز بنجاح.\nيمكنك الآن إتمام التحقق العادي أو تجربة كود VIP جديد.",
+            "إلغاء ارتباط VIP",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 }

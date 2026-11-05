@@ -114,36 +114,45 @@ public partial class LinkUnlockViewModel : ObservableObject
 
             string key = VipKeyInput.Trim().ToUpperInvariant();
 
-            // Offline master bypass check (instant lifetime license)
-            if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase) ||
-                key.Equals("SL-VIP-MASTER-2026", StringComparison.OrdinalIgnoreCase))
+            // Online verification via sidelink-web API first (so admin control is absolute)
+            try
             {
-                _linkUnlockService.SavePersistentVipLicense(key);
-                VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص Master VIP الدائم بنجاح!";
-                IsSuccessAnimation = true;
-                await Task.Delay(1000);
-                App.Current?.Dispatcher?.Invoke(() =>
+                using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+                var resp = await http.PostAsJsonAsync("https://sidelink-web.vercel.app/api/app/vip/verify", new { key });
+                if (resp.IsSuccessStatusCode)
                 {
-                    IsUnlocked = true;
-                    VerificationCompleted?.Invoke();
-                });
-                return;
+                    var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
+                    {
+                        _linkUnlockService.SavePersistentVipLicense(key);
+                        VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP بنجاح!";
+                        IsSuccessAnimation = true;
+                        await Task.Delay(800);
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            IsUnlocked = true;
+                            VerificationCompleted?.Invoke();
+                        });
+                        return;
+                    }
+                }
+                else
+                {
+                    var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                    string msg = doc.TryGetProperty("error", out var e) ? e.GetString() ?? "مفتاح غير صالح." : "تم تعطيل أو رفض هذا المفتاح من قبل الإدارة.";
+                    VipStatusMessage = msg;
+                    return;
+                }
             }
-
-            // Online verification via sidelink-web API
-            using var http = new System.Net.Http.HttpClient();
-            http.Timeout = TimeSpan.FromSeconds(5);
-
-            var resp = await http.PostAsJsonAsync("https://sidelink-web.vercel.app/api/app/vip/verify", new { key });
-            if (resp.IsSuccessStatusCode)
+            catch (Exception ex)
             {
-                var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
+                // Only if offline without internet, check emergency master key
+                if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase))
                 {
                     _linkUnlockService.SavePersistentVipLicense(key);
-                    VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP الدائم على جهازك بنجاح!";
+                    VipStatusMessage = "✓ تم تفعيل ترخيص الطوارئ دون اتصال بنجاح!";
                     IsSuccessAnimation = true;
-                    await Task.Delay(1000);
+                    await Task.Delay(800);
                     App.Current?.Dispatcher?.Invoke(() =>
                     {
                         IsUnlocked = true;
@@ -151,6 +160,8 @@ public partial class LinkUnlockViewModel : ObservableObject
                     });
                     return;
                 }
+                VipStatusMessage = "تعذر الاتصال بالخادم للتحقق من المفتاح: " + ex.Message;
+                return;
             }
 
             VipStatusMessage = "مفتاح VIP غير صالح أو منتهي الصلاحية.";
