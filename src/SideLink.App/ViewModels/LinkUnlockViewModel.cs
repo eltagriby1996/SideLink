@@ -75,6 +75,23 @@ public partial class LinkUnlockViewModel : ObservableObject
         return false;
     }
 
+    public async Task<bool> ValidateAuthorizationOnlineAsync()
+    {
+        var (isValid, reason) = await _linkUnlockService.ValidateSavedLicenseOnlineAsync();
+        if (!isValid)
+        {
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                IsUnlocked = false;
+                HasError = true;
+                ErrorMessage = reason ?? "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة.";
+                VipStatusMessage = ErrorMessage;
+            });
+            return false;
+        }
+        return true;
+    }
+
     [RelayCommand]
     public void ToggleVipSection()
     {

@@ -74,6 +74,9 @@ public interface ILinkUnlockService
 
     bool IsMachineAlreadyAuthorized();
     void SavePersistentVipLicense(string vipKey);
+    string? GetSavedVipKey();
+    void RevokeLocalVipLicense();
+    Task<(bool IsValid, string? Reason)> ValidateSavedLicenseOnlineAsync(CancellationToken cancellationToken = default);
     Task<VerificationSession> CreateSessionAsync(CancellationToken cancellationToken = default);
     Task<VerificationStatus> CheckSessionStatusAsync(string sessionId, CancellationToken cancellationToken = default);
     Task<bool> AuthorizeAndUnlockAsync(string sessionId, CancellationToken cancellationToken = default);

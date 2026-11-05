@@ -16,6 +16,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
     private readonly HttpClient _httpClient;
     private readonly ILogger<LinkUnlockService> _logger;
     private string _baseUrl;
+    private readonly string _remoteWebUrl;
     private readonly string _issuer;
     private readonly string _audience;
     private readonly string _verificationKey;
@@ -68,6 +69,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
     {
         _httpClient = httpClient;
         _baseUrl = baseUrl.TrimEnd('/');
+        _remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app").TrimEnd('/');
         _verificationKey = verificationKey;
         _logger = logger;
         _issuer = issuer;
@@ -88,6 +90,133 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         string dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideLink");
         Directory.CreateDirectory(dir);
         return Path.Combine(dir, "vip_license.lic");
+    }
+
+    public string? GetSavedVipKey()
+    {
+        try
+        {
+            string vipPath = GetVipLicenseFilePath();
+            if (File.Exists(vipPath))
+            {
+                byte[] encrypted = File.ReadAllBytes(vipPath);
+                byte[] entropy = Encoding.UTF8.GetBytes("SideLink-VIP-Machine-v1");
+                byte[] plainBytes = ProtectedData.Unprotect(encrypted, entropy, DataProtectionScope.CurrentUser);
+                string plain = Encoding.UTF8.GetString(plainBytes);
+
+                string[] parts = plain.Split('|');
+                if (parts.Length >= 3)
+                {
+                    string machine = parts[0];
+                    string user = parts[1];
+                    string key = parts[2];
+                    if (string.Equals(machine, Environment.MachineName, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(user, Environment.UserName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return key;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error reading saved VIP key: {Msg}", ex.Message);
+        }
+        return null;
+    }
+
+    public void RevokeLocalVipLicense()
+    {
+        try
+        {
+            string vipPath = GetVipLicenseFilePath();
+            if (File.Exists(vipPath))
+            {
+                File.Delete(vipPath);
+                _logger.LogInformation("Deleted local VIP license file.");
+            }
+            string licPath = GetLicenseFilePath();
+            if (File.Exists(licPath))
+            {
+                File.Delete(licPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to delete local VIP license: {Msg}", ex.Message);
+        }
+        finally
+        {
+            _isUnlocked = false;
+            _currentSession = null;
+            SessionUnlockStateChanged?.Invoke(this, false);
+        }
+    }
+
+    public async Task<(bool IsValid, string? Reason)> ValidateSavedLicenseOnlineAsync(CancellationToken cancellationToken = default)
+    {
+        string? key = GetSavedVipKey();
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            _isUnlocked = false;
+            return (false, "لا يوجد ترخيص VIP محفوظ على هذا الجهاز.");
+        }
+
+        try
+        {
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(6) };
+            string url = $"{_remoteWebUrl}/api/app/vip/status";
+
+            var payload = new
+            {
+                key = key.Trim(),
+                machineName = Environment.MachineName,
+                userName = Environment.UserName
+            };
+
+            var content = new StringContent(
+                JsonSerializer.Serialize(payload),
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            var resp = await http.PostAsync(url, content, cancellationToken);
+            if (resp.IsSuccessStatusCode)
+            {
+                var body = await resp.Content.ReadAsStringAsync(cancellationToken);
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+
+                bool valid = root.TryGetProperty("valid", out var v) && v.GetBoolean();
+                string? reason = root.TryGetProperty("reason", out var r) ? r.GetString() : null;
+
+                if (!valid)
+                {
+                    _logger.LogWarning("VIP License revoked or inactive on server ({Key}): {Reason}", key, reason);
+                    RevokeLocalVipLicense();
+                    return (false, reason ?? "تم تعطيل أو إلغاء صلاحية هذا المفتاح من قبل الإدارة.");
+                }
+
+                _isUnlocked = true;
+                return (true, null);
+            }
+            else
+            {
+                _logger.LogWarning("VIP status check returned status code: {Status}", resp.StatusCode);
+                RevokeLocalVipLicense();
+                return (false, "تم رفض الترخيص من الخادم.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Unable to contact verification server for license check: {Msg}", ex.Message);
+            // If offline, check if local file signature is intact
+            if (IsMachineAlreadyAuthorized())
+            {
+                return (true, null);
+            }
+            return (false, "تعذر الاتصال بخادم التحقق.");
+        }
     }
 
     public bool IsMachineAlreadyAuthorized()

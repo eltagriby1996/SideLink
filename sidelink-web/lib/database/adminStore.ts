@@ -179,6 +179,27 @@ export function validateVipKey(key: string): { isValid: boolean; reason?: string
   return { isValid: true };
 }
 
+export function checkVipKeyStatus(key: string): { isValid: boolean; reason?: string } {
+  const db = dbInstance.getDb();
+  const cleanKey = key.trim().toUpperCase();
+  const found = db.vipKeys.find((k) => k.key === cleanKey);
+
+  if (!found) {
+    return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو تم حذفه من قبل الإدارة.' };
+  }
+  if (!found.isActive) {
+    return { isValid: false, reason: 'تم تعطيل هذا المفتاح من قبل الإدارة.' };
+  }
+  if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
+    return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
+  }
+  if (found.maxUses > 0 && found.usedCount > found.maxUses) {
+    return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+  }
+
+  return { isValid: true };
+}
+
 // Blacklist Methods
 export function getBlacklist(): BlacklistedIp[] {
   return [...dbInstance.getDb().blacklist];
