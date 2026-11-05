@@ -316,12 +316,28 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
                 throw new InvalidOperationException("Invalid session creation response from embedded server.");
             }
 
+            // Extract nonce from local result URL if present
+            string nonce = string.Empty;
+            if (!string.IsNullOrEmpty(result.VerificationUrl) && result.VerificationUrl.Contains("nonce="))
+            {
+                try
+                {
+                    int idx = result.VerificationUrl.IndexOf("nonce=");
+                    if (idx >= 0)
+                    {
+                        nonce = result.VerificationUrl.Substring(idx + 6).Split('&')[0];
+                    }
+                }
+                catch { }
+            }
+
+            // Always open the real web domain for official verification and Adsterra monetization
+            string liveVerificationUrl = $"{_remoteWebUrl}/verify?session={result.SessionId}&nonce={nonce}";
+
             var session = new VerificationSession
             {
                 SessionId = result.SessionId,
-                VerificationUrl = string.IsNullOrWhiteSpace(result.VerificationUrl) 
-                    ? $"{_baseUrl}/verify?session={result.SessionId}" 
-                    : result.VerificationUrl,
+                VerificationUrl = liveVerificationUrl,
                 ExpiresAt = result.ExpiresAt,
                 Status = VerificationStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow
@@ -348,40 +364,65 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         if (_currentSession != null && !string.IsNullOrWhiteSpace(_currentSession.VerificationUrl))
             return _currentSession.VerificationUrl;
 
-        return $"{_baseUrl}/verify?session={sessionId}";
+        return $"{_remoteWebUrl}/verify?session={sessionId}";
     }
 
     public async Task<VerificationStatus> CheckSessionStatusAsync(string sessionId, CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _httpClient.GetAsync($"{_baseUrl}/api/verification/sessions/{sessionId}/status", cancellationToken);
-            if (!response.IsSuccessStatusCode)
+            // 1. Fast local check (instant response when browser sends local ping)
+            try
             {
-                // Transient network / startup delay should remain pending, never prematurely expire
-                return VerificationStatus.Pending;
-            }
-
-            var data = await response.Content.ReadFromJsonAsync<VerificationStatusResponse>(cancellationToken: cancellationToken);
-            if (data == null) return VerificationStatus.Pending;
-
-            var status = data.Status.ToLowerInvariant() switch
-            {
-                "verified" => VerificationStatus.Verified,
-                "expired" => VerificationStatus.Expired,
-                "failed" => VerificationStatus.Failed,
-                _ => VerificationStatus.Pending
-            };
-
-            lock (_lock)
-            {
-                if (_currentSession != null && _currentSession.SessionId == sessionId)
+                var localResp = await _httpClient.GetAsync($"{_baseUrl}/api/verification/sessions/{sessionId}/status", cancellationToken);
+                if (localResp.IsSuccessStatusCode)
                 {
-                    _currentSession = _currentSession with { Status = status };
+                    var data = await localResp.Content.ReadFromJsonAsync<VerificationStatusResponse>(cancellationToken: cancellationToken);
+                    if (data != null && data.Status.Equals("verified", StringComparison.OrdinalIgnoreCase))
+                    {
+                        lock (_lock)
+                        {
+                            if (_currentSession != null && _currentSession.SessionId == sessionId)
+                            {
+                                _currentSession = _currentSession with { Status = VerificationStatus.Verified };
+                            }
+                        }
+                        return VerificationStatus.Verified;
+                    }
                 }
             }
+            catch { }
 
-            return status;
+            // 2. Remote check on sidelink-web.vercel.app (in case browser blocked localhost ping)
+            try
+            {
+                var remoteResp = await _httpClient.GetAsync($"{_remoteWebUrl}/api/verification/sessions/{sessionId}/status", cancellationToken);
+                if (remoteResp.IsSuccessStatusCode)
+                {
+                    var remoteData = await remoteResp.Content.ReadFromJsonAsync<VerificationStatusResponse>(cancellationToken: cancellationToken);
+                    if (remoteData != null && remoteData.Status.Equals("verified", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Sync local embedded server so local authorize succeeds
+                        try
+                        {
+                            await _httpClient.GetAsync($"{_baseUrl}/api/ping-complete?session={sessionId}", cancellationToken);
+                        }
+                        catch { }
+
+                        lock (_lock)
+                        {
+                            if (_currentSession != null && _currentSession.SessionId == sessionId)
+                            {
+                                _currentSession = _currentSession with { Status = VerificationStatus.Verified };
+                            }
+                        }
+                        return VerificationStatus.Verified;
+                    }
+                }
+            }
+            catch { }
+
+            return VerificationStatus.Pending;
         }
         catch (Exception ex)
         {

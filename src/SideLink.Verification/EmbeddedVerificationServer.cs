@@ -110,7 +110,12 @@ public class EmbeddedVerificationServer : IDisposable
         {
             if (path == "/" || path == "/verify")
             {
-                await ServeVerificationPageAsync(context);
+                string sessionId = req.QueryString["session"] ?? "";
+                string nonce = req.QueryString["nonce"] ?? "";
+                string remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app").TrimEnd('/');
+                string redirectTarget = $"{remoteWebUrl}/verify?session={sessionId}&nonce={nonce}";
+                res.Redirect(redirectTarget);
+                res.Close();
                 return;
             }
             else if (path == "/api/health" && req.HttpMethod == "GET")
@@ -135,7 +140,8 @@ public class EmbeddedVerificationServer : IDisposable
                     };
                 }
 
-                string verificationUrl = $"{BaseUrl}/verify?session={sessionId}&nonce={nonce}";
+                string remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app").TrimEnd('/');
+                string verificationUrl = $"{remoteWebUrl}/verify?session={sessionId}&nonce={nonce}";
                 await SendJsonAsync(res, new
                 {
                     sessionId,
