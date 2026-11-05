@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import AdBanner from '@/components/AdBanner';
+import AdScriptInjector from '@/components/AdScriptInjector';
 import { 
   ShieldCheck, 
   Lock, 
@@ -27,6 +29,28 @@ function VerifyContent() {
   const [secondsRemaining, setSecondsRemaining] = useState<number>(600); // 10 mins
   const [verifyStep, setVerifyStep] = useState<number>(0);
   const [verifyProgress, setVerifyProgress] = useState<number>(0);
+  const [adsConfig, setAdsConfig] = useState<{
+    enabled: boolean;
+    topBannerHtml: string;
+    bottomBannerHtml: string;
+    popunderScript: string;
+    socialBarScript: string;
+    smartlinkUrl: string;
+    openSmartlinkOnVerify: boolean;
+    adCountdownSeconds: number;
+  } | null>(null);
+
+  // Load Ads Configuration
+  useEffect(() => {
+    fetch('/api/app/ads')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.ads) {
+          setAdsConfig(data.ads);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -82,6 +106,13 @@ function VerifyContent() {
       setStatus('error');
       setErrorMessage('معرّف الجلسة مفقود. يرجى إعادة تشغيل برنامج SideLink.');
       return;
+    }
+
+    // Trigger Smartlink sponsor tab if enabled
+    if (adsConfig?.enabled && adsConfig?.openSmartlinkOnVerify && adsConfig?.smartlinkUrl) {
+      try {
+        window.open(adsConfig.smartlinkUrl, '_blank', 'noopener,noreferrer');
+      } catch {}
     }
 
     setStatus('verifying');
@@ -198,10 +229,26 @@ function VerifyContent() {
         </div>
       </header>
 
+      {/* Global Ad Scripts (Popunder & Social Bar) */}
+      {adsConfig?.enabled && (
+        <AdScriptInjector
+          scripts={[adsConfig.popunderScript, adsConfig.socialBarScript]}
+        />
+      )}
+
       {/* Main Content Area */}
       <main className="flex-1 flex items-center justify-center p-4 sm:p-6 my-8">
         <div className="max-w-md w-full mx-auto space-y-6">
           
+          {/* Top Ad Banner */}
+          {adsConfig?.enabled && adsConfig?.topBannerHtml && (
+            <AdBanner
+              htmlCode={adsConfig.topBannerHtml}
+              label="إعلان ممول • Sponsored"
+              minHeight={90}
+            />
+          )}
+
           {/* Main Verification Card */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-blue-950/60 backdrop-blur-2xl relative overflow-hidden transition-all duration-500">
             {/* Top Glowing Gradient Accent Bar */}
@@ -456,6 +503,15 @@ function VerifyContent() {
             )}
 
           </div>
+
+          {/* Bottom Ad Banner */}
+          {adsConfig?.enabled && adsConfig?.bottomBannerHtml && (
+            <AdBanner
+              htmlCode={adsConfig.bottomBannerHtml}
+              label="إعلان رعاية • Advertisement"
+              minHeight={150}
+            />
+          )}
 
           {/* Micro Footer Notice */}
           <div className="text-center text-xs text-slate-500 space-y-2">

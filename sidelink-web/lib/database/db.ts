@@ -2,6 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
+export interface AdsConfig {
+  enabled: boolean;
+  topBannerHtml: string;
+  bottomBannerHtml: string;
+  popunderScript: string;
+  socialBarScript: string;
+  smartlinkUrl: string;
+  openSmartlinkOnVerify: boolean;
+  adCountdownSeconds: number;
+}
+
 export interface RemoteConfig {
   isVerificationEnabled: boolean;
   maintenanceMode: boolean;
@@ -86,6 +97,7 @@ interface RawStoredSession {
 
 export interface DatabaseSchema {
   config: RemoteConfig;
+  ads: AdsConfig;
   sessions: Record<string, RawStoredSession>;
   ipas: CuratedIpa[];
   vipKeys: VipKey[];
@@ -111,6 +123,16 @@ function getDefaultDatabase(): DatabaseSchema {
         link: 'https://github.com/eltagriby1996/SideLink',
         linkText: 'عرض التحديثات',
       },
+    },
+    ads: {
+      enabled: true,
+      topBannerHtml: '',
+      bottomBannerHtml: '',
+      popunderScript: '',
+      socialBarScript: '',
+      smartlinkUrl: '',
+      openSmartlinkOnVerify: false,
+      adCountdownSeconds: 0,
     },
     sessions: {},
     ipas: [
@@ -221,6 +243,7 @@ class PersistentDatabase {
         const def = getDefaultDatabase();
         return {
           config: { ...def.config, ...(parsed.config || {}) },
+          ads: { ...def.ads, ...(parsed.ads || {}) },
           sessions: parsed.sessions || {},
           ipas: Array.isArray(parsed.ipas) ? parsed.ipas : def.ipas,
           vipKeys: Array.isArray(parsed.vipKeys) ? parsed.vipKeys : def.vipKeys,

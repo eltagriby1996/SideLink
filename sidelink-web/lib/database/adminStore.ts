@@ -1,6 +1,7 @@
 import {
   dbInstance,
   RemoteConfig,
+  AdsConfig,
   CuratedIpa,
   VipKey,
   BlacklistedIp,
@@ -8,7 +9,7 @@ import {
   VerificationSessionRecord,
 } from './db';
 
-export type { RemoteConfig, CuratedIpa, VipKey, BlacklistedIp, TelemetryEvent };
+export type { RemoteConfig, AdsConfig, CuratedIpa, VipKey, BlacklistedIp, TelemetryEvent };
 
 // Config Methods
 export function getRemoteConfig(): RemoteConfig {
@@ -27,6 +28,36 @@ export function updateRemoteConfig(partial: Partial<RemoteConfig>): RemoteConfig
   };
   dbInstance.save();
   return db.config;
+}
+
+// Ads Management Methods
+export function getAdsConfig(): AdsConfig {
+  const db = dbInstance.getDb();
+  if (!db.ads) {
+    db.ads = {
+      enabled: true,
+      topBannerHtml: '',
+      bottomBannerHtml: '',
+      popunderScript: '',
+      socialBarScript: '',
+      smartlinkUrl: '',
+      openSmartlinkOnVerify: false,
+      adCountdownSeconds: 0,
+    };
+    dbInstance.save();
+  }
+  return { ...db.ads };
+}
+
+export function updateAdsConfig(partial: Partial<AdsConfig>): AdsConfig {
+  const db = dbInstance.getDb();
+  const current = getAdsConfig();
+  db.ads = {
+    ...current,
+    ...partial,
+  };
+  dbInstance.save();
+  return { ...db.ads };
 }
 
 // Curated IPAs Methods

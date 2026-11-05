@@ -27,8 +27,21 @@ import {
   XCircle,
   ExternalLink,
   Flame,
-  UserCheck
+  UserCheck,
+  DollarSign,
+  Megaphone
 } from 'lucide-react';
+
+interface AdsConfigState {
+  enabled: boolean;
+  topBannerHtml: string;
+  bottomBannerHtml: string;
+  popunderScript: string;
+  socialBarScript: string;
+  smartlinkUrl: string;
+  openSmartlinkOnVerify: boolean;
+  adCountdownSeconds: number;
+}
 
 interface RemoteConfigState {
   isVerificationEnabled: boolean;
@@ -104,12 +117,23 @@ interface VerificationSession {
 export default function AdminPage() {
   // Active Tab
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'config' | 'sessions' | 'ipas' | 'vip' | 'telemetry' | 'security'
+    'overview' | 'config' | 'sessions' | 'ipas' | 'vip' | 'telemetry' | 'security' | 'ads'
   >('overview');
 
   // Data states
   const [stats, setStats] = useState<any>(null);
   const [config, setConfig] = useState<RemoteConfigState | null>(null);
+  const [ads, setAds] = useState<AdsConfigState>({
+    enabled: true,
+    topBannerHtml: '',
+    bottomBannerHtml: '',
+    popunderScript: '',
+    socialBarScript: '',
+    smartlinkUrl: '',
+    openSmartlinkOnVerify: false,
+    adCountdownSeconds: 0,
+  });
+  const [savingAds, setSavingAds] = useState<boolean>(false);
   const [sessions, setSessions] = useState<VerificationSession[]>([]);
   const [ipas, setIpas] = useState<CuratedIpa[]>([]);
   const [vipKeys, setVipKeys] = useState<VipKey[]>([]);
@@ -148,7 +172,7 @@ export default function AdminPage() {
   // Fetch all dashboard data
   const fetchAllData = useCallback(async () => {
     try {
-      const [statsRes, configRes, sessionsRes, ipasRes, vipRes, telRes, blRes] = await Promise.all([
+      const [statsRes, configRes, sessionsRes, ipasRes, vipRes, telRes, blRes, adsRes] = await Promise.all([
         fetch('/api/admin/stats'),
         fetch('/api/admin/config'),
         fetch('/api/admin/sessions'),
@@ -156,6 +180,7 @@ export default function AdminPage() {
         fetch('/api/admin/vip-keys'),
         fetch('/api/admin/telemetry?limit=80'),
         fetch('/api/admin/blacklist'),
+        fetch('/api/admin/ads'),
       ]);
 
       if (statsRes.ok) {
@@ -186,6 +211,10 @@ export default function AdminPage() {
         const d = await blRes.json();
         setBlacklist(d.blacklist);
       }
+      if (adsRes.ok) {
+        const d = await adsRes.json();
+        if (d.ads) setAds(d.ads);
+      }
     } catch (err) {
       console.error('Error fetching admin data:', err);
     }
@@ -213,6 +242,30 @@ export default function AdminPage() {
       }
     } catch {
       alert('خطأ في الاتصال.');
+    }
+  };
+
+  // Save Ads Configuration
+  const handleSaveAds = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setSavingAds(true);
+    try {
+      const res = await fetch('/api/admin/ads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ads),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('✓ تم حفظ ونشر إعدادات الإعلانات بنجاح!');
+        if (data.ads) setAds(data.ads);
+      } else {
+        alert(data.error || 'فشل حفظ إعدادات الإعلانات.');
+      }
+    } catch {
+      alert('خطأ في الاتصال بالسيرفر.');
+    } finally {
+      setSavingAds(false);
     }
   };
 
@@ -521,6 +574,21 @@ export default function AdminPage() {
           >
             <ShieldAlert className="w-4 h-4" />
             <span>7. الأمان وحظر الـ IPs</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('ads')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+              activeTab === 'ads'
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-600/30 ring-1 ring-emerald-400/50'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900'
+            }`}
+          >
+            <DollarSign className="w-4 h-4 text-emerald-400" />
+            <span>8. الإعلانات والربح (Adsterra)</span>
+            <span className="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-mono">
+              Monetize
+            </span>
           </button>
         </div>
 
@@ -1403,7 +1471,309 @@ export default function AdminPage() {
         )}
 
         {/* ========================================================== */}
-        {/* TAB 7: SECURITY & BLACKLIST */}
+        {/* TAB 8: ADS & MONETIZATION (ADSTERRA INTEGRATION) */}
+        {/* ========================================================== */}
+        {activeTab === 'ads' && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Header & Quick Action */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-white">إدارة الإعلانات والربح (Ads Monetization)</h2>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Adsterra Ready
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  تحكم كامل في إعلانات Adsterra وشبكات الإعلانات الأخرى داخل صفحة التحقق لتوليد أرباح من كل جلسة تشغيل
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <a
+                  href="/verify?session=demo-session-preview"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 transition border border-slate-700"
+                >
+                  <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+                  <span>معاينة صفحة التحقق الحية</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={handleSaveAds}
+                  disabled={savingAds}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 transition disabled:opacity-50 cursor-pointer"
+                >
+                  {savingAds ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>جاري الحفظ...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>حفظ ونشر الإعلانات فوراً</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Adsterra Setup Guide matching the user's screenshot */}
+            <div className="bg-gradient-to-br from-emerald-950/40 via-slate-900/90 to-slate-900/90 border border-emerald-800/40 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+              
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                  <DollarSign className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">
+                    دليل ملء نموذج Adsterra (الظاهر في صورتك)
+                  </h3>
+                  <p className="text-[11px] text-emerald-400/80">
+                    اتبع هذه الخطوات البسيطة لتفعيل حسابك والحصول على الأكواد
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs pt-2">
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                  <span className="text-emerald-400 font-bold font-mono">1. Website</span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    اكتب دومين موقعك أو الرابط الذي ترفع عليه SideLink (مثلاً رابط Vercel أو دومينك الخاص).
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                  <span className="text-emerald-400 font-bold font-mono">2. Category</span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    اختر <strong>Software</strong> أو <strong>Downloads</strong> أو <strong>Other</strong> ليتطابق مع طبيعة البرنامج.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                  <span className="text-emerald-400 font-bold font-mono">3. Show adult ads</span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    يُفضل تركها <strong>معطلة (Off)</strong> لتجنب الإعلانات غير اللائقة، أو تفعيلها إذا كنت ترغب في رفع الـ CPM لأقصى حد.
+                  </p>
+                </div>
+
+                <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                  <span className="text-emerald-400 font-bold font-mono">4. Ad Unit Format</span>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    اختر <strong>Social Bar</strong> أو <strong>Popunder</strong> (الأعلى ربحاً)، أو <strong>Banner</strong> (728x90)، ثم انسخ الكود وضعه بالأسفل.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Ads Master Controls Card */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Sliders className="w-4 h-4 text-emerald-400" />
+                <span>المفاتيح العامة للتحكم في الإعلانات</span>
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Master Switch */}
+                <div className="flex items-center justify-between p-4 bg-slate-950/80 rounded-xl border border-slate-800">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-white block">
+                      تفعيل الإعلانات على صفحة التحقق
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      تشغيل أو إيقاف ظهور كافة الإعلانات فورياً
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ads.enabled}
+                      onChange={(e) => setAds({ ...ads, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                {/* Smartlink on Verify Click */}
+                <div className="flex items-center justify-between p-4 bg-slate-950/80 rounded-xl border border-slate-800">
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold text-white block">
+                      فتح رابط السمارت لينك عند الضغط على تأكيد
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      فتح صفحة الرعاية في تبويب جديد مع إتمام التحقق
+                    </span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ads.openSmartlinkOnVerify}
+                      onChange={(e) => setAds({ ...ads, openSmartlinkOnVerify: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Direct Smartlink URL Input */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>رابط السمارت لينك المباشر (Adsterra Direct Link / Smartlink URL):</span>
+                </label>
+                <input
+                  type="url"
+                  value={ads.smartlinkUrl || ''}
+                  onChange={(e) => setAds({ ...ads, smartlinkUrl: e.target.value })}
+                  placeholder="https://www.highcpmgate.com/..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-600 font-mono focus:border-emerald-500 focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  إذا أنشأت في Adsterra وحدة &quot;Smartlink&quot;، ضع الرابط هنا وسيتم توجيه الزائر له في تبويب جديد بمجرد الضغط على زر التحقق.
+                </span>
+              </div>
+            </div>
+
+            {/* Ad Units Code Inputs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Unit 1: Social Bar */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                      1
+                    </div>
+                    <span className="text-xs font-bold text-white">
+                      سكريبت السوشيال بار (Social Bar Code)
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">
+                    TOP CPM
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  إشعار أو شريط عائم ذكي يظهر للمستخدم في صفحة التحقق بدون حجب المحتوى:
+                </p>
+                <textarea
+                  rows={4}
+                  value={ads.socialBarScript || ''}
+                  onChange={(e) => setAds({ ...ads, socialBarScript: e.target.value })}
+                  placeholder="<script type='text/javascript' src='//.../invoke.js'></script>"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-slate-700 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Unit 2: Popunder */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
+                      2
+                    </div>
+                    <span className="text-xs font-bold text-white">
+                      سكريبت البوب أندر (Popunder Script)
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">
+                    High Revenue
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  يفتح نافذة إعلان في الخلفية عند نقر المستخدم في أي مكان بالصفحة:
+                </p>
+                <textarea
+                  rows={4}
+                  value={ads.popunderScript || ''}
+                  onChange={(e) => setAds({ ...ads, popunderScript: e.target.value })}
+                  placeholder="<script type='text/javascript' src='//.../invoke.js'></script>"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-300 placeholder-slate-700 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Unit 3: Top Banner */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+                      3
+                    </div>
+                    <span className="text-xs font-bold text-white">
+                      بانر الإعلان العلوي (Top Banner 728x90 / 468x60)
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
+                    Header
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  كود البانر المستطيل الذي يظهر في أعلى صفحة التحقق فوق بطاقة الجلسة:
+                </p>
+                <textarea
+                  rows={4}
+                  value={ads.topBannerHtml || ''}
+                  onChange={(e) => setAds({ ...ads, topBannerHtml: e.target.value })}
+                  placeholder="ضع كود الـ HTML / Script الخاص ببانر 728x90 هنا..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-blue-300 placeholder-slate-700 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Unit 4: Bottom Banner */}
+              <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-xs">
+                      4
+                    </div>
+                    <span className="text-xs font-bold text-white">
+                      بانر الإعلان السفلي (Bottom Banner 300x250 / Responsive)
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
+                    Footer
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  كود البانر المربع أو المتجاوب الذي يظهر أسفل بطاقة التحقق مباشرة:
+                </p>
+                <textarea
+                  rows={4}
+                  value={ads.bottomBannerHtml || ''}
+                  onChange={(e) => setAds({ ...ads, bottomBannerHtml: e.target.value })}
+                  placeholder="ضع كود الـ HTML / Script الخاص ببانر 300x250 هنا..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-blue-300 placeholder-slate-700 focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Save Button Floating / Bottom Bar */}
+            <div className="flex items-center justify-end pt-2">
+              <button
+                type="button"
+                onClick={handleSaveAds}
+                disabled={savingAds}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-xl shadow-emerald-600/30 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                {savingAds ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>جاري حفظ وتطبيق الإعلانات...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>حفظ ونشر التعديلات على صفحة التحقق</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
         {/* ========================================================== */}
         {activeTab === 'security' && (
           <div className="space-y-6">
