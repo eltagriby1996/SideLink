@@ -38,7 +38,16 @@ function VerifyContent() {
     smartlinkUrl: string;
     openSmartlinkOnVerify: boolean;
     adCountdownSeconds: number;
-  } | null>(null);
+  }>({
+    enabled: true,
+    topBannerHtml: '',
+    bottomBannerHtml: '',
+    popunderScript: '<script data-cfasync="false" src="https://accountut.com/1/0a6dadbbf05fcfc44cee6a5e531224e6"></script>',
+    socialBarScript: '<script data-cfasync="false" src="https://bellnewyork.org/14/f504848a82ca24d1bee310ac6e6d8991"></script>',
+    smartlinkUrl: 'https://ardance.org/4/8a4e54806bf1d2e4984078c43efd8205',
+    openSmartlinkOnVerify: true,
+    adCountdownSeconds: 0,
+  });
 
   // Load Ads Configuration
   useEffect(() => {

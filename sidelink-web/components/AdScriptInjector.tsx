@@ -35,9 +35,11 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
         scriptNodes.forEach((node) => {
           const scriptEl = document.createElement('script');
           scriptEl.type = node.type || 'text/javascript';
+          Array.from(node.attributes).forEach((attr) => {
+            scriptEl.setAttribute(attr.name, attr.value);
+          });
           if (node.src) {
             scriptEl.src = node.src;
-            scriptEl.async = true;
           } else {
             scriptEl.textContent = node.textContent;
           }
@@ -71,3 +73,4 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
 
   return null;
 }
+
