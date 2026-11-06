@@ -1,5 +1,7 @@
 import React from 'react';
 import TypewriterTitle from '../components/TypewriterTitle';
+import ModdedIpaSection from '../components/ModdedIpaSection';
+import SigningToolsSection from '../components/SigningToolsSection';
 import {
   Smartphone,
   RefreshCw,
@@ -50,8 +52,14 @@ export default function HomePage() {
             <a href="#download" className="hover:text-white transition">
               تحميل الأداة
             </a>
+            <a href="#modded-ipas" className="hover:text-white transition text-blue-400 font-bold">
+              تطبيقات IPA معدلة
+            </a>
+            <a href="#esign-ksign" className="hover:text-white transition text-emerald-400 font-bold">
+              ESign والشهادات (P12)
+            </a>
             <a href="#prerequisites" className="hover:text-white transition">
-              المتطلبات الأساسية (iTunes &amp; iCloud)
+              المتطلبات الأساسية
             </a>
             <a href="#guide" className="hover:text-white transition">
               دليل الاستخدام
@@ -259,6 +267,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Modded IPAs Library Section */}
+      <ModdedIpaSection />
+
+      {/* On-Device Signing (ESign / KSign) & Enterprise Certificates Section */}
+      <SigningToolsSection />
 
       {/* Step-by-Step Guide */}
       <section id="guide" className="py-16 px-4 max-w-5xl mx-auto border-t border-slate-800/80 scroll-mt-20">
