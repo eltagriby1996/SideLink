@@ -100,7 +100,7 @@
       "note": "ترخيص تجريبي للمستخدم",
       "createdAt": "2026-11-06T15:20:00.000Z",
       "expiresAt": null,
-      "usedCount": 1,
+      "usedCount": 0,
       "maxUses": 0,
       "isActive": true
     },
@@ -124,5 +124,18 @@
     }
   ],
   "blacklist": [],
-  "telemetry": []
+  "telemetry": [
+    {
+      "clientVersion": "1.0.0",
+      "deviceModel": "Windows Client Device",
+      "iosVersion": "iOS Device",
+      "action": "app_launch",
+      "status": "success",
+      "errorCode": null,
+      "errorMessage": null,
+      "clientIp": "57.154.3.144",
+      "id": "evt-mw554at5-uuy1",
+      "timestamp": "2026-11-06T15:39:34.457Z"
+    }
+  ]
 }
