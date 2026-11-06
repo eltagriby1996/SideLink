@@ -76,7 +76,14 @@ public class InfrastructureAndSecurityTests
             File.Exists(info.MobileProvisionPath).Should().BeTrue();
             info.P12Path.Should().NotBeNullOrEmpty();
             File.Exists(info.P12Path).Should().BeTrue();
-            info.IsReadyToSign.Should().BeTrue();
+            if (info.IsExpired)
+            {
+                info.IsReadyToSign.Should().BeFalse();
+            }
+            else
+            {
+                info.IsReadyToSign.Should().BeTrue();
+            }
 
             // Test signing Spotify.ipa
             if (File.Exists(@"E:\downloads\Spotify.ipa"))
@@ -91,9 +98,17 @@ public class InfrastructureAndSecurityTests
                     ModifyBundleId = true
                 };
 
-                string signedPath = await signingService.SignIpaAsync(@"E:\downloads\Spotify.ipa", cfg, device);
-                File.Exists(signedPath).Should().BeTrue();
-                new FileInfo(signedPath).Length.Should().BeGreaterThan(1000000);
+                if (info.IsExpired)
+                {
+                    var act = () => signingService.SignIpaAsync(@"E:\downloads\Spotify.ipa", cfg, device);
+                    await act.Should().ThrowAsync<InvalidOperationException>();
+                }
+                else
+                {
+                    string signedPath = await signingService.SignIpaAsync(@"E:\downloads\Spotify.ipa", cfg, device);
+                    File.Exists(signedPath).Should().BeTrue();
+                    new FileInfo(signedPath).Length.Should().BeGreaterThan(1000000);
+                }
             }
         }
         finally

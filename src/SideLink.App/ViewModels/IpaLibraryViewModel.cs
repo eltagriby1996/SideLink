@@ -16,6 +16,8 @@ public partial class IpaLibraryViewModel : ObservableObject
     private readonly IInstallationService _installationService;
     private readonly IDeviceDiscoveryService _deviceService;
     private readonly ICredentialStore _credentialStore;
+    private readonly IAppleIdentityService _identityService;
+    private readonly SigningRefreshViewModel _signingRefresh;
     private readonly ILogger<IpaLibraryViewModel> _logger;
 
     public ObservableCollection<IpaMetadata> LoadedIpas { get; } = new();
@@ -91,6 +93,8 @@ public partial class IpaLibraryViewModel : ObservableObject
         IInstallationService installationService,
         IDeviceDiscoveryService deviceService,
         ICredentialStore credentialStore,
+        IAppleIdentityService identityService,
+        SigningRefreshViewModel signingRefresh,
         ILogger<IpaLibraryViewModel> logger)
     {
         _ipaInspector = ipaInspector;
@@ -98,6 +102,8 @@ public partial class IpaLibraryViewModel : ObservableObject
         _installationService = installationService;
         _deviceService = deviceService;
         _credentialStore = credentialStore;
+        _identityService = identityService;
+        _signingRefresh = signingRefresh;
         _logger = logger;
     }
 
@@ -226,12 +232,70 @@ public partial class IpaLibraryViewModel : ObservableObject
 
         try
         {
-            // 1. Sign IPA using active Apple ID credentials & profile
-            string? activeAppleId = await _credentialStore.GetLastAppleIdAsync();
+            // 1. Determine signing method and configuration
+            var method = _signingRefresh.SelectedMethod;
+            string? activeAppleId = !string.IsNullOrWhiteSpace(_signingRefresh.AppleId) 
+                ? _signingRefresh.AppleId.Trim() 
+                : await _credentialStore.GetLastAppleIdAsync();
+
+            if (method == SigningMethodType.PersonalTeam)
+            {
+                if (string.IsNullOrWhiteSpace(activeAppleId))
+                {
+                    HasError = true;
+                    ErrorMessage = "لم يتم تحديد أي حساب Apple ID. يرجى التوجه إلى صفحة 'التوقيع والحسابات' لتسجيل الدخول أو اختيار حساب.";
+                    StatusMessage = ErrorMessage;
+                    return;
+                }
+
+                var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId);
+                if (identity == null || !identity.IsReadyToSign)
+                {
+                    identity = await _identityService.AutoConfigureIdentityForAccountAsync(activeAppleId, device.DeviceId);
+                }
+
+                if (identity == null || string.IsNullOrWhiteSpace(identity.P12Path) || !File.Exists(identity.P12Path))
+                {
+                    HasError = true;
+                    ErrorMessage = $"لم يتم العثور على شهادة توقيع ومفتاح خاص (P12) لحساب ({activeAppleId}). يرجى التحقق من تسجيل الحساب أو استيراد ملف P12 من صفحة 'التوقيع والحسابات'.";
+                    StatusMessage = ErrorMessage;
+                    return;
+                }
+
+                if (identity.IsExpired)
+                {
+                    HasError = true;
+                    ErrorMessage = $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({activeAppleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}). صلاحية الحسابات المجانية 7 أيام فقط. يرجى تجديد الحساب أو استخدام شهادة P12 مخصصة صالحة.";
+                    StatusMessage = ErrorMessage;
+                    return;
+                }
+            }
+            else if (method == SigningMethodType.CustomP12)
+            {
+                if (string.IsNullOrWhiteSpace(_signingRefresh.P12Path) || !File.Exists(_signingRefresh.P12Path))
+                {
+                    HasError = true;
+                    ErrorMessage = "لم يتم تحديد ملف شهادة P12 صالح. انتقل إلى صفحة 'التوقيع والحسابات' واختر ملف الشهادة (P12).";
+                    StatusMessage = ErrorMessage;
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(_signingRefresh.MobileProvisionPath) || !File.Exists(_signingRefresh.MobileProvisionPath))
+                {
+                    HasError = true;
+                    ErrorMessage = "لم يتم تحديد ملف تعريف التثبيت (Mobileprovision) صالح. انتقل إلى صفحة 'التوقيع والحسابات' واختر الملف.";
+                    StatusMessage = ErrorMessage;
+                    return;
+                }
+            }
+
             var config = new SigningConfiguration 
             { 
-                Method = SigningMethodType.PersonalTeam,
+                Method = method,
                 AppleId = activeAppleId ?? string.Empty,
+                P12Path = _signingRefresh.P12Path,
+                P12Password = _signingRefresh.P12Password,
+                MobileProvisionPath = _signingRefresh.MobileProvisionPath,
                 CustomBundleId = AutoModifyBundleId && !string.IsNullOrWhiteSpace(TargetBundleId) 
                     ? TargetBundleId.Trim() 
                     : null,

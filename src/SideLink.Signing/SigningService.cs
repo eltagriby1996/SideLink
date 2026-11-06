@@ -150,11 +150,23 @@ public class SigningService : ISigningService
                         identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId);
                     }
 
-                    if (identity.IsReadyToSign)
+                    if (identity != null && identity.IsExpired)
+                    {
+                        throw new InvalidOperationException(
+                            $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({appleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}).\n" +
+                            "صلاحية الحسابات المجانية 7 أيام فقط. يرجى تجديد الحساب أو استخدام شهادة P12 مخصصة صالحة لتجنب رفض نظام iOS (0xe8008015).");
+                    }
+
+                    if (identity != null && identity.IsReadyToSign)
                     {
                         effectiveProfile = identity.MobileProvisionPath;
                         effectiveP12 = identity.P12Path;
                         _logger.LogInformation("Resolved personal team identity: Profile={Profile}, P12={P12}", effectiveProfile, effectiveP12);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"لم يتم العثور على شهادة توقيع (P12) أو ملف تعريف صالح لحساب ({appleId}). يرجى التحقق من تسجيل الحساب أو استيراد ملف P12 و Mobileprovision.");
                     }
                 }
             }

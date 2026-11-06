@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -34,6 +35,9 @@ public partial class SigningRefreshViewModel : ObservableObject
 
     [ObservableProperty]
     private string _mobileProvisionPath = string.Empty;
+
+    [ObservableProperty]
+    private string _p12Password = "sidelink";
 
     [ObservableProperty]
     private string _statusMessage = "Ready. Passwords are encrypted using Windows DPAPI.";
@@ -190,7 +194,24 @@ public partial class SigningRefreshViewModel : ObservableObject
         else
         {
             HasActiveCertificate = false;
-            ProvisioningStatusDisplay = "لم يتم العثور على شهادة توقيع بعد لهذا الحساب. قم بتسجيل الدخول أو استيراد ملف P12 و Mobileprovision.";
+            if (identity != null && identity.IsExpired)
+            {
+                CertificateSubject = identity.CertificateSubject ?? $"iPhone Developer: {AppleId}";
+                TeamId = identity.TeamId ?? "—";
+                ExpirationDisplay = identity.ExpirationDate?.ToString("yyyy-MM-dd HH:mm") ?? "منتهية الصلاحية";
+                IsDeviceProvisioned = identity.IsMatchingCurrentDevice;
+                ProvisioningStatusDisplay = $"⚠️ ملف تعريف التثبيت (Mobileprovision) انتهت صلاحيته بتاريخ ({ExpirationDisplay}).\n" +
+                                            "صلاحية حسابات المطور المجانية 7 أيام فقط. يرجى تجديد الحساب أو استيراد ملف P12 و Mobileprovision جديد.";
+            }
+            else
+            {
+                CertificateSubject = string.Empty;
+                TeamId = string.Empty;
+                ExpirationDisplay = string.Empty;
+                IsDeviceProvisioned = false;
+                ProvisioningStatusDisplay = $"لم يتم العثور على شهادة توقيع (P12) أو ملف تعريف لهذا الحساب ({AppleId}).\n" +
+                                            "قم بتسجيل الدخول أو استيراد ملف P12 و Mobileprovision لتفعيل التوقيع.";
+            }
         }
     }
 
@@ -454,5 +475,31 @@ public partial class SigningRefreshViewModel : ObservableObject
         {
             MobileProvisionPath = dialog.FileName;
         }
+    }
+
+    [RelayCommand]
+    public void SaveCustomP12()
+    {
+        if (string.IsNullOrWhiteSpace(P12Path) || !File.Exists(P12Path))
+        {
+            StatusMessage = "يرجى اختيار ملف الشهادة (P12) الصالح أولاً.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(MobileProvisionPath) || !File.Exists(MobileProvisionPath))
+        {
+            StatusMessage = "يرجى اختيار ملف التثبيت (Mobileprovision) الصالح أولاً.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        SelectedMethod = SigningMethodType.CustomP12;
+        HasActiveCertificate = true;
+        CertificateSubject = $"Custom P12: {Path.GetFileName(P12Path)}";
+        ExpirationDisplay = "شهادة مخصصة نشطة";
+        ProvisioningStatusDisplay = $"✓ تم اعتماد الشهادة المخصصة ({Path.GetFileName(P12Path)}) بنجاح! جاهز للتوقيع والتثبيت.";
+        StatusMessage = ProvisioningStatusDisplay;
+        IsSuccessStatus = true;
     }
 }

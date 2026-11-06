@@ -380,6 +380,21 @@
                                         <TextBlock Text="{Binding IpaLibrary.ErrorMessage}" FontSize="12" Foreground="#FCA5A5" TextWrapping="Wrap" />
                                     </Border>
 
+                                    <!-- Active Signing Account Indicator -->
+                                    <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                <TextBlock Text="🔑  طريقة التوقيع المعتمدة: " FontSize="12" Foreground="{StaticResource TextMutedBrush}" />
+                                                <TextBlock Text="{Binding SigningRefresh.SavedAccountDisplay, TargetNullValue='حساب Apple ID'}" FontWeight="Bold" FontSize="12" Foreground="#38BDF8" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="⚙️ تغيير الشهادة / الحساب" Command="{Binding NavigateCommand}" CommandParameter="SigningRefresh" Padding="10,4" FontSize="11" />
+                                        </Grid>
+                                    </Border>
+
                                     <!-- Install CTA Button -->
                                     <Button Style="{StaticResource PrimaryButtonStyle}" 
                                             Content="🚀  توقيع وتثبيت التطبيق على الآيفون (Sign &amp; Install)" 
@@ -754,6 +769,90 @@
                                                 <Button Grid.Column="2" Style="{StaticResource SecondaryButtonStyle}" Content="✕ إلغاء" Command="{Binding SigningRefresh.Cancel2FaCommand}" Margin="8,0,0,0" Padding="14,8" />
                                             </Grid>
                                         </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Custom P12 Certificate & Profile Card -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <TextBlock Text="🔏 استيراد شهادة مطور خارجية (Custom P12 &amp; Mobileprovision)" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,4" />
+                                    <TextBlock Text="يتيح لك توقيع التطبيقات بشهادة P12 مخصصة وملف Mobileprovision خارجي لتفادي قيود الـ 7 أيام لحسابات Apple المجانية." FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,14" TextWrapping="Wrap" />
+
+                                    <!-- P12 File Selection -->
+                                    <TextBlock Text="ملف شهادة المطور والمفتاح الخاص (P12 Certificate):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding SigningRefresh.P12Path, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" />
+                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="📂 اختيار P12..." Command="{Binding SigningRefresh.BrowseP12Command}" Margin="10,0,0,0" Padding="14,8" />
+                                    </Grid>
+
+                                    <!-- P12 Password -->
+                                    <TextBlock Text="كلمة سر الشهادة (P12 Password) - اتركها فارغة إذا لم تكن محمية:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+                                    <TextBox Text="{Binding SigningRefresh.P12Password, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+
+                                    <!-- MobileProvision File Selection -->
+                                    <TextBlock Text="ملف تعريف التثبيت (Mobileprovision Profile):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,4" />
+                                    <Grid Margin="0,0,0,14">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox Text="{Binding SigningRefresh.MobileProvisionPath, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True" />
+                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="📂 اختيار Profile..." Command="{Binding SigningRefresh.BrowseMobileProvisionCommand}" Margin="10,0,0,0" Padding="14,8" />
+                                    </Grid>
+
+                                    <!-- Save Custom Cert Button -->
+                                    <WrapPanel Orientation="Horizontal">
+                                        <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                                Background="#059669" 
+                                                Content="💾 حفظ واعتماد الشهادة المخصصة (Use Custom P12)" 
+                                                Command="{Binding SigningRefresh.SaveCustomP12Command}" 
+                                                Padding="20,10" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Certificate Details & Status Card -->
+                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,12">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="📋 حالة وتفاصيل شهادة التوقيع النشطة" FontSize="16" FontWeight="Bold" Foreground="White" />
+                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 تحديث الحالة" Command="{Binding SigningRefresh.RefreshCertificateStatusCommand}" Padding="10,4" />
+                                    </Grid>
+
+                                    <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Text="اسم الشهادة:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8" />
+                                            <TextBlock Grid.Column="1" Text="{Binding SigningRefresh.CertificateSubject, TargetNullValue='غير متوفر'}" FontWeight="Bold" FontSize="12" Foreground="White" Margin="0,0,0,8" TextTrimming="CharacterEllipsis" />
+
+                                            <TextBlock Grid.Row="1" Text="معرّف الفريق (Team):" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8" />
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SigningRefresh.TeamId, TargetNullValue='—'}" FontFamily="Consolas" FontWeight="Bold" FontSize="12" Foreground="#38BDF8" Margin="0,0,0,8" />
+
+                                            <TextBlock Grid.Row="2" Text="صلاحية التوقيع:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" Margin="0,0,0,8" />
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SigningRefresh.ExpirationDisplay, TargetNullValue='—'}" FontWeight="Bold" FontSize="12" Foreground="#F59E0B" Margin="0,0,0,8" />
+
+                                            <TextBlock Grid.Row="3" Text="حالة الجهاز المتصل:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SigningRefresh.ProvisioningStatusDisplay}" FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                        </Grid>
                                     </Border>
                                 </StackPanel>
                             </Border>

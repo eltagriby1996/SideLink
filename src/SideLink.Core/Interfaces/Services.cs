@@ -125,10 +125,12 @@ public class AppleIdentityInfo
     public string? P12Path { get; set; }
     public List<string> ProvisionedDevices { get; set; } = new();
     public bool IsMatchingCurrentDevice { get; set; }
+    public bool IsExpired => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
     public bool IsReadyToSign => !string.IsNullOrEmpty(MobileProvisionPath) && 
                                  System.IO.File.Exists(MobileProvisionPath) &&
                                  !string.IsNullOrEmpty(P12Path) &&
-                                 System.IO.File.Exists(P12Path);
+                                 System.IO.File.Exists(P12Path) &&
+                                 !IsExpired;
 }
 
 public interface IAppleIdentityService

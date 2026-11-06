@@ -64,6 +64,15 @@ public class AppleIdentityService : IAppleIdentityService
 
         if (!File.Exists(profilePath))
         {
+            if (File.Exists(p12Path))
+            {
+                return new AppleIdentityInfo
+                {
+                    AppleId = appleId,
+                    P12Path = p12Path,
+                    IsMatchingCurrentDevice = false
+                };
+            }
             return null;
         }
 
@@ -160,7 +169,10 @@ public class AppleIdentityService : IAppleIdentityService
             {
                 var candidateInfo = await ParseMobileProvisionAsync(candidate, appleId);
                 bool hasDevice = candidateInfo.ProvisionedDevices.Any(d => string.Equals(d, deviceUdid, StringComparison.OrdinalIgnoreCase));
-                if (hasDevice && candidateInfo.ExpirationDate > DateTime.UtcNow)
+                bool matchesAccount = !string.IsNullOrEmpty(candidateInfo.CertificateSubject) &&
+                                      candidateInfo.CertificateSubject.Contains(appleId, StringComparison.OrdinalIgnoreCase);
+
+                if (hasDevice && matchesAccount && candidateInfo.ExpirationDate > DateTime.UtcNow)
                 {
                     matchedInfo = candidateInfo;
                     matchedSource = candidate;
@@ -183,7 +195,25 @@ public class AppleIdentityService : IAppleIdentityService
             return matchedInfo;
         }
 
-        // Fallback: return unconfigured info
+        // Fallback: parse existing target profile if present, or return unconfigured info
+        if (File.Exists(targetProfilePath))
+        {
+            try
+            {
+                var existingInfo = await ParseMobileProvisionAsync(targetProfilePath, appleId);
+                if (File.Exists(targetP12Path))
+                {
+                    existingInfo.P12Path = targetP12Path;
+                }
+                if (!string.IsNullOrEmpty(deviceUdid))
+                {
+                    existingInfo.IsMatchingCurrentDevice = existingInfo.ProvisionedDevices.Any(d => string.Equals(d, deviceUdid, StringComparison.OrdinalIgnoreCase));
+                }
+                return existingInfo;
+            }
+            catch { }
+        }
+
         return new AppleIdentityInfo
         {
             AppleId = appleId,
