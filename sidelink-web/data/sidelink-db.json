@@ -138,7 +138,7 @@
       "expiresAt": null,
       "usedCount": 0,
       "maxUses": 0,
-      "isActive": false
+      "isActive": true
     }
   ],
   "blacklist": [],
