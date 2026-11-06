@@ -211,19 +211,23 @@ export default function SigningToolsSection() {
                 {/* Action Buttons */}
                 <div className="pt-4 border-t border-slate-800/80 flex flex-wrap sm:flex-nowrap items-center gap-3">
                   <a
-                    href="#download-esign"
+                    href="https://github.com/khoindvn/khoindvn.github.io/releases/download/ipa/ESign.ipa"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/25 active:scale-95 transition-all duration-200 hover:-translate-y-0.5"
                   >
                     <Download className="w-4 h-4" />
-                    <span>تحميل ملف ESign IPA</span>
+                    <span>تحميل ESign IPA (مباشر)</span>
                   </a>
                   <a
-                    href="#install-dns"
+                    href="https://github.com/dns-khoindvn/oci-auto-vm/releases/download/DNS/khoindvn.mobileconfig"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs border border-slate-700 transition-all duration-200 hover:-translate-y-0.5"
                     title="تثبيت ملف DNS لمنع حظر شهادات ESign"
                   >
                     <Globe className="w-4 h-4 text-cyan-400" />
-                    <span>ملف مانع الحظر (DNS)</span>
+                    <span>تثبيت مانع الحظر (DNS)</span>
                   </a>
                 </div>
               </div>
@@ -285,18 +289,22 @@ export default function SigningToolsSection() {
                 {/* Action Buttons */}
                 <div className="pt-4 border-t border-slate-800/80 flex flex-wrap sm:flex-nowrap items-center gap-3">
                   <a
-                    href="#download-ksign"
+                    href="https://github.com/khoindvn/khoindvn.github.io/releases/download/ipa/KSign.ipa"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs shadow-lg shadow-cyan-600/25 active:scale-95 transition-all duration-200 hover:-translate-y-0.5"
                   >
                     <Download className="w-4 h-4" />
-                    <span>تحميل ملف KSign IPA</span>
+                    <span>تحميل KSign IPA (مباشر)</span>
                   </a>
                   <a
-                    href="#guide"
+                    href="https://github.com/dns-khoindvn/oci-auto-vm/releases/download/DNS/khoindvn.mobileconfig"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs border border-slate-700 transition-all duration-200 hover:-translate-y-0.5"
                   >
-                    <HelpCircle className="w-4 h-4 text-slate-400" />
-                    <span>دليل الاستخدام</span>
+                    <Globe className="w-4 h-4 text-cyan-400" />
+                    <span>ملف الـ DNS</span>
                   </a>
                 </div>
               </div>
@@ -402,16 +410,44 @@ export default function SigningToolsSection() {
             ))}
           </div>
 
-          {/* Anti-Revoke DNS Notice */}
+          {/* Anti-Revoke DNS Box & Setup */}
           <ScrollReveal direction="up" distance={20} delayMs={150}>
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-950/30 via-slate-900 to-amber-950/20 border border-amber-500/20 text-right space-y-2 hover:border-amber-500/40 transition-all duration-300 hover:-translate-y-1">
-              <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
-                <span>نصيحة هامة لتفادي إيقاف أو حظر الشهادات المؤسسية (Anti-Revoke DNS):</span>
+            <div className="p-6 rounded-3xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-emerald-950/30 border border-amber-500/30 text-right space-y-4 hover:border-amber-500/50 transition-all duration-300 hover:-translate-y-1">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-amber-300 font-bold text-base">
+                  <ShieldCheck className="w-5 h-5 shrink-0 text-emerald-400" />
+                  <span>ملف مانع الحظر وحماية الشهادات (Khoindvn Anti-Revoke DNS)</span>
+                </div>
+                <a
+                  href="https://github.com/dns-khoindvn/oci-auto-vm/releases/download/DNS/khoindvn.mobileconfig"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/25 active:scale-95 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>تثبيت بروفايل الـ DNS المباشر</span>
+                </a>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed pr-6">
-                للحفاظ على الشهادات المؤسسية لتعمل لأشهر دون توقف، قم بتثبيت بروفايل DNS مخصص على جهاز الآيفون الخاص بك لحجب خوادم التحقق من أبل (<code className="text-amber-200 font-mono">ocsp.apple.com</code> و <code className="text-amber-200 font-mono">ppq.apple.com</code>).
+
+              <p className="text-xs text-slate-300 leading-relaxed">
+                لحماية شهادات المؤسسات وتطبيقات ESign و KSign من الإغلاق المفاجئ، يقوم هذا البروفايل بحجب خوادم فحص الشهادات التابعة لأبل (<code className="text-amber-200 font-mono">ocsp.apple.com</code> و <code className="text-amber-200 font-mono">ppq.apple.com</code>) لتظل تطبيقاتك تعمل لأشهر متواصلة.
               </p>
+
+              {/* 3 Step Install instructions */}
+              <div className="pt-2 border-t border-slate-800/80 grid sm:grid-cols-3 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/70">
+                  <span className="text-amber-400 font-bold ml-1">1.</span>
+                  <span className="text-slate-300">افتح الرابط عبر متصفح <strong>Safari</strong> وحمّل ملف التعريف.</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/70">
+                  <span className="text-cyan-400 font-bold ml-1">2.</span>
+                  <span className="text-slate-300">افتح إعدادات الآيفون ثم اضغط على <strong>Profile Downloaded</strong>.</span>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/70">
+                  <span className="text-emerald-400 font-bold ml-1">3.</span>
+                  <span className="text-slate-300">اضغط <strong>تثبيت (Install)</strong> ومبروك، تم حظر سيرفرات الإيقاف!</span>
+                </div>
+              </div>
             </div>
           </ScrollReveal>
         </div>
