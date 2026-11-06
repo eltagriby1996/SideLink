@@ -118,6 +118,17 @@ public class AppleAuthService : IAppleAuthService
                 return (true, false, "✓ تم التحقق من حساب Apple ID بنجاح من خوادم Apple!");
             }
 
+            if (statusCode == 503)
+            {
+                _logger.LogWarning("Apple signin blocked by Apple anti-bot / service restriction (HTTP 503)");
+                return (false, false, 
+                    "⚠️ خوادم Apple حظرت تسجيل الدخول المباشر (رمز 503: Service Temporarily Unavailable).\n" +
+                    "Apple تفرض حماية مشددة على واجهة تسجيل الدخول المباشر.\n" +
+                    "💡 لتوقيع وتثبيت تطبيقاتك فوراً يمكنك استخدام:\n" +
+                    "1. خيار (شهادة P12 مخصصة) لاختيار ملف P12 و Mobileprovision صالحين.\n" +
+                    "2. أو قم بتسجيل الدخول عبر أداة iloader ليتم استخراج الشهادة تلقائياً إلى نظام ويندوز، وسيلتقطها SideLink فوراً.");
+            }
+
             _logger.LogWarning("Apple signin responded with unexpected status {Status}: {Body}", statusCode, body);
             return (false, false, $"❌ فشل تسجيل الدخول لدى خوادم Apple (رمز الاستجابة: {statusCode}). يرجى التأكد من كتابة البريد وكلمة المرور بشكل صحيح.");
         }
