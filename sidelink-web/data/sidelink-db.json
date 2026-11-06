@@ -34,6 +34,22 @@
       "expiresAt": "2026-11-06T15:39:23.178Z",
       "verifiedAt": null,
       "challengeNonce": ""
+    },
+    "3483cf2fbb8948b985a42a93bd90f300": {
+      "sessionId": "3483cf2fbb8948b985a42a93bd90f300",
+      "status": "pending",
+      "createdAt": "2026-11-06T15:39:35.192Z",
+      "expiresAt": "2026-11-06T15:54:35.192Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
+    },
+    "73ea57a5d7c9456699db92ffd8cbf90e": {
+      "sessionId": "73ea57a5d7c9456699db92ffd8cbf90e",
+      "status": "pending",
+      "createdAt": "2026-11-06T15:41:46.930Z",
+      "expiresAt": "2026-11-06T15:56:46.930Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
     }
   },
   "ipas": [
@@ -120,7 +136,7 @@
       "expiresAt": null,
       "usedCount": 0,
       "maxUses": 0,
-      "isActive": false
+      "isActive": true
     },
     {
       "key": "SL-VIP-3TDZ-WRYK-M8G2",
@@ -129,7 +145,7 @@
       "expiresAt": "2026-11-09T23:59:59.000Z",
       "usedCount": 1,
       "maxUses": 0,
-      "isActive": true
+      "isActive": false
     },
     {
       "key": "SL-VIP-TEST-AUTO-PASS",
@@ -142,5 +158,18 @@
     }
   ],
   "blacklist": [],
-  "telemetry": []
+  "telemetry": [
+    {
+      "clientVersion": "1.0.0",
+      "deviceModel": "Windows Client Device",
+      "iosVersion": "iOS Device",
+      "action": "app_launch",
+      "status": "success",
+      "errorCode": null,
+      "errorMessage": null,
+      "clientIp": "57.154.3.144",
+      "id": "evt-mw554at5-uuy1",
+      "timestamp": "2026-11-06T15:39:34.457Z"
+    }
+  ]
 }
