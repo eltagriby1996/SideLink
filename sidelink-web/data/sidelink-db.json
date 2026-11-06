@@ -158,12 +158,12 @@
     },
     {
       "key": "SL-VIP-F57R-H7RT-UOWX",
-      "note": "مفتاح ترخيص مخصص",
-      "createdAt": "2026-11-06T16:07:27.586Z",
-      "expiresAt": "2026-11-08T16:07:27.586Z",
+      "note": "مفتاح تم إيقافه من الإدارة",
+      "createdAt": "2026-11-06T16:08:02.057Z",
+      "expiresAt": null,
       "usedCount": 0,
       "maxUses": 0,
-      "isActive": true
+      "isActive": false
     }
   ],
   "blacklist": [],
