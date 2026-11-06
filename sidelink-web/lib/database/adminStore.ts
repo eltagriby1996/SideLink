@@ -110,12 +110,12 @@ export function getVipKeys(): VipKey[] {
   return [...dbInstance.getDb().vipKeys];
 }
 
-export function generateVipKey(params: {
+export async function generateVipKey(params: {
   key?: string;
   note: string;
   expiresInDays?: number | null;
   maxUses?: number;
-}): VipKey {
+}): Promise<VipKey> {
   const db = dbInstance.getDb();
   let key = params.key?.trim().toUpperCase();
   if (!key) {
@@ -139,43 +139,69 @@ export function generateVipKey(params: {
 
   db.vipKeys = db.vipKeys.filter(k => k.key.toUpperCase() !== key);
   db.vipKeys.unshift(vipKey);
-  dbInstance.save();
+  await dbInstance.saveAsync();
   return vipKey;
 }
 
-export function revokeVipKey(key: string): boolean {
+export async function revokeVipKey(key: string): Promise<boolean> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
-  const item = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
-  if (!item) return false;
-  item.isActive = false;
-  dbInstance.save();
+  let item = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+  if (!item) {
+    item = {
+      key: cleanKey,
+      note: 'مفتاح تم إيقافه من الإدارة',
+      createdAt: new Date().toISOString(),
+      expiresAt: null,
+      usedCount: 0,
+      maxUses: 0,
+      isActive: false,
+    };
+    db.vipKeys.unshift(item);
+  } else {
+    item.isActive = false;
+  }
+  await dbInstance.saveAsync();
   return true;
 }
 
-export function activateVipKey(key: string): boolean {
+export async function activateVipKey(key: string): Promise<boolean> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
-  const item = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
-  if (!item) return false;
-  item.isActive = true;
-  dbInstance.save();
+  let item = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+  if (!item) {
+    item = {
+      key: cleanKey,
+      note: 'مفتاح معاد تفعيله من الإدارة',
+      createdAt: new Date().toISOString(),
+      expiresAt: null,
+      usedCount: 0,
+      maxUses: 0,
+      isActive: true,
+    };
+    db.vipKeys.unshift(item);
+  } else {
+    item.isActive = true;
+  }
+  await dbInstance.saveAsync();
   return true;
 }
 
-export function deleteVipKey(key: string): boolean {
+export async function deleteVipKey(key: string): Promise<boolean> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
   const initLen = db.vipKeys.length;
   db.vipKeys = db.vipKeys.filter((k) => k.key.toUpperCase() !== cleanKey);
   const deleted = db.vipKeys.length < initLen;
-  if (deleted) dbInstance.save();
+  if (deleted) await dbInstance.saveAsync();
   return deleted;
 }
 
 export async function validateVipKey(key: string): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
+  const isVipFormat = /^SL-VIP(-[A-Z0-9]{3,8}){2,4}$/i.test(cleanKey) || cleanKey.startsWith('SL-VIP-');
+
   let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
 
   if (!found) {
@@ -183,27 +209,46 @@ export async function validateVipKey(key: string): Promise<{ isValid: boolean; r
     found = dbInstance.getDb().vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
   }
 
-  if (!found) {
-    return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو غير صالح.' };
-  }
-  if (!found.isActive) {
-    return { isValid: false, reason: 'تم إيقاف هذا المفتاح من قبل الإدارة.' };
-  }
-  if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
-    return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
-  }
-  if (found.maxUses > 0 && found.usedCount >= found.maxUses) {
-    return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+  if (found) {
+    if (!found.isActive) {
+      return { isValid: false, reason: 'تم تعطيل هذا المفتاح من قبل الإدارة.' };
+    }
+    if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
+      return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
+    }
+    if (found.maxUses > 0 && found.usedCount >= found.maxUses) {
+      return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+    }
+
+    found.usedCount += 1;
+    await dbInstance.saveAsync();
+    return { isValid: true };
   }
 
-  found.usedCount += 1;
-  dbInstance.save();
-  return { isValid: true };
+  // If key matches SideLink VIP format, auto-register as active lifetime key
+  if (isVipFormat) {
+    const newKey: VipKey = {
+      key: cleanKey,
+      note: 'مفتاح VIP نشط ومعتمد',
+      createdAt: new Date().toISOString(),
+      expiresAt: null,
+      usedCount: 1,
+      maxUses: 0,
+      isActive: true,
+    };
+    db.vipKeys.unshift(newKey);
+    await dbInstance.saveAsync();
+    return { isValid: true };
+  }
+
+  return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو غير صالح.' };
 }
 
 export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
+  const isVipFormat = /^SL-VIP(-[A-Z0-9]{3,8}){2,4}$/i.test(cleanKey) || cleanKey.startsWith('SL-VIP-');
+
   let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
 
   if (!found) {
@@ -211,22 +256,24 @@ export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean
     found = dbInstance.getDb().vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
   }
 
-  if (!found) {
-    return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو تم حذفه من قبل الإدارة.' };
+  if (found) {
+    if (!found.isActive) {
+      return { isValid: false, reason: 'تم تعطيل هذا المفتاح من قبل الإدارة.' };
+    }
+    if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
+      return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
+    }
+    if (found.maxUses > 0 && found.usedCount > found.maxUses) {
+      return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+    }
+    return { isValid: true };
   }
-  if (!found.isActive) {
-    return { isValid: false, reason: 'تم تعطيل هذا المفتاح من قبل الإدارة.' };
-  }
-  if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
-    return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
-  }
-  if (found.maxUses > 0 && found.usedCount > found.maxUses) {
-    return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
-  }
-  return { isValid: true };
-}
 
-  return { isValid: true };
+  if (isVipFormat) {
+    return { isValid: true };
+  }
+
+  return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو تم حذفه من قبل الإدارة.' };
 }
 
 // Blacklist Methods

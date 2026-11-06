@@ -257,12 +257,24 @@ class PersistentDatabase {
 
   private mergeWithDefaults(parsed: any): DatabaseSchema {
     const def = getDefaultDatabase();
+    const currentKeys = this.data?.vipKeys || [];
+    const incomingKeys = Array.isArray(parsed?.vipKeys) ? parsed.vipKeys : def.vipKeys;
+    const keyMap = new Map<string, VipKey>();
+    for (const k of incomingKeys) {
+      if (k && k.key) keyMap.set(k.key.toUpperCase(), k);
+    }
+    for (const k of currentKeys) {
+      if (k && k.key && !keyMap.has(k.key.toUpperCase())) {
+        keyMap.set(k.key.toUpperCase(), k);
+      }
+    }
+
     return {
       config: { ...def.config, ...(parsed?.config || {}) },
       ads: { ...def.ads, ...(parsed?.ads || {}) },
       sessions: parsed?.sessions || {},
       ipas: Array.isArray(parsed?.ipas) ? parsed.ipas : def.ipas,
-      vipKeys: Array.isArray(parsed?.vipKeys) ? parsed.vipKeys : def.vipKeys,
+      vipKeys: Array.from(keyMap.values()),
       blacklist: Array.isArray(parsed?.blacklist) ? parsed.blacklist : [],
       telemetry: Array.isArray(parsed?.telemetry) ? parsed.telemetry : [],
     };
@@ -286,44 +298,66 @@ class PersistentDatabase {
       }
       fs.writeFileSync(this.primaryPath, jsonStr, 'utf8');
     } catch { }
-
-    // 3. Asynchronously sync to GitHub repository so changes persist permanently across all Vercel instances
-    this.syncToGitHub(jsonStr);
   }
 
-  private syncToGitHub(jsonStr: string): void {
-    if (!GITHUB_TOKEN) return;
+  public async syncToGitHub(jsonStr?: string): Promise<boolean> {
+    if (!GITHUB_TOKEN) return false;
     try {
       const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
-      fetch(url, {
+      const res = await fetch(url, {
         headers: {
           Authorization: `token ${GITHUB_TOKEN}`,
           'User-Agent': 'SideLink-Web',
         },
-      })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((ghData) => {
-          if (!ghData || !ghData.sha) return;
-          const content = Buffer.from(jsonStr, 'utf8').toString('base64');
-          return fetch(url, {
-            method: 'PUT',
-            headers: {
-              Authorization: `token ${GITHUB_TOKEN}`,
-              'User-Agent': 'SideLink-Web',
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: 'Sync persistent SideLink database from Admin portal',
-              content,
-              sha: ghData.sha,
-              branch: 'main',
-            }),
-          });
-        })
-        .catch((e) => console.warn('GitHub db sync error:', e));
+        cache: 'no-store',
+      });
+      if (!res.ok) return false;
+      const ghData = await res.json();
+      if (!ghData || !ghData.sha) return false;
+
+      // Extract existing remote VIP keys to ensure cross-lambda persistence
+      if (ghData.content) {
+        try {
+          const remoteJson = JSON.parse(Buffer.from(ghData.content, 'base64').toString('utf8'));
+          if (Array.isArray(remoteJson.vipKeys)) {
+            const keyMap = new Map<string, VipKey>();
+            for (const rk of remoteJson.vipKeys) {
+              if (rk && rk.key) keyMap.set(rk.key.toUpperCase(), rk);
+            }
+            for (const lk of this.data.vipKeys) {
+              if (lk && lk.key) keyMap.set(lk.key.toUpperCase(), lk);
+            }
+            this.data.vipKeys = Array.from(keyMap.values());
+          }
+        } catch { }
+      }
+
+      const payload = JSON.stringify(this.data, null, 2);
+      const content = Buffer.from(payload, 'utf8').toString('base64');
+      const putRes = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          'User-Agent': 'SideLink-Web',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: 'Sync persistent SideLink database [skip ci]',
+          content,
+          sha: ghData.sha,
+          branch: 'main',
+        }),
+      });
+      return putRes.ok;
     } catch (e) {
-      console.warn('GitHub db sync exception:', e);
+      console.warn('GitHub db sync error:', e);
+      return false;
     }
+  }
+
+  public async saveAsync(): Promise<void> {
+    this.saveDirect(this.data);
+    await this.syncToGitHub();
   }
 
   public async refreshFromCloud(): Promise<void> {

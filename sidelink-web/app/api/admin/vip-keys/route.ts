@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     await dbInstance.refreshFromCloud();
     const body = await request.json().catch(() => ({}));
-    const key = generateVipKey({
+    const key = await generateVipKey({
       key: body.key,
       note: body.note || 'مفتاح ترخيص من لوحة التحكم',
       expiresInDays: body.expiresInDays !== undefined ? Number(body.expiresInDays) : null,
@@ -51,16 +51,16 @@ export async function DELETE(request: NextRequest) {
   }
 
   if (action === 'revoke') {
-    const ok = revokeVipKey(key);
+    const ok = await revokeVipKey(key);
     return NextResponse.json({ success: ok, message: ok ? 'تم تعطيل المفتاح.' : 'المفتاح غير موجود.' });
   }
 
   if (action === 'activate') {
-    const ok = activateVipKey(key);
+    const ok = await activateVipKey(key);
     return NextResponse.json({ success: ok, message: ok ? 'تم إعادة تفعيل المفتاح بنجاح.' : 'المفتاح غير موجود.' });
   }
 
-  const ok = deleteVipKey(key);
+  const ok = await deleteVipKey(key);
   return NextResponse.json({ success: ok, message: ok ? 'تم مسح المفتاح نهائياً.' : 'المفتاح غير موجود.' });
 }
 
