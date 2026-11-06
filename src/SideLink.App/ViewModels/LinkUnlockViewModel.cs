@@ -70,8 +70,34 @@ public partial class LinkUnlockViewModel : ObservableObject
         {
             IsUnlocked = true;
             IsVerifying = false;
+            IsSuccessAnimation = false;
             return true;
         }
+        return false;
+    }
+
+    public string? GetSavedVipKey() => _linkUnlockService.GetSavedVipKey();
+
+    public async Task<bool> CheckEmergencyKillSwitchAsync()
+    {
+        try
+        {
+            using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+            var resp = await http.GetAsync("https://sidelink-web.vercel.app/api/app/config");
+            if (resp.IsSuccessStatusCode)
+            {
+                var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+                if (doc.TryGetProperty("emergencyKillSwitch", out var ks) && ks.GetBoolean())
+                {
+                    return true;
+                }
+            }
+            else if (resp.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                return true;
+            }
+        }
+        catch { }
         return false;
     }
 
@@ -127,9 +153,10 @@ public partial class LinkUnlockViewModel : ObservableObject
                         _linkUnlockService.SavePersistentVipLicense(key);
                         VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP بنجاح!";
                         IsSuccessAnimation = true;
-                        await Task.Delay(800);
+                        await Task.Delay(1000);
                         App.Current?.Dispatcher?.Invoke(() =>
                         {
+                            IsSuccessAnimation = false;
                             IsUnlocked = true;
                             VerificationCompleted?.Invoke();
                         });
@@ -152,9 +179,10 @@ public partial class LinkUnlockViewModel : ObservableObject
                     _linkUnlockService.SavePersistentVipLicense(key);
                     VipStatusMessage = "✓ تم تفعيل ترخيص الطوارئ دون اتصال بنجاح!";
                     IsSuccessAnimation = true;
-                    await Task.Delay(800);
+                    await Task.Delay(1000);
                     App.Current?.Dispatcher?.Invoke(() =>
                     {
+                        IsSuccessAnimation = false;
                         IsUnlocked = true;
                         VerificationCompleted?.Invoke();
                     });
@@ -182,6 +210,7 @@ public partial class LinkUnlockViewModel : ObservableObject
         {
             StopPolling();
             IsVerifying = false;
+            IsSuccessAnimation = false;
             HasError = false;
             ErrorMessage = string.Empty;
             SecondsRemaining = 600;
@@ -356,6 +385,7 @@ public partial class LinkUnlockViewModel : ObservableObject
 
             App.Current?.Dispatcher?.Invoke(() =>
             {
+                IsSuccessAnimation = false;
                 IsUnlocked = true;
                 VerificationCompleted?.Invoke();
             });

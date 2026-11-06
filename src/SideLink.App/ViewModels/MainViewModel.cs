@@ -116,7 +116,6 @@ public partial class MainViewModel : ObservableObject
 
         // Initialize signing & accounts in background
         _ = SigningRefresh.InitializeAsync();
-        StartAuthWatchdog();
     }
 
     private void StartAuthWatchdog()
@@ -128,18 +127,39 @@ public partial class MainViewModel : ObservableObject
 
             try
             {
-                bool valid = await LinkUnlock.ValidateAuthorizationOnlineAsync();
-                if (!valid)
+                // Only if machine is using a VIP key, validate VIP key online
+                string? vipKey = LinkUnlock.GetSavedVipKey();
+                if (!string.IsNullOrEmpty(vipKey))
                 {
-                    App.Current?.Dispatcher?.Invoke(() =>
+                    bool valid = await LinkUnlock.ValidateAuthorizationOnlineAsync();
+                    if (!valid)
                     {
-                        IsAppUnlocked = false;
-                        LinkUnlock.IsUnlocked = false;
-                        LinkUnlock.HasError = true;
-                        LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
-                        LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
-                        _ = LinkUnlock.InitializeSessionAsync();
-                    });
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            IsAppUnlocked = false;
+                            LinkUnlock.IsUnlocked = false;
+                            LinkUnlock.HasError = true;
+                            LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
+                            LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
+                            _ = LinkUnlock.InitializeSessionAsync();
+                        });
+                    }
+                }
+                else
+                {
+                    // For normal browser-verified sessions, check emergency kill switch
+                    bool killSwitchActive = await LinkUnlock.CheckEmergencyKillSwitchAsync();
+                    if (killSwitchActive)
+                    {
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            IsAppUnlocked = false;
+                            LinkUnlock.IsUnlocked = false;
+                            LinkUnlock.HasError = true;
+                            LinkUnlock.ErrorMessage = "تم إيقاف التطبيق مؤقتاً بواسطة زر الطوارئ من لوحة التحكم.";
+                            _ = LinkUnlock.InitializeSessionAsync();
+                        });
+                    }
                 }
             }
             catch
