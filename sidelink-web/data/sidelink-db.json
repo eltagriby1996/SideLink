@@ -29,7 +29,7 @@
   "sessions": {
     "3a457a0ad2f64b0b863f93ff0d191e9e": {
       "sessionId": "3a457a0ad2f64b0b863f93ff0d191e9e",
-      "status": "pending",
+      "status": "expired",
       "createdAt": "2026-11-06T15:24:23.178Z",
       "expiresAt": "2026-11-06T15:39:23.178Z",
       "verifiedAt": null,
@@ -38,8 +38,8 @@
     "3483cf2fbb8948b985a42a93bd90f300": {
       "sessionId": "3483cf2fbb8948b985a42a93bd90f300",
       "status": "pending",
-      "createdAt": "2026-11-06T15:40:47.269Z",
-      "expiresAt": "2026-11-06T15:55:47.269Z",
+      "createdAt": "2026-11-06T15:40:07.649Z",
+      "expiresAt": "2026-11-06T15:55:07.649Z",
       "verifiedAt": null,
       "challengeNonce": ""
     }
@@ -104,6 +104,15 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-18EN-EWUF-I6ZR",
+      "note": "مفتاح ترخيص مخصص",
+      "createdAt": "2026-11-06T15:40:10.218Z",
+      "expiresAt": null,
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-JUKY-AISL-OISL",
       "note": "ترخيص تجريبي للمستخدم",
       "createdAt": "2026-11-06T15:20:00.000Z",
@@ -132,5 +141,18 @@
     }
   ],
   "blacklist": [],
-  "telemetry": []
+  "telemetry": [
+    {
+      "clientVersion": "1.0.0",
+      "deviceModel": "Windows Client Device",
+      "iosVersion": "iOS Device",
+      "action": "app_launch",
+      "status": "success",
+      "errorCode": null,
+      "errorMessage": null,
+      "clientIp": "154.182.93.182",
+      "id": "evt-mw5572ba-x5q6",
+      "timestamp": "2026-11-06T15:41:43.414Z"
+    }
+  ]
 }
