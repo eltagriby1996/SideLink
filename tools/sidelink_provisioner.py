@@ -7,7 +7,17 @@ mobile provisioning profiles (.mobileprovision) directly from Apple without thir
 
 import os
 import sys
+import io
 import json
+
+if sys.platform == "win32":
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 import uuid
 import base64
 import hashlib
@@ -637,14 +647,24 @@ def main():
 
     args = parser.parse_args()
 
+    def output_json(obj):
+        try:
+            payload = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+            sys.stdout.buffer.write(payload + b"\n")
+            sys.stdout.buffer.flush()
+        except Exception:
+            payload = json.dumps(obj, ensure_ascii=True).encode("ascii")
+            sys.stdout.buffer.write(payload + b"\n")
+            sys.stdout.buffer.flush()
+
     if args.command == "login":
         res = login_apple_id(args.apple_id, args.password, args.code)
-        print(json.dumps(res, ensure_ascii=False))
+        output_json(res)
         sys.exit(0 if res.get("success") or res.get("requires_2fa") else 1)
 
     elif args.command == "provision":
         res = provision_device_and_extract_certs(args.apple_id, args.udid, args.bundle_id)
-        print(json.dumps(res, ensure_ascii=False))
+        output_json(res)
         sys.exit(0 if res.get("success") else 1)
 
     else:
