@@ -37,18 +37,7 @@ public class AppleAuthService : IAppleAuthService
         string trimmedId = appleId.Trim();
         string trimmedPwd = password.Trim();
 
-        // 1. Check if user provided an App-Specific Password (standard 16 characters with hyphens: xxxx-xxxx-xxxx-xxxx)
-        string cleanPwd = trimmedPwd.Replace("-", "").Replace(" ", "");
-        bool isAppSpecific = (trimmedPwd.Contains("-") && cleanPwd.Length == 16 && cleanPwd.All(char.IsLetterOrDigit))
-                             || (cleanPwd.Length == 16 && cleanPwd.All(char.IsLower));
-
-        if (isAppSpecific)
-        {
-            _logger.LogInformation("Valid App-Specific Password format accepted for {Account}", trimmedId);
-            return (true, false, "✓ تم قبول واعتماد كلمة السر الخاصة بالتطبيقات (App-Specific Password) بنجاح!\nالحساب معتمد وجاهز لتوقيع وتثبيت التطبيقات فوراً دون الحاجة لرمز 2FA.");
-        }
-
-        // 2. Standard Apple ID Authentication against Apple Auth Server
+        // Standard Apple ID Authentication against Apple Auth Server
         return await PerformAppleWebAuthAsync(trimmedId, trimmedPwd, cancellationToken);
     }
 
@@ -117,7 +106,7 @@ public class AppleAuthService : IAppleAuthService
                 return (false, true, "📱 بيانات الحساب صحيحة! تم بدء إجراء التحقق بخطوتين (2FA) من Apple.\nتحقق الآن من ظهور الإشعار على جهاز الآيفون الخاص بك، ثم أدخل الرمز المكون من 6 أرقام أدناه واضغط 'تأكيد الرمز'.");
             }
 
-            if (statusCode == 401 || statusCode == 400 || body.Contains("auth.error") || body.Contains("invalid"))
+            if (statusCode == 401 || statusCode == 400 || body.Contains("auth.error") || body.Contains("invalid") || body.Contains("notFound"))
             {
                 _logger.LogWarning("Apple rejected credentials for {Account}: {Body}", appleId, body);
                 return (false, false, "❌ فشل تسجيل الدخول: تم رفض بيانات الاعتماد من قبل خوادم Apple.\nاسم المستخدم أو كلمة المرور غير صحيحة.");
@@ -126,14 +115,11 @@ public class AppleAuthService : IAppleAuthService
             if (statusCode == 200 || statusCode == 204)
             {
                 _logger.LogInformation("Apple web authentication successful for {Account}", appleId);
-                return (true, false, "✓ تم التحقق من حساب Apple ID بنجاح من خوادم Apple! الحساب نشط وجاهز للتوقيع.");
+                return (true, false, "✓ تم التحقق من حساب Apple ID بنجاح من خوادم Apple!");
             }
 
-            // If Apple returns 503 or throttles direct web signin
-            _logger.LogWarning("Apple signin responded with status {Status}", statusCode);
-            return (true, false, 
-                "✓ تم حفظ وتشفير حساب Apple بنجاح في نظام ويندوز (Windows DPAPI)!\n" +
-                "الحساب نشط وجاهز لتوقيع وتثبيت التطبيقات عبر شهادة المطور المقترنة بهاتفك.");
+            _logger.LogWarning("Apple signin responded with unexpected status {Status}: {Body}", statusCode, body);
+            return (false, false, $"❌ فشل تسجيل الدخول لدى خوادم Apple (رمز الاستجابة: {statusCode}). يرجى التأكد من كتابة البريد وكلمة المرور بشكل صحيح.");
         }
         catch (OperationCanceledException)
         {
@@ -142,9 +128,7 @@ public class AppleAuthService : IAppleAuthService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to connect to Apple auth servers for {Account}", appleId);
-            return (true, false, 
-                "✓ تم حفظ وتشفير الحساب محلياً في نظام ويندوز (Windows DPAPI)!\n" +
-                "الحساب جاهز للتوقيع باستخدام الشهادة المقترنة بجهازك المتصل.");
+            return (false, false, $"❌ تعذر الاتصال بخوادم Apple: {ex.Message}. يرجى التأكد من اتصال الإنترنت وحاول مجدداً.");
         }
     }
 

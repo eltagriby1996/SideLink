@@ -268,8 +268,22 @@ public partial class SigningRefreshViewModel : ObservableObject
         await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
         await RefreshCertificateStatusAsync();
 
-        StatusMessage = "✓ تم حفظ وتشفير حساب Apple بنجاح داخل SideLink (Windows DPAPI)!\nالحساب جاهز لتوقيع وتثبيت التطبيقات فوراً.";
-        IsSuccessStatus = true;
+        var identity = await _identityService.GetIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
+        if (identity != null && identity.IsReadyToSign && !identity.IsExpired)
+        {
+            StatusMessage = "✓ تم حفظ وتشفير حساب Apple بنجاح داخل نظام ويندوز (Windows DPAPI)!\nتم العثور على شهادة توقيع صالحة وملف تعريف لهذا الحساب، وهو جاهز للتوقيع فوراً.";
+            IsSuccessStatus = true;
+        }
+        else if (identity != null && identity.IsExpired)
+        {
+            StatusMessage = $"⚠️ تم حفظ الحساب في نظام ويندوز، ولكن ملف التعريف والشهادة المقترنة به منتهية الصلاحية منذ ({identity.ExpirationDate:yyyy-MM-dd}).\nيرجى تجديد الحساب أو استيراد ملف P12 و Mobileprovision صالح من الأسفل لتفادي خطأ 0xe8008015.";
+            IsSuccessStatus = false;
+        }
+        else
+        {
+            StatusMessage = $"⚠️ تم حفظ بيانات الحساب محلياً في ويندوز (DPAPI)، ولكن لم يتم العثور على شهادة توقيع (P12) أو ملف تعريف لهذا الحساب ({AppleId.Trim()}).\nلتوقيع التطبيقات بهذا الحساب، يمكنك استيراد ملف P12 و Mobileprovision من بطاقة (شهادة P12 مخصصة) أدناه.";
+            IsSuccessStatus = false;
+        }
     }
 
     [RelayCommand]
@@ -321,14 +335,29 @@ public partial class SigningRefreshViewModel : ObservableObject
                 HasStoredPassword = true;
                 SavedAccountDisplay = $"الحساب النشط المحفوظ: {AppleId.Trim()}";
                 Is2FaPromptVisible = false;
-                StatusMessage = authResult.Message;
-                IsSuccessStatus = true;
 
                 await RefreshSavedAccountsListAsync();
 
                 string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
                 await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
                 await RefreshCertificateStatusAsync();
+
+                var identity = await _identityService.GetIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
+                if (identity != null && identity.IsReadyToSign && !identity.IsExpired)
+                {
+                    StatusMessage = "✓ تم تسجيل الدخول بنجاح! تم ربط شهادة التوقيع والحساب جاهز لتوقيع وتثبيت التطبيقات.";
+                    IsSuccessStatus = true;
+                }
+                else if (identity != null && identity.IsExpired)
+                {
+                    StatusMessage = $"⚠️ تم تسجيل الدخول بنجاح، ولكن شهادة المطور المجانية لهذا الحساب منتهية الصلاحية منذ ({identity.ExpirationDate:yyyy-MM-dd}).\nيرجى تجديد الحساب أو استيراد شهادة P12 مخصصة صالحة من الأسفل.";
+                    IsSuccessStatus = false;
+                }
+                else
+                {
+                    StatusMessage = $"✓ تم تسجيل الدخول والتحقق بنجاح لدى Apple!\nولكن لم يتم العثور على ملف تعريف أو شهادة P12 لهذا الحساب ({AppleId.Trim()}) محلياً.\nيمكنك استيراد شهادة P12 وملف Mobileprovision من بطاقة (شهادة P12 مخصصة) أدناه للبدء بالتوقيع فوراً.";
+                    IsSuccessStatus = true;
+                }
             }
             else
             {
@@ -383,10 +412,23 @@ public partial class SigningRefreshViewModel : ObservableObject
                 await RefreshSavedAccountsListAsync();
 
                 Is2FaPromptVisible = false;
-                StatusMessage = result.Message;
-                IsSuccessStatus = true;
                 TwoFactorCode = string.Empty;
+
+                string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
+                await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
                 await RefreshCertificateStatusAsync();
+
+                var identity = await _identityService.GetIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
+                if (identity != null && identity.IsReadyToSign && !identity.IsExpired)
+                {
+                    StatusMessage = "✓ تم تأكيد رمز التحقق (2FA) بنجاح! تم ربط شهادة التوقيع والحساب جاهز لتوقيع وتثبيت التطبيقات.";
+                    IsSuccessStatus = true;
+                }
+                else
+                {
+                    StatusMessage = $"✓ تم تأكيد رمز التحقق (2FA) بنجاح لدى Apple!\nولكن لم يتم العثور على ملف تعريف أو شهادة P12 لهذا الحساب ({AppleId.Trim()}) محلياً.\nيرجى استيراد شهادة P12 وملف Mobileprovision من بطاقة (شهادة P12 مخصصة) أدناه لتفعيل التوقيع.";
+                    IsSuccessStatus = true;
+                }
             }
             else
             {
