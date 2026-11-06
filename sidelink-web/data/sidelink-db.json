@@ -29,7 +29,7 @@
   "sessions": {
     "3a457a0ad2f64b0b863f93ff0d191e9e": {
       "sessionId": "3a457a0ad2f64b0b863f93ff0d191e9e",
-      "status": "pending",
+      "status": "expired",
       "createdAt": "2026-11-06T15:24:23.178Z",
       "expiresAt": "2026-11-06T15:39:23.178Z",
       "verifiedAt": null,
@@ -38,8 +38,8 @@
     "3483cf2fbb8948b985a42a93bd90f300": {
       "sessionId": "3483cf2fbb8948b985a42a93bd90f300",
       "status": "pending",
-      "createdAt": "2026-11-06T15:40:36.220Z",
-      "expiresAt": "2026-11-06T15:55:36.220Z",
+      "createdAt": "2026-11-06T15:40:39.913Z",
+      "expiresAt": "2026-11-06T15:55:39.913Z",
       "verifiedAt": null,
       "challengeNonce": ""
     }
