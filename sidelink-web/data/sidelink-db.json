@@ -38,8 +38,8 @@
     "3483cf2fbb8948b985a42a93bd90f300": {
       "sessionId": "3483cf2fbb8948b985a42a93bd90f300",
       "status": "pending",
-      "createdAt": "2026-11-06T15:40:07.649Z",
-      "expiresAt": "2026-11-06T15:55:07.649Z",
+      "createdAt": "2026-11-06T15:40:11.350Z",
+      "expiresAt": "2026-11-06T15:55:11.350Z",
       "verifiedAt": null,
       "challengeNonce": ""
     }
