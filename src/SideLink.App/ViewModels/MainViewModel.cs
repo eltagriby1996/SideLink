@@ -141,7 +141,7 @@ public partial class MainViewModel : ObservableObject
                             LinkUnlock.HasError = true;
                             LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
                             LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
-                            _ = LinkUnlock.InitializeSessionAsync();
+                            _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
                         });
                     }
                 }
@@ -157,7 +157,7 @@ public partial class MainViewModel : ObservableObject
                             LinkUnlock.IsUnlocked = false;
                             LinkUnlock.HasError = true;
                             LinkUnlock.ErrorMessage = "تم إيقاف التطبيق مؤقتاً بواسطة زر الطوارئ من لوحة التحكم.";
-                            _ = LinkUnlock.InitializeSessionAsync();
+                            _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
                         });
                     }
                 }
@@ -166,7 +166,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Ignore transient network errors
             }
-        }, null, TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(15));
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4));
     }
 
     private void OnVerificationCompleted()
@@ -185,6 +185,31 @@ public partial class MainViewModel : ObservableObject
         if (pageName == "SigningRefresh")
         {
             _ = SigningRefresh.InitializeAsync();
+        }
+
+        // Real-time enforcement on navigation
+        if (IsAppUnlocked)
+        {
+            _ = Task.Run(async () =>
+            {
+                string? vipKey = LinkUnlock.GetSavedVipKey();
+                if (!string.IsNullOrEmpty(vipKey))
+                {
+                    bool valid = await LinkUnlock.ValidateAuthorizationOnlineAsync();
+                    if (!valid)
+                    {
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            IsAppUnlocked = false;
+                            LinkUnlock.IsUnlocked = false;
+                            LinkUnlock.HasError = true;
+                            LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
+                            LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
+                            _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
+                        });
+                    }
+                }
+            });
         }
     }
 }

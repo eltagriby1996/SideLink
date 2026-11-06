@@ -204,15 +204,18 @@ public partial class LinkUnlockViewModel : ObservableObject
         }
     }
 
-    public async Task InitializeSessionAsync()
+    public async Task InitializeSessionAsync(bool preserveError = false)
     {
         try
         {
             StopPolling();
             IsVerifying = false;
             IsSuccessAnimation = false;
-            HasError = false;
-            ErrorMessage = string.Empty;
+            if (!preserveError)
+            {
+                HasError = false;
+                ErrorMessage = string.Empty;
+            }
             SecondsRemaining = 600;
             TimeRemainingText = "10:00 متبقية";
             StatusText = "Connecting to verification gateway...";

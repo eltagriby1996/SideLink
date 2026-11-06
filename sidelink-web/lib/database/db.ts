@@ -363,7 +363,7 @@ class PersistentDatabase {
   public async refreshFromCloud(): Promise<void> {
     if (!GITHUB_TOKEN) return;
     try {
-      const url = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/${GITHUB_FILE}`;
+      const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
       const res = await fetch(url, {
         headers: {
           Authorization: `token ${GITHUB_TOKEN}`,
@@ -372,9 +372,13 @@ class PersistentDatabase {
         cache: 'no-store',
       });
       if (res.ok) {
-        const cloudData = await res.json();
-        this.data = this.mergeWithDefaults(cloudData);
-        try { fs.writeFileSync(this.tmpPath, JSON.stringify(this.data), 'utf8'); } catch { }
+        const ghData = await res.json();
+        if (ghData && ghData.content) {
+          const raw = Buffer.from(ghData.content, 'base64').toString('utf8');
+          const cloudData = JSON.parse(raw);
+          this.data = this.mergeWithDefaults(cloudData);
+          try { fs.writeFileSync(this.tmpPath, JSON.stringify(this.data), 'utf8'); } catch { }
+        }
       }
     } catch (e) {
       console.warn('Failed to refresh from cloud:', e);

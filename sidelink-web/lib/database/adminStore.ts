@@ -247,7 +247,6 @@ export async function validateVipKey(key: string): Promise<{ isValid: boolean; r
 export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
-  const isVipFormat = /^SL-VIP(-[A-Z0-9]{3,8}){2,4}$/i.test(cleanKey) || cleanKey.startsWith('SL-VIP-');
 
   let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
 
@@ -266,10 +265,6 @@ export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean
     if (found.maxUses > 0 && found.usedCount > found.maxUses) {
       return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
     }
-    return { isValid: true };
-  }
-
-  if (isVipFormat) {
     return { isValid: true };
   }
 
