@@ -96,6 +96,15 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-XPFV-D87Z-T8HF",
+      "note": "Test key",
+      "createdAt": "2026-11-06T15:20:02.183Z",
+      "expiresAt": null,
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-MASTER-2026",
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
