@@ -479,13 +479,15 @@ public class AppleIdentityService : IAppleIdentityService
                 return false;
             }
 
+            string? pwd = await _credentialStore.GetApplePasswordAsync(appleId);
+            string pwdArg = !string.IsNullOrWhiteSpace(pwd) ? $"--password \"{pwd}\"" : "";
             string bundleArg = !string.IsNullOrWhiteSpace(bundleId) ? $"--bundle-id \"{bundleId}\"" : "--bundle-id \"*\"";
             _logger.LogInformation("Calling sidelink-provisioner to extract cert and profile for {Account}, device {UDID}, bundle {Bundle}", appleId, deviceUdid, bundleId ?? "*");
 
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = provisionerPath,
-                Arguments = $"provision --apple-id \"{appleId}\" --udid \"{deviceUdid}\" {bundleArg}",
+                Arguments = $"provision --apple-id \"{appleId}\" --udid \"{deviceUdid}\" {bundleArg} {pwdArg}".Trim(),
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

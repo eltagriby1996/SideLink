@@ -167,7 +167,7 @@ public class SigningService : ISigningService
                 if (!string.IsNullOrWhiteSpace(appleId))
                 {
                     var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId);
-                    if (identity == null || !identity.IsReadyToSign)
+                    if (identity == null || !identity.IsReadyToSign || identity.IsExpired)
                     {
                         identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId, requestedBundleId);
                     }
@@ -176,7 +176,7 @@ public class SigningService : ISigningService
                     {
                         throw new InvalidOperationException(
                             $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({appleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}).\n" +
-                            "صلاحية الحسابات المجانية 7 أيام فقط. يرجى تجديد الحساب أو استخدام شهادة P12 مخصصة صالحة لتجنب رفض نظام iOS (0xe8008015).");
+                            "يرجى الانتقال إلى صفحة 'التوقيع والحسابات' والضغط على زر تسجيل الدخول لتجديد الشهادة مجاناً من خوادم Apple لمدة 7 أيام جديدة.");
                     }
 
                     if (identity != null && identity.IsReadyToSign)

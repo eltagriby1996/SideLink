@@ -29,6 +29,8 @@ import urllib3
 import requests
 from datetime import datetime, timezone
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 from cryptography import x509
 from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes, serialization
@@ -420,7 +422,7 @@ def send_dev_request(endpoint: str, session: dict, body_dict: dict = None):
         url,
         headers=headers,
         data=plistlib.dumps(req_body),
-        verify=APPLE_ROOT_PEM if os.path.exists(APPLE_ROOT_PEM) else False,
+        verify=False,
         timeout=25
     )
 
@@ -436,7 +438,7 @@ def send_dev_request(endpoint: str, session: dict, body_dict: dict = None):
     return plist_resp
 
 
-def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_id: str = "*"):
+def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_id: str = "*", password: str = None):
     """
     1. Fetch developer teams
     2. Register device UDID
@@ -447,186 +449,206 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
     7. Download MobileProvisioning Profile
     8. Save all files to %APPDATA%/SideLink/Identities/{account}
     """
-    session = load_cached_session(apple_id)
-    if not session or not session.get("token") or not session.get("adsid"):
-        return {"success": False, "error": "لا توجد جلسة نشطة مسجلة لهذا الحساب. يرجى تسجيل الدخول أولاً."}
+    try:
+        session = load_cached_session(apple_id)
+        if (not session or not session.get("token") or not session.get("adsid")) and password:
+            login_res = login_apple_id(apple_id, password)
+            if login_res.get("success"):
+                session = load_cached_session(apple_id)
 
-    clean_account = sanitize_account_name(apple_id)
-    out_dir = os.path.join(IDENTITIES_BASE, clean_account)
-    os.makedirs(out_dir, exist_ok=True)
+        if not session or not session.get("token") or not session.get("adsid"):
+            return {"success": False, "error": "لا توجد جلسة نشطة مسجلة لهذا الحساب. يرجى تسجيل الدخول أولاً."}
 
-    # 1. List Teams
-    teams_resp = send_dev_request("listTeams", session)
-    teams = teams_resp.get("teams", [])
-    if not teams:
-        return {"success": False, "error": "لم يتم العثور على أي فريق مطور (Team) مرتبط بهذا الحساب."}
-    
-    team_id = teams[0].get("teamId")
-    team_name = teams[0].get("name", "Personal Team")
+        clean_account = sanitize_account_name(apple_id)
+        out_dir = os.path.join(IDENTITIES_BASE, clean_account)
+        os.makedirs(out_dir, exist_ok=True)
 
-    # 2. Register Device
-    devices_resp = send_dev_request("listDevices", session, {"teamId": team_id})
-    existing_devices = devices_resp.get("devices", [])
-    device_found = any(d.get("deviceNumber", "").lower() == device_udid.lower() for d in existing_devices)
-
-    if not device_found:
+        # 1. List Teams (auto-renew if session 1100 expired)
         try:
-            send_dev_request("addDevice", session, {
-                "teamId": team_id,
-                "name": "SideLink-iPhone",
-                "deviceNumber": device_udid
-            })
+            teams_resp = send_dev_request("listTeams", session)
         except Exception as e:
-            # Code 35 means device already registered
-            if "35" not in str(e):
+            if "1100" in str(e) and password:
+                login_res = login_apple_id(apple_id, password)
+                if login_res.get("success"):
+                    session = load_cached_session(apple_id)
+                    teams_resp = send_dev_request("listTeams", session)
+                else:
+                    raise e
+            else:
                 raise e
 
-    # 3. Generate RSA 2048 Private Key & CSR
-    private_key_path = os.path.join(out_dir, "key.p8")
-    if os.path.exists(private_key_path):
-        with open(private_key_path, "rb") as f:
-            private_key = serialization.load_pem_private_key(f.read(), password=None)
-    else:
-        private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-        with open(private_key_path, "wb") as f:
-            f.write(private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.PKCS8,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
+        teams = teams_resp.get("teams", [])
+        if not teams:
+            return {"success": False, "error": "لم يتم العثور على أي فريق مطور (Team) مرتبط بهذا الحساب."}
+        
+        team_id = teams[0].get("teamId")
+        team_name = teams[0].get("name", "Personal Team")
 
-    csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "SideLink"),
-        x509.NameAttribute(NameOID.COMMON_NAME, f"iPhone Developer: {apple_id}")
-    ])).sign(private_key, hashes.SHA256())
+        # 2. Register Device
+        devices_resp = send_dev_request("listDevices", session, {"teamId": team_id})
+        existing_devices = devices_resp.get("devices", [])
+        device_found = any(d.get("deviceNumber", "").lower() == device_udid.lower() for d in existing_devices)
 
-    csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+        if not device_found:
+            try:
+                send_dev_request("addDevice", session, {
+                    "teamId": team_id,
+                    "name": "SideLink-iPhone",
+                    "deviceNumber": device_udid
+                })
+            except Exception as e:
+                # Code 35 means device already registered
+                if "35" not in str(e):
+                    raise e
 
-    # 4. Submit CSR (handle error 7460 max certs)
-    cert_content = None
-    for attempt in range(3):
-        try:
-            csr_resp = send_dev_request("submitDevelopmentCSR", session, {
-                "teamId": team_id,
-                "csrContent": csr_pem,
-                "machineName": "SideLink-PC",
-                "machineId": str(uuid.uuid4()).upper()
-            })
-            cert_req = csr_resp.get("certRequest", {})
-            cert_id = cert_req.get("certRequestId")
+        # 3. Generate RSA 2048 Private Key & CSR
+        private_key_path = os.path.join(out_dir, "key.p8")
+        if os.path.exists(private_key_path):
+            with open(private_key_path, "rb") as f:
+                private_key = serialization.load_pem_private_key(f.read(), password=None)
+        else:
+            private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+            with open(private_key_path, "wb") as f:
+                f.write(private_key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                ))
 
-            # Fetch certificate list to get the issued .cer bytes
-            all_certs_resp = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id})
-            for c in all_certs_resp.get("certificates", []):
-                if c.get("certificateId") == cert_id or (c.get("machineName") == "SideLink-PC" and c.get("certContent")):
+        csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "SideLink"),
+            x509.NameAttribute(NameOID.COMMON_NAME, f"iPhone Developer: {apple_id}")
+        ])).sign(private_key, hashes.SHA256())
+
+        csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+        # 4. Submit CSR (handle error 7460 max certs)
+        cert_content = None
+        for attempt in range(3):
+            try:
+                csr_resp = send_dev_request("submitDevelopmentCSR", session, {
+                    "teamId": team_id,
+                    "csrContent": csr_pem,
+                    "machineName": "SideLink-PC",
+                    "machineId": str(uuid.uuid4()).upper()
+                })
+                cert_req = csr_resp.get("certRequest", {})
+                cert_id = cert_req.get("certRequestId")
+
+                # Fetch certificate list to get the issued .cer bytes
+                all_certs_resp = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id})
+                for c in all_certs_resp.get("certificates", []):
+                    if c.get("certificateId") == cert_id or (c.get("machineName") == "SideLink-PC" and c.get("certContent")):
+                        cert_content = c.get("certContent")
+                        break
+                if cert_content:
+                    break
+            except Exception as e:
+                if "7460" in str(e):
+                    # Revoke oldest cert
+                    all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
+                    if all_certs and all_certs[0].get("serialNumber"):
+                        send_dev_request("revokeDevelopmentCert", session, {
+                            "teamId": team_id,
+                            "serialNumber": all_certs[0]["serialNumber"]
+                        })
+                        continue
+                raise e
+
+        if not cert_content:
+            # Check existing active certs
+            all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
+            for c in all_certs:
+                if c.get("certContent"):
                     cert_content = c.get("certContent")
                     break
-            if cert_content:
-                break
-        except Exception as e:
-            if "7460" in str(e):
-                # Revoke oldest cert
-                all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
-                if all_certs and all_certs[0].get("serialNumber"):
-                    send_dev_request("revokeDevelopmentCert", session, {
-                        "teamId": team_id,
-                        "serialNumber": all_certs[0]["serialNumber"]
-                    })
-                    continue
-            raise e
 
-    if not cert_content:
-        # Check existing active certs
-        all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
-        for c in all_certs:
-            if c.get("certContent"):
-                cert_content = c.get("certContent")
-                break
+        if not cert_content:
+            return {"success": False, "error": "تعذر استخراج شهادة المطور من خوادم Apple."}
 
-    if not cert_content:
-        return {"success": False, "error": "تعذر استخراج شهادة المطور من خوادم Apple."}
+        # 5. Export PKCS#12 (.p12)
+        cert_obj = x509.load_der_x509_certificate(cert_content)
+        p12_data = pkcs12.serialize_key_and_certificates(
+            name=b"SideLink Developer",
+            key=private_key,
+            cert=cert_obj,
+            cas=None,
+            encryption_algorithm=serialization.BestAvailableEncryption(b"sidelink")
+        )
+        p12_path = os.path.join(out_dir, "identity.p12")
+        with open(p12_path, "wb") as f:
+            f.write(p12_data)
 
-    # 5. Export PKCS#12 (.p12)
-    cert_obj = x509.load_der_x509_certificate(cert_content)
-    p12_data = pkcs12.serialize_key_and_certificates(
-        name=b"SideLink Developer",
-        key=private_key,
-        cert=cert_obj,
-        cas=None,
-        encryption_algorithm=serialization.BestAvailableEncryption(b"sidelink")
-    )
-    p12_path = os.path.join(out_dir, "identity.p12")
-    with open(p12_path, "wb") as f:
-        f.write(p12_data)
+        # 6. Register App ID / Match Application Identifier
+        app_ids_resp = send_dev_request("listAppIds", session, {"teamId": team_id})
+        app_ids = app_ids_resp.get("appIds", [])
+        app_id_obj = None
 
-    # 6. Register App ID / Match Application Identifier
-    app_ids_resp = send_dev_request("listAppIds", session, {"teamId": team_id})
-    app_ids = app_ids_resp.get("appIds", [])
-    app_id_obj = None
+        clean_bundle_id = bundle_id.strip() if bundle_id else "*"
 
-    clean_bundle_id = bundle_id.strip() if bundle_id else "*"
+        # Check if exact bundle ID already exists in developer account
+        if clean_bundle_id != "*":
+            for a in app_ids:
+                if a.get("identifier", "").lower() == clean_bundle_id.lower():
+                    app_id_obj = a
+                    break
 
-    # Check if exact bundle ID already exists in developer account
-    if clean_bundle_id != "*":
-        for a in app_ids:
-            if a.get("identifier", "").lower() == clean_bundle_id.lower():
-                app_id_obj = a
-                break
+        # If wildcard requested or exact not found, check if a wildcard exists
+        if not app_id_obj and clean_bundle_id == "*":
+            for a in app_ids:
+                if a.get("identifier") == "*":
+                    app_id_obj = a
+                    break
 
-    # If wildcard requested or exact not found, check if a wildcard exists
-    if not app_id_obj and clean_bundle_id == "*":
-        for a in app_ids:
-            if a.get("identifier") == "*":
-                app_id_obj = a
-                break
+        # Try creating new App ID if not found
+        if not app_id_obj:
+            target_ident = f"com.sidelink.{clean_account}" if clean_bundle_id == "*" else clean_bundle_id
+            try:
+                name_suffix = target_ident.split(".")[-1] if "." in target_ident else target_ident
+                add_app_resp = send_dev_request("addAppId", session, {
+                    "teamId": team_id,
+                    "identifier": target_ident,
+                    "name": f"SideLink {name_suffix[:15]}"
+                })
+                app_id_obj = add_app_resp.get("appId")
+            except Exception:
+                # If creating failed (e.g. limit reached), reuse first available App ID from the account
+                if app_ids:
+                    app_id_obj = app_ids[0]
 
-    # Try creating new App ID if not found
-    if not app_id_obj:
-        target_ident = f"com.sidelink.{clean_account}" if clean_bundle_id == "*" else clean_bundle_id
-        try:
-            name_suffix = target_ident.split(".")[-1] if "." in target_ident else target_ident
-            add_app_resp = send_dev_request("addAppId", session, {
-                "teamId": team_id,
-                "identifier": target_ident,
-                "name": f"SideLink {name_suffix[:15]}"
-            })
-            app_id_obj = add_app_resp.get("appId")
-        except Exception:
-            # If creating failed (e.g. limit reached), reuse first available App ID from the account
-            if app_ids:
-                app_id_obj = app_ids[0]
+        if not app_id_obj:
+            return {"success": False, "error": "تعذر تسجيل معرف التطبيق (App ID) لدى Apple."}
 
-    if not app_id_obj:
-        return {"success": False, "error": "تعذر تسجيل معرف التطبيق (App ID) لدى Apple."}
+        # 7. Download Team Provisioning Profile
+        prof_resp = send_dev_request("downloadTeamProvisioningProfile", session, {
+            "teamId": team_id,
+            "appIdId": app_id_obj["appIdId"]
+        })
+        
+        prov_profile = prof_resp.get("provisioningProfile", {})
+        encoded_bytes = prov_profile.get("encodedProfile")
+        if not encoded_bytes:
+            return {"success": False, "error": "خوادم Apple لم تقم بإرجاع ملف تعريف التثبيت (Mobileprovision)."}
 
-    # 7. Download Team Provisioning Profile
-    prof_resp = send_dev_request("downloadTeamProvisioningProfile", session, {
-        "teamId": team_id,
-        "appIdId": app_id_obj["appIdId"]
-    })
-    
-    prov_profile = prof_resp.get("provisioningProfile", {})
-    encoded_bytes = prov_profile.get("encodedProfile")
-    if not encoded_bytes:
-        return {"success": False, "error": "خوادم Apple لم تقم بإرجاع ملف تعريف التثبيت (Mobileprovision)."}
+        profile_path = os.path.join(out_dir, "embedded.mobileprovision")
+        with open(profile_path, "wb") as f:
+            f.write(encoded_bytes)
 
-    profile_path = os.path.join(out_dir, "embedded.mobileprovision")
-    with open(profile_path, "wb") as f:
-        f.write(encoded_bytes)
+        allowed_bundle_id = app_id_obj.get("identifier", "*")
 
-    allowed_bundle_id = app_id_obj.get("identifier", "*")
-
-    return {
-        "success": True,
-        "apple_id": apple_id,
-        "team_id": team_id,
-        "team_name": team_name,
-        "p12_path": p12_path,
-        "profile_path": profile_path,
-        "allowed_bundle_id": allowed_bundle_id,
-        "expiration": prov_profile.get("dateExpire", "")
-    }
+        return {
+            "success": True,
+            "apple_id": apple_id,
+            "team_id": team_id,
+            "team_name": team_name,
+            "p12_path": p12_path,
+            "profile_path": profile_path,
+            "allowed_bundle_id": allowed_bundle_id,
+            "expiration": prov_profile.get("dateExpire", "")
+        }
+    except Exception as e:
+        return {"success": False, "error": f"فشل استخراج الشهادة: {e}"}
 
 
 def main():
@@ -644,6 +666,7 @@ def main():
     prov_parser.add_argument("--apple-id", required=True)
     prov_parser.add_argument("--udid", required=True)
     prov_parser.add_argument("--bundle-id", required=False, default="*")
+    prov_parser.add_argument("--password", required=False, default=None)
 
     args = parser.parse_args()
 
@@ -663,7 +686,7 @@ def main():
         sys.exit(0 if res.get("success") or res.get("requires_2fa") else 1)
 
     elif args.command == "provision":
-        res = provision_device_and_extract_certs(args.apple_id, args.udid, args.bundle_id)
+        res = provision_device_and_extract_certs(args.apple_id, args.udid, args.bundle_id, args.password)
         output_json(res)
         sys.exit(0 if res.get("success") else 1)
 

@@ -248,10 +248,14 @@ public partial class IpaLibraryViewModel : ObservableObject
                     return;
                 }
 
+                string? targetBundleId = AutoModifyBundleId && !string.IsNullOrWhiteSpace(TargetBundleId) 
+                    ? TargetBundleId.Trim() 
+                    : SelectedIpa?.BundleIdentifier;
+
                 var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId);
-                if (identity == null || !identity.IsReadyToSign)
+                if (identity == null || !identity.IsReadyToSign || identity.IsExpired)
                 {
-                    identity = await _identityService.AutoConfigureIdentityForAccountAsync(activeAppleId, device.DeviceId);
+                    identity = await _identityService.AutoConfigureIdentityForAccountAsync(activeAppleId, device.DeviceId, targetBundleId);
                 }
 
                 if (identity == null || string.IsNullOrWhiteSpace(identity.P12Path) || !File.Exists(identity.P12Path))
@@ -265,7 +269,7 @@ public partial class IpaLibraryViewModel : ObservableObject
                 if (identity.IsExpired)
                 {
                     HasError = true;
-                    ErrorMessage = $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({activeAppleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}). صلاحية الحسابات المجانية 7 أيام فقط. يرجى تجديد الحساب أو استخدام شهادة P12 مخصصة صالحة.";
+                    ErrorMessage = $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({activeAppleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}). يرجى إعادة تسجيل الدخول في صفحة 'التوقيع والحسابات' لتجديد الشهادة تلقائياً.";
                     StatusMessage = ErrorMessage;
                     return;
                 }

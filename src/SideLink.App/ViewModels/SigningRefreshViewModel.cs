@@ -201,7 +201,7 @@ public partial class SigningRefreshViewModel : ObservableObject
                 ExpirationDisplay = identity.ExpirationDate?.ToString("yyyy-MM-dd HH:mm") ?? "منتهية الصلاحية";
                 IsDeviceProvisioned = identity.IsMatchingCurrentDevice;
                 ProvisioningStatusDisplay = $"⚠️ ملف تعريف التثبيت (Mobileprovision) انتهت صلاحيته بتاريخ ({ExpirationDisplay}).\n" +
-                                            "صلاحية حسابات المطور المجانية 7 أيام فقط. يرجى تجديد الحساب أو استيراد ملف P12 و Mobileprovision جديد.";
+                                            "صلاحية حسابات المطور المجانية 7 أيام فقط. اضغط على زر تسجيل الدخول (Sign-In & 2FA) أدناه لتجديد الشهادة تلقائياً لمدة 7 أيام جديدة.";
             }
             else
             {
