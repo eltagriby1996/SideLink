@@ -12,7 +12,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'download', label: 'تحميل الأداة' },
   { id: 'modded-ipas', label: 'تطبيقات معدلة', badge: 'VIP' },
-  { id: 'esign-ksign', label: 'ESign والشهادات', badge: 'P12' },
+  { id: 'esign-ksign', label: 'ESign و KSign و DNS', badge: 'OTA' },
   { id: 'prerequisites', label: 'المتطلبات الأساسية' },
   { id: 'guide', label: 'دليل الاستخدام' },
   { id: 'features', label: 'المميزات' },
