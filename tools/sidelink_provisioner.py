@@ -376,10 +376,10 @@ def login_apple_id(apple_id: str, password: str, code: str = None):
         }
 
     # Extract tokens for Developer Services 2
-    # GrandSlam requires an authorized app token (xcode.auth) to access Developer Services
-    xcode_token = request_app_token(spd, "xcode.auth")
+    # GrandSlam requires an authorized app token (com.apple.gs.xcode.auth) to access Developer Services
+    xcode_token = request_app_token(spd, "com.apple.gs.xcode.auth")
     if not xcode_token:
-        xcode_token = request_app_token(spd, "com.apple.gs.xcode.auth")
+        xcode_token = request_app_token(spd, "xcode.auth")
     if not xcode_token:
         xcode_token = spd.get("t", {}).get("com.apple.gs.xcode.auth", {}).get("token")
     if not xcode_token:
@@ -479,7 +479,8 @@ def request_app_token(spd: dict, app_name: str = "xcode.auth") -> str:
 
         aesgcm = AESGCM(sk)
         decrypted_bytes = aesgcm.decrypt(iv, ciphertext_and_tag, header)
-        decrypted_plist = plistlib.loads(decrypted_bytes)
+        PLIST_HEADER = b"<?xml version='1.0' encoding='UTF-8'?>\n<!DOCTYPE plist PUBLIC '-//Apple//DTD PLIST 1.0//EN' 'http://www.apple.com/DTDs/PropertyList-1.0.dtd'>\n<plist version='1.0'>\n"
+        decrypted_plist = plistlib.loads(PLIST_HEADER + decrypted_bytes + b"\n</plist>")
 
         if decrypted_plist.get("status-code") != 200:
             return ""
@@ -494,11 +495,17 @@ def request_app_token(spd: dict, app_name: str = "xcode.auth") -> str:
 def send_dev_request(endpoint: str, session: dict, body_dict: dict = None):
     """Send authenticated request to Apple Developer Services 2."""
     cpd, base_headers, dev_id = get_anisette_headers()
-    url = f"https://developerservices2.apple.com/services/QH65B2/ios/{endpoint}.action?clientId=XABBG36SBA"
+    prefix = "" if endpoint == "listTeams" else "ios/"
+    url = f"https://developerservices2.apple.com/services/QH65B2/{prefix}{endpoint}.action?clientId=XABBG36SBA"
 
     headers = dict(base_headers)
+    for k, v in cpd.items():
+        if k.startswith("X-"):
+            headers[k] = str(v)
+
     headers["X-Apple-GS-Token"] = session["token"]
-    headers["X-Apple-I-Identity-Id"] = session["adsid"]
+    headers["X-Apple-I-Identity-Id"] = str(session["adsid"])
+    headers["User-Agent"] = "Xcode"
 
     req_body = {
         "clientId": "XABBG36SBA",
@@ -550,6 +557,23 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
         if not session or not session.get("token") or not session.get("adsid"):
             return {"success": False, "error": "لا توجد جلسة نشطة مسجلة لهذا الحساب. يرجى تسجيل الدخول أولاً."}
 
+        # Auto-upgrade token to com.apple.gs.xcode.auth if needed
+        if session.get("sk_b64") and session.get("c_b64") and session.get("idms_token"):
+            if not session.get("token") or "gs.xcode.auth" not in session.get("token", ""):
+                try:
+                    spd_cached = {
+                        "adsid": session.get("adsid"),
+                        "GsIdmsToken": session.get("idms_token"),
+                        "sk": base64.b64decode(session["sk_b64"]),
+                        "c": base64.b64decode(session["c_b64"])
+                    }
+                    new_tok = request_app_token(spd_cached, "com.apple.gs.xcode.auth")
+                    if new_tok:
+                        session["token"] = new_tok
+                        save_cached_session(apple_id, session)
+                except Exception:
+                    pass
+
         clean_account = sanitize_account_name(apple_id)
         out_dir = os.path.join(IDENTITIES_BASE, clean_account)
         os.makedirs(out_dir, exist_ok=True)
@@ -568,7 +592,7 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
                             "sk": base64.b64decode(session["sk_b64"]),
                             "c": base64.b64decode(session["c_b64"])
                         }
-                        new_token = request_app_token(spd_cached, "xcode.auth")
+                        new_token = request_app_token(spd_cached, "com.apple.gs.xcode.auth")
                         if new_token:
                             session["token"] = new_token
                             save_cached_session(apple_id, session)
@@ -615,14 +639,23 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
 
         # 3. Generate RSA 2048 Private Key & CSR
         private_key_path = os.path.join(out_dir, "key.p8")
+        private_key = None
         if os.path.exists(private_key_path):
-            with open(private_key_path, "rb") as f:
-                private_key = serialization.load_pem_private_key(f.read(), password=None)
-        else:
+            try:
+                with open(private_key_path, "rb") as f:
+                    kb = f.read()
+                try:
+                    private_key = serialization.load_pem_private_key(kb, password=None)
+                except Exception:
+                    private_key = serialization.load_der_private_key(kb, password=None)
+            except Exception:
+                private_key = None
+
+        if not private_key:
             private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
             with open(private_key_path, "wb") as f:
                 f.write(private_key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
+                    encoding=serialization.Encoding.DER,
                     format=serialization.PrivateFormat.PKCS8,
                     encryption_algorithm=serialization.NoEncryption()
                 ))
@@ -757,7 +790,7 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
             "p12_path": p12_path,
             "profile_path": profile_path,
             "allowed_bundle_id": allowed_bundle_id,
-            "expiration": prov_profile.get("dateExpire", "")
+            "expiration": str(prov_profile.get("dateExpire", ""))
         }
     except Exception as e:
         return {"success": False, "error": f"فشل استخراج الشهادة: {e}"}
@@ -784,11 +817,11 @@ def main():
 
     def output_json(obj):
         try:
-            payload = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+            payload = json.dumps(obj, ensure_ascii=False, default=str).encode("utf-8")
             sys.stdout.buffer.write(payload + b"\n")
             sys.stdout.buffer.flush()
         except Exception:
-            payload = json.dumps(obj, ensure_ascii=True).encode("ascii")
+            payload = json.dumps(obj, ensure_ascii=True, default=str).encode("ascii")
             sys.stdout.buffer.write(payload + b"\n")
             sys.stdout.buffer.flush()
 
