@@ -37,6 +37,7 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.serialization import pkcs12
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import padding
 import pbkdf2
 from Crypto.Hash import SHA256
@@ -375,17 +376,29 @@ def login_apple_id(apple_id: str, password: str, code: str = None):
         }
 
     # Extract tokens for Developer Services 2
-    xcode_token = spd.get("t", {}).get("com.apple.gs.xcode.auth", {}).get("token")
+    # GrandSlam requires an authorized app token (xcode.auth) to access Developer Services
+    xcode_token = request_app_token(spd, "xcode.auth")
+    if not xcode_token:
+        xcode_token = request_app_token(spd, "com.apple.gs.xcode.auth")
+    if not xcode_token:
+        xcode_token = spd.get("t", {}).get("com.apple.gs.xcode.auth", {}).get("token")
+    if not xcode_token:
+        xcode_token = spd.get("t", {}).get("xcode.auth", {}).get("token")
     if not xcode_token and "GsIdmsToken" in spd:
         xcode_token = spd["GsIdmsToken"]
     
-    adsid = spd.get("adsid", "")
+    adsid = str(spd.get("adsid", ""))
+    sk = spd.get("sk")
+    c = spd.get("c")
 
     session_info = {
         "pending_2fa": False,
         "adsid": adsid,
         "token": xcode_token,
         "apple_id": apple_id,
+        "sk_b64": base64.b64encode(sk).decode() if isinstance(sk, (bytes, bytearray)) else "",
+        "c_b64": base64.b64encode(c).decode() if isinstance(c, (bytes, bytearray)) else "",
+        "idms_token": spd.get("GsIdmsToken", ""),
         "authenticated_at": time.time()
     }
     save_cached_session(apple_id, session_info)
@@ -398,6 +411,84 @@ def login_apple_id(apple_id: str, password: str, code: str = None):
         "token": xcode_token,
         "message": "✓ تم تسجيل الدخول إلى Apple ID بنجاح!"
     }
+
+
+def request_app_token(spd: dict, app_name: str = "xcode.auth") -> str:
+    """
+    Request application token (e.g. xcode.auth) from Apple GrandSlam (GsService2)
+    using master session proof (sk, c, GsIdmsToken, adsid) in spd.
+    Decrypts the AES-256-GCM encrypted token response using the session key (sk).
+    """
+    try:
+        dsid = str(spd.get("adsid", ""))
+        auth_token = spd.get("GsIdmsToken", "")
+        sk = spd.get("sk")
+        c = spd.get("c")
+
+        if not dsid or not auth_token or not sk or not c:
+            return ""
+
+        if isinstance(sk, str):
+            sk = base64.b64decode(sk)
+        if isinstance(c, str):
+            c = base64.b64decode(c)
+
+        h = hmac.new(sk, digestmod=hashlib.sha256)
+        h.update(b"apptokens")
+        h.update(dsid.encode("utf-8"))
+        h.update(app_name.encode("utf-8"))
+        checksum = h.digest()
+
+        cpd, base_headers, _ = get_anisette_headers()
+
+        body = {
+            "Header": {"Version": "1.0.1"},
+            "Request": {
+                "app": [app_name],
+                "c": c,
+                "checksum": checksum,
+                "cpd": cpd,
+                "o": "apptokens",
+                "u": dsid,
+                "t": auth_token
+            }
+        }
+
+        headers = dict(base_headers)
+        headers["Connection"] = "close"
+
+        resp = requests.post(
+            "https://gsa.apple.com/grandslam/GsService2",
+            headers=headers,
+            data=plistlib.dumps(body),
+            verify=APPLE_ROOT_PEM if os.path.exists(APPLE_ROOT_PEM) else False,
+            timeout=15
+        )
+
+        if resp.status_code != 200:
+            return ""
+
+        resp_plist = plistlib.loads(resp.content).get("Response", {})
+        et = resp_plist.get("et")
+        if not et or len(et) < 35 or et[:3] != b"XYZ":
+            return ""
+
+        header = et[0:3]
+        iv = et[3:19]
+        ciphertext_and_tag = et[19:]
+
+        aesgcm = AESGCM(sk)
+        decrypted_bytes = aesgcm.decrypt(iv, ciphertext_and_tag, header)
+        decrypted_plist = plistlib.loads(decrypted_bytes)
+
+        if decrypted_plist.get("status-code") != 200:
+            return ""
+
+        tokens = decrypted_plist.get("t", {})
+        app_dict = tokens.get(app_name, {})
+        return app_dict.get("token", "")
+    except Exception:
+        return ""
 
 
 def send_dev_request(endpoint: str, session: dict, body_dict: dict = None):
@@ -467,12 +558,33 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
         try:
             teams_resp = send_dev_request("listTeams", session)
         except Exception as e:
-            if "1100" in str(e) and password:
-                login_res = login_apple_id(apple_id, password)
-                if login_res.get("success"):
-                    session = load_cached_session(apple_id)
-                    teams_resp = send_dev_request("listTeams", session)
-                else:
+            if "1100" in str(e):
+                refreshed = False
+                if session.get("sk_b64") and session.get("c_b64") and session.get("idms_token"):
+                    try:
+                        spd_cached = {
+                            "adsid": session.get("adsid"),
+                            "GsIdmsToken": session.get("idms_token"),
+                            "sk": base64.b64decode(session["sk_b64"]),
+                            "c": base64.b64decode(session["c_b64"])
+                        }
+                        new_token = request_app_token(spd_cached, "xcode.auth")
+                        if new_token:
+                            session["token"] = new_token
+                            save_cached_session(apple_id, session)
+                            teams_resp = send_dev_request("listTeams", session)
+                            refreshed = True
+                    except Exception:
+                        pass
+
+                if not refreshed and password:
+                    login_res = login_apple_id(apple_id, password)
+                    if login_res.get("success"):
+                        session = load_cached_session(apple_id)
+                        teams_resp = send_dev_request("listTeams", session)
+                    else:
+                        raise e
+                elif not refreshed:
                     raise e
             else:
                 raise e
