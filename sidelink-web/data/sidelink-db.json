@@ -26,16 +26,7 @@
     "openSmartlinkOnVerify": true,
     "adCountdownSeconds": 0
   },
-  "sessions": {
-    "3a457a0ad2f64b0b863f93ff0d191e9e": {
-      "sessionId": "3a457a0ad2f64b0b863f93ff0d191e9e",
-      "status": "pending",
-      "createdAt": "2026-11-06T15:18:41.710Z",
-      "expiresAt": "2026-11-06T15:33:41.710Z",
-      "verifiedAt": null,
-      "challengeNonce": ""
-    }
-  },
+  "sessions": {},
   "ipas": [
     {
       "id": "spotify-plus",
@@ -96,11 +87,11 @@
   ],
   "vipKeys": [
     {
-      "key": "SL-VIP-XPFV-D87Z-T8HF",
-      "note": "Test key",
-      "createdAt": "2026-11-06T15:20:02.183Z",
+      "key": "SL-VIP-JUKY-AISL-OISL",
+      "note": "ترخيص تجريبي للمستخدم",
+      "createdAt": "2026-11-06T15:20:00.000Z",
       "expiresAt": null,
-      "usedCount": 1,
+      "usedCount": 0,
       "maxUses": 0,
       "isActive": true
     },
@@ -109,7 +100,7 @@
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
       "expiresAt": null,
-      "usedCount": 1,
+      "usedCount": 0,
       "maxUses": 0,
       "isActive": true
     },
@@ -124,30 +115,5 @@
     }
   ],
   "blacklist": [],
-  "telemetry": [
-    {
-      "clientVersion": "1.0.0",
-      "deviceModel": "Windows Client Device",
-      "iosVersion": "iOS Device",
-      "action": "app_launch",
-      "status": "success",
-      "errorCode": null,
-      "errorMessage": null,
-      "clientIp": "57.154.3.144",
-      "id": "evt-mw54cgc6-rqra",
-      "timestamp": "2026-11-06T15:17:55.254Z"
-    },
-    {
-      "clientVersion": "1.0.0",
-      "deviceModel": "Windows Client Device",
-      "iosVersion": "iOS Device",
-      "action": "app_launch",
-      "status": "success",
-      "errorCode": null,
-      "errorMessage": null,
-      "clientIp": "57.154.3.144",
-      "id": "evt-mw54b95u-yqal",
-      "timestamp": "2026-11-06T15:16:59.298Z"
-    }
-  ]
+  "telemetry": []
 }
