@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'يرجى إدخال مفتاح الـ VIP.' }, { status: 400 });
     }
 
-    const check = validateVipKey(key);
+    const check = await validateVipKey(key);
     if (!check.isValid) {
       return NextResponse.json({ error: check.reason || 'المفتاح غير صالح.' }, { status: 400 });
     }

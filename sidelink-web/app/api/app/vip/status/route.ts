@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, valid: false, reason: 'المفتاح غير موجود.' }, { status: 400 });
     }
 
-    const status = checkVipKeyStatus(key);
+    const status = await checkVipKeyStatus(key);
     return NextResponse.json({
       success: true,
       valid: status.isValid,

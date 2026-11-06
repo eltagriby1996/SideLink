@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthorizedAdmin } from '@/lib/security/adminAuth';
 import { getVipKeys, generateVipKey, revokeVipKey, activateVipKey, deleteVipKey } from '@/lib/database/adminStore';
+import { dbInstance } from '@/lib/database/db';
 
 export async function GET(request: NextRequest) {
   const isAuth = await isAuthorizedAdmin(request);
@@ -8,6 +9,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  await dbInstance.refreshFromCloud();
   const keys = getVipKeys();
   return NextResponse.json({ success: true, keys });
 }
@@ -19,8 +21,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await dbInstance.refreshFromCloud();
     const body = await request.json().catch(() => ({}));
     const key = generateVipKey({
+      key: body.key,
       note: body.note || 'مفتاح ترخيص من لوحة التحكم',
       expiresInDays: body.expiresInDays !== undefined ? Number(body.expiresInDays) : null,
       maxUses: body.maxUses !== undefined ? Number(body.maxUses) : 0,

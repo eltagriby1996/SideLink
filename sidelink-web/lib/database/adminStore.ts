@@ -111,15 +111,19 @@ export function getVipKeys(): VipKey[] {
 }
 
 export function generateVipKey(params: {
+  key?: string;
   note: string;
   expiresInDays?: number | null;
   maxUses?: number;
 }): VipKey {
   const db = dbInstance.getDb();
-  const randomPart = Array.from({ length: 3 }, () =>
-    Math.random().toString(36).substring(2, 6).toUpperCase()
-  ).join('-');
-  const key = `SL-VIP-${randomPart}`;
+  let key = params.key?.trim().toUpperCase();
+  if (!key) {
+    const randomPart = Array.from({ length: 3 }, () =>
+      Math.random().toString(36).substring(2, 6).toUpperCase()
+    ).join('-');
+    key = `SL-VIP-${randomPart}`;
+  }
 
   const vipKey: VipKey = {
     key,
@@ -133,6 +137,7 @@ export function generateVipKey(params: {
     isActive: true,
   };
 
+  db.vipKeys = db.vipKeys.filter(k => k.key.toUpperCase() !== key);
   db.vipKeys.unshift(vipKey);
   dbInstance.save();
   return vipKey;
@@ -168,10 +173,15 @@ export function deleteVipKey(key: string): boolean {
   return deleted;
 }
 
-export function validateVipKey(key: string): { isValid: boolean; reason?: string } {
+export async function validateVipKey(key: string): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
-  const found = db.vipKeys.find((k) => k.key === cleanKey);
+  let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+
+  if (!found) {
+    await dbInstance.refreshFromCloud();
+    found = dbInstance.getDb().vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+  }
 
   if (!found) {
     return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو غير صالح.' };
@@ -191,10 +201,15 @@ export function validateVipKey(key: string): { isValid: boolean; reason?: string
   return { isValid: true };
 }
 
-export function checkVipKeyStatus(key: string): { isValid: boolean; reason?: string } {
+export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
-  const found = db.vipKeys.find((k) => k.key === cleanKey);
+  let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+
+  if (!found) {
+    await dbInstance.refreshFromCloud();
+    found = dbInstance.getDb().vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+  }
 
   if (!found) {
     return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو تم حذفه من قبل الإدارة.' };
@@ -208,6 +223,8 @@ export function checkVipKeyStatus(key: string): { isValid: boolean; reason?: str
   if (found.maxUses > 0 && found.usedCount > found.maxUses) {
     return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
   }
+  return { isValid: true };
+}
 
   return { isValid: true };
 }
