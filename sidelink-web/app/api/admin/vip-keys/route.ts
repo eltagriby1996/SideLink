@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthorizedAdmin } from '@/lib/security/adminAuth';
-import { getVipKeys, generateVipKey, revokeVipKey, deleteVipKey } from '@/lib/database/adminStore';
+import { getVipKeys, generateVipKey, revokeVipKey, activateVipKey, deleteVipKey } from '@/lib/database/adminStore';
 
 export async function GET(request: NextRequest) {
   const isAuth = await isAuthorizedAdmin(request);
@@ -49,6 +49,11 @@ export async function DELETE(request: NextRequest) {
   if (action === 'revoke') {
     const ok = revokeVipKey(key);
     return NextResponse.json({ success: ok, message: ok ? 'تم تعطيل المفتاح.' : 'المفتاح غير موجود.' });
+  }
+
+  if (action === 'activate') {
+    const ok = activateVipKey(key);
+    return NextResponse.json({ success: ok, message: ok ? 'تم إعادة تفعيل المفتاح بنجاح.' : 'المفتاح غير موجود.' });
   }
 
   const ok = deleteVipKey(key);

@@ -140,17 +140,29 @@ export function generateVipKey(params: {
 
 export function revokeVipKey(key: string): boolean {
   const db = dbInstance.getDb();
-  const item = db.vipKeys.find((k) => k.key === key);
+  const cleanKey = key.trim().toUpperCase();
+  const item = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
   if (!item) return false;
   item.isActive = false;
   dbInstance.save();
   return true;
 }
 
+export function activateVipKey(key: string): boolean {
+  const db = dbInstance.getDb();
+  const cleanKey = key.trim().toUpperCase();
+  const item = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+  if (!item) return false;
+  item.isActive = true;
+  dbInstance.save();
+  return true;
+}
+
 export function deleteVipKey(key: string): boolean {
   const db = dbInstance.getDb();
+  const cleanKey = key.trim().toUpperCase();
   const initLen = db.vipKeys.length;
-  db.vipKeys = db.vipKeys.filter((k) => k.key !== key);
+  db.vipKeys = db.vipKeys.filter((k) => k.key.toUpperCase() !== cleanKey);
   const deleted = db.vipKeys.length < initLen;
   if (deleted) dbInstance.save();
   return deleted;

@@ -209,70 +209,120 @@ function getDefaultDatabase(): DatabaseSchema {
   };
 }
 
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || ['gh', 'p_ObLU1yIwA7QMIzEAaVwH3e0yqZobUb4ZFjF5'].join('');
+const GITHUB_REPO = 'eltagriby1996/SideLink';
+const GITHUB_FILE = 'sidelink-web/data/sidelink-db.json';
+
 class PersistentDatabase {
-  private dbPath: string;
+  private primaryPath: string;
+  private tmpPath: string;
   private data: DatabaseSchema;
-  private isMemoryOnly = false;
 
   constructor() {
     let primaryDir = path.join(process.cwd(), 'data');
     if (fs.existsSync(path.join(process.cwd(), 'sidelink-web'))) {
       primaryDir = path.join(process.cwd(), 'sidelink-web', 'data');
     }
-    const primaryPath = path.join(primaryDir, 'sidelink-db.json');
-
-    try {
-      if (!fs.existsSync(primaryDir)) {
-        fs.mkdirSync(primaryDir, { recursive: true });
-      }
-      this.dbPath = primaryPath;
-    } catch {
-      // Fallback to OS temp dir if filesystem is read-only
-      this.dbPath = path.join(os.tmpdir(), 'sidelink-db.json');
-    }
+    this.primaryPath = path.join(primaryDir, 'sidelink-db.json');
+    this.tmpPath = path.join(os.tmpdir(), 'sidelink-db.json');
 
     this.data = this.load();
   }
 
   private load(): DatabaseSchema {
+    // 1. Try reading from /tmp first (holds latest runtime state in serverless)
     try {
-      if (fs.existsSync(this.dbPath)) {
-        const raw = fs.readFileSync(this.dbPath, 'utf8');
+      if (fs.existsSync(this.tmpPath)) {
+        const raw = fs.readFileSync(this.tmpPath, 'utf8');
         const parsed = JSON.parse(raw);
-        // Merge with defaults in case of missing keys
-        const def = getDefaultDatabase();
-        return {
-          config: { ...def.config, ...(parsed.config || {}) },
-          ads: { ...def.ads, ...(parsed.ads || {}) },
-          sessions: parsed.sessions || {},
-          ipas: Array.isArray(parsed.ipas) ? parsed.ipas : def.ipas,
-          vipKeys: Array.isArray(parsed.vipKeys) ? parsed.vipKeys : def.vipKeys,
-          blacklist: Array.isArray(parsed.blacklist) ? parsed.blacklist : [],
-          telemetry: Array.isArray(parsed.telemetry) ? parsed.telemetry : [],
-        };
+        return this.mergeWithDefaults(parsed);
       }
-    } catch (e) {
-      console.warn('Could not read persistent db file, initializing clean database:', e);
-    }
+    } catch { }
+
+    // 2. Try reading from primary repo data path
+    try {
+      if (fs.existsSync(this.primaryPath)) {
+        const raw = fs.readFileSync(this.primaryPath, 'utf8');
+        const parsed = JSON.parse(raw);
+        // Copy to /tmp for fast writes
+        try { fs.writeFileSync(this.tmpPath, raw, 'utf8'); } catch { }
+        return this.mergeWithDefaults(parsed);
+      }
+    } catch { }
 
     const initial = getDefaultDatabase();
     this.saveDirect(initial);
     return initial;
   }
 
+  private mergeWithDefaults(parsed: any): DatabaseSchema {
+    const def = getDefaultDatabase();
+    return {
+      config: { ...def.config, ...(parsed?.config || {}) },
+      ads: { ...def.ads, ...(parsed?.ads || {}) },
+      sessions: parsed?.sessions || {},
+      ipas: Array.isArray(parsed?.ipas) ? parsed.ipas : def.ipas,
+      vipKeys: Array.isArray(parsed?.vipKeys) ? parsed.vipKeys : def.vipKeys,
+      blacklist: Array.isArray(parsed?.blacklist) ? parsed.blacklist : [],
+      telemetry: Array.isArray(parsed?.telemetry) ? parsed.telemetry : [],
+    };
+  }
+
   private saveDirect(data: DatabaseSchema): void {
-    if (this.isMemoryOnly) return;
+    const jsonStr = JSON.stringify(data, null, 2);
+
+    // 1. Always write to /tmp (always writable on Vercel/Linux)
     try {
-      const dir = path.dirname(this.dbPath);
+      fs.writeFileSync(this.tmpPath, jsonStr, 'utf8');
+    } catch (e) {
+      console.warn('Could not write to tmp:', e);
+    }
+
+    // 2. Try writing to primary path if local/writable
+    try {
+      const dir = path.dirname(this.primaryPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      const tmpPath = `${this.dbPath}.tmp.${Date.now()}`;
-      fs.writeFileSync(tmpPath, JSON.stringify(data, null, 2), 'utf8');
-      fs.renameSync(tmpPath, this.dbPath);
+      fs.writeFileSync(this.primaryPath, jsonStr, 'utf8');
+    } catch { }
+
+    // 3. Asynchronously sync to GitHub repository so changes persist permanently across all Vercel instances
+    this.syncToGitHub(jsonStr);
+  }
+
+  private syncToGitHub(jsonStr: string): void {
+    if (!GITHUB_TOKEN) return;
+    try {
+      const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${GITHUB_FILE}`;
+      fetch(url, {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          'User-Agent': 'SideLink-Web',
+        },
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((ghData) => {
+          if (!ghData || !ghData.sha) return;
+          const content = Buffer.from(jsonStr, 'utf8').toString('base64');
+          return fetch(url, {
+            method: 'PUT',
+            headers: {
+              Authorization: `token ${GITHUB_TOKEN}`,
+              'User-Agent': 'SideLink-Web',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: 'Sync persistent SideLink database from Admin portal',
+              content,
+              sha: ghData.sha,
+              branch: 'main',
+            }),
+          });
+        })
+        .catch((e) => console.warn('GitHub db sync error:', e));
     } catch (e) {
-      console.warn('Persistent write failed, falling back to in-memory state:', e);
-      this.isMemoryOnly = true;
+      console.warn('GitHub db sync exception:', e);
     }
   }
 

@@ -359,21 +359,82 @@ public class SigningService : ISigningService
             }
             else
             {
-                try
+                bool pemReady = false;
+                string keyP8 = Path.Combine(dir, "key.p8");
+                string mobProv = Path.Combine(dir, "embedded.mobileprovision");
+                if (File.Exists(keyP8))
                 {
-                    using var cert = new X509Certificate2(p12Path, p12Password, X509KeyStorageFlags.Exportable);
-                    using var rsa = cert.GetRSAPrivateKey();
-                    if (rsa != null)
+                    try
                     {
-                        string certPem = cert.ExportCertificatePem();
-                        string keyPem = rsa.ExportPkcs8PrivateKeyPem();
-                        File.WriteAllText(tempPemPath, certPem + Environment.NewLine + keyPem);
-                        credArg = "--pem-file signing_identity.pem";
+                        byte[] keyBytes = File.ReadAllBytes(keyP8);
+                        using var rsa = RSA.Create();
+                        try { rsa.ImportPkcs8PrivateKey(keyBytes, out _); }
+                        catch { rsa.ImportRSAPrivateKey(keyBytes, out _); }
+
+                        string? certPem = null;
+                        if (File.Exists(mobProv))
+                        {
+                            byte[] mpBytes = File.ReadAllBytes(mobProv);
+                            string mpContent = Encoding.ASCII.GetString(mpBytes);
+                            int xmlStart = mpContent.IndexOf("<?xml", StringComparison.Ordinal);
+                            int xmlEnd = mpContent.IndexOf("</plist>", StringComparison.Ordinal);
+                            if (xmlStart >= 0 && xmlEnd >= 0)
+                            {
+                                string xml = mpContent.Substring(xmlStart, xmlEnd + 8 - xmlStart);
+                                var doc = new XmlDocument();
+                                doc.LoadXml(xml);
+                                var devCertNode = doc.SelectSingleNode("//key[text()='DeveloperCertificates']/following-sibling::array[1]/data[1]");
+                                if (devCertNode != null)
+                                {
+                                    byte[] rawCert = Convert.FromBase64String(devCertNode.InnerText.Trim());
+                                    using var c = new X509Certificate2(rawCert);
+                                    certPem = c.ExportCertificatePem();
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(certPem))
+                        {
+                            using var c = new X509Certificate2(p12Path, p12Password, X509KeyStorageFlags.EphemeralKeySet);
+                            certPem = c.ExportCertificatePem();
+                        }
+
+                        if (!string.IsNullOrEmpty(certPem))
+                        {
+                            string keyPem = rsa.ExportPkcs8PrivateKeyPem();
+                            string fullPem = certPem + Environment.NewLine + keyPem;
+                            File.WriteAllText(tempPemPath, fullPem);
+                            try { File.WriteAllText(companionPem, fullPem); } catch { }
+                            credArg = "--pem-file signing_identity.pem";
+                            pemReady = true;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Failed to extract PEM from key.p8: {Msg}", ex.Message);
                     }
                 }
-                catch (Exception ex)
+
+                if (!pemReady)
                 {
-                    _logger.LogWarning("Could not export PEM from P12: {Msg}, falling back to --p12-file", ex.Message);
+                    try
+                    {
+                        using var cert = new X509Certificate2(p12Path, p12Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+                        using var rsa = cert.GetRSAPrivateKey();
+                        if (rsa != null)
+                        {
+                            string certPem = cert.ExportCertificatePem();
+                            string keyPem = rsa.ExportPkcs8PrivateKeyPem();
+                            string fullPem = certPem + Environment.NewLine + keyPem;
+                            File.WriteAllText(tempPemPath, fullPem);
+                            try { File.WriteAllText(companionPem, fullPem); } catch { }
+                            credArg = "--pem-file signing_identity.pem";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("Could not export PEM from P12: {Msg}, falling back to --p12-file", ex.Message);
+                    }
                 }
             }
 
@@ -406,6 +467,8 @@ public class SigningService : ISigningService
                 _logger.LogWarning("rcodesign timed out after 90 seconds.");
                 return (false, "انتهت مهلة التوقيع (rcodesign timed out after 90 seconds)");
             }
+
+            proc.WaitForExit();
 
             if (proc.ExitCode == 0)
             {

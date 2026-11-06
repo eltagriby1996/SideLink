@@ -409,7 +409,7 @@ def login_apple_id(apple_id: str, password: str, code: str = None):
         "apple_id": apple_id,
         "adsid": adsid,
         "token": xcode_token,
-        "message": "✓ تم تسجيل الدخول إلى Apple ID بنجاح!"
+        "message": "تم تسجيل الدخول إلى Apple ID بنجاح!"
     }
 
 
@@ -797,6 +797,7 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
             "team_id": team_id,
             "team_name": team_name,
             "p12_path": p12_path,
+            "pem_path": pem_path,
             "profile_path": profile_path,
             "allowed_bundle_id": allowed_bundle_id,
             "expiration": str(prov_profile.get("dateExpire", ""))

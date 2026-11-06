@@ -341,20 +341,24 @@ export default function AdminPage() {
     e.preventDefault();
     try {
       const days = Number(newVipExpiryDays);
+      const noteToSend = newVipNote.trim() || 'مفتاح ترخيص مخصص';
       const res = await fetch('/api/admin/vip-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          note: newVipNote,
+          note: noteToSend,
           expiresInDays: days > 0 ? days : null,
           maxUses: Number(newVipMaxUses) || 0,
         }),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.key) {
         showToast(`✓ تم إنشاء المفتاح: ${data.key.key}`);
         setNewVipNote('');
+        setVipKeys(prev => [data.key, ...prev]);
         fetchAllData();
+      } else {
+        alert(data.error || 'فشل توليد المفتاح');
       }
     } catch {
       alert('خطأ في الاتصال.');
@@ -364,9 +368,39 @@ export default function AdminPage() {
   // Revoke VIP Key
   const handleRevokeVipKey = async (key: string) => {
     try {
-      const res = await fetch(`/api/admin/vip-keys?key=${key}&action=revoke`, { method: 'DELETE' });
+      setVipKeys(prev => prev.map(k => k.key.toUpperCase() === key.toUpperCase() ? { ...k, isActive: false } : k));
+      const res = await fetch(`/api/admin/vip-keys?key=${encodeURIComponent(key)}&action=revoke`, { method: 'DELETE' });
       if (res.ok) {
-        showToast('تم تعطيل المفتاح.');
+        showToast('تم تعطيل المفتاح بنجاح.');
+        fetchAllData();
+      }
+    } catch {
+      alert('خطأ في الاتصال.');
+    }
+  };
+
+  // Activate VIP Key
+  const handleActivateVipKey = async (key: string) => {
+    try {
+      setVipKeys(prev => prev.map(k => k.key.toUpperCase() === key.toUpperCase() ? { ...k, isActive: true } : k));
+      const res = await fetch(`/api/admin/vip-keys?key=${encodeURIComponent(key)}&action=activate`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('تم إعادة تفعيل المفتاح بنجاح.');
+        fetchAllData();
+      }
+    } catch {
+      alert('خطأ في الاتصال.');
+    }
+  };
+
+  // Delete VIP Key permanently
+  const handleDeleteVipKey = async (key: string) => {
+    if (!confirm(`هل أنت متأكد من مسح المفتاح (${key}) نهائياً؟`)) return;
+    try {
+      setVipKeys(prev => prev.filter(k => k.key.toUpperCase() !== key.toUpperCase()));
+      const res = await fetch(`/api/admin/vip-keys?key=${encodeURIComponent(key)}&action=delete`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('تم حذف المفتاح نهائياً.');
         fetchAllData();
       }
     } catch {
@@ -1306,10 +1340,9 @@ export default function AdminPage() {
                   <label className="block text-xs text-slate-400 mb-1">ملاحظة أو اسم المستفيد:</label>
                   <input
                     type="text"
-                    required
                     value={newVipNote}
                     onChange={(e) => setNewVipNote(e.target.value)}
-                    placeholder="مثل: ترخيص أحمد منجد - مدى الحياة"
+                    placeholder="مثل: ترخيص أحمد منجد - مدى الحياة (اختياري)"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
                   />
                 </div>
@@ -1385,15 +1418,35 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="p-3.5 text-center">
-                          {k.isActive && (
+                          <div className="flex items-center justify-center gap-1.5">
+                            {k.isActive ? (
+                              <button
+                                type="button"
+                                onClick={() => handleRevokeVipKey(k.key)}
+                                className="px-2.5 py-1 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white transition text-[11px]"
+                                title="تعطيل الكود مؤقتاً"
+                              >
+                                تعطيل
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleActivateVipKey(k.key)}
+                                className="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-300 hover:text-white transition text-[11px]"
+                                title="إعادة تفعيل الكود"
+                              >
+                                تفعيل
+                              </button>
+                            )}
                             <button
                               type="button"
-                              onClick={() => handleRevokeVipKey(k.key)}
-                              className="px-2.5 py-1 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white transition text-[11px]"
+                              onClick={() => handleDeleteVipKey(k.key)}
+                              className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-red-700 text-slate-400 hover:text-white transition text-[11px]"
+                              title="حذف المفتاح نهائياً"
                             >
-                              تعطيل
+                              حذف
                             </button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     ))}
