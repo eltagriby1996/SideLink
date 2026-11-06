@@ -104,6 +104,15 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-JWSD-8LPN-ULK7",
+      "note": "مفتاح ترخيص مخصص",
+      "createdAt": "2026-11-06T15:40:46.885Z",
+      "expiresAt": null,
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-JUKY-AISL-OISL",
       "note": "ترخيص تجريبي للمستخدم",
       "createdAt": "2026-11-06T15:20:00.000Z",
