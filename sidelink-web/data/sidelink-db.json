@@ -118,7 +118,7 @@
       "expiresAt": null,
       "usedCount": 1,
       "maxUses": 0,
-      "isActive": false
+      "isActive": true
     },
     {
       "key": "SL-VIP-MASTER-2026",
@@ -127,7 +127,7 @@
       "expiresAt": null,
       "usedCount": 1,
       "maxUses": 0,
-      "isActive": true
+      "isActive": false
     },
     {
       "key": "SL-VIP-VERIFIED-REAL-KEY",
