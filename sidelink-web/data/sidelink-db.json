@@ -26,7 +26,16 @@
     "openSmartlinkOnVerify": true,
     "adCountdownSeconds": 0
   },
-  "sessions": {},
+  "sessions": {
+    "3a457a0ad2f64b0b863f93ff0d191e9e": {
+      "sessionId": "3a457a0ad2f64b0b863f93ff0d191e9e",
+      "status": "pending",
+      "createdAt": "2026-11-06T15:18:00.152Z",
+      "expiresAt": "2026-11-06T15:33:00.152Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
+    }
+  },
   "ipas": [
     {
       "id": "spotify-plus",
@@ -107,18 +116,6 @@
   ],
   "blacklist": [],
   "telemetry": [
-    {
-      "clientVersion": "1.0.0",
-      "deviceModel": "Windows Client Device",
-      "iosVersion": "iOS Device",
-      "action": "app_launch",
-      "status": "success",
-      "errorCode": null,
-      "errorMessage": null,
-      "clientIp": "57.154.3.144",
-      "id": "evt-mw54cgc6-rqra",
-      "timestamp": "2026-11-06T15:17:55.254Z"
-    },
     {
       "clientVersion": "1.0.0",
       "deviceModel": "Windows Client Device",
