@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -240,9 +241,12 @@ public class SigningService : ISigningService
             string rcodesignPath = FindRcodesignExecutable();
 
             bool codesignSuccess = false;
+            string codesignError = string.Empty;
             if (!string.IsNullOrWhiteSpace(rcodesignPath) && !string.IsNullOrWhiteSpace(effectiveP12) && File.Exists(effectiveP12))
             {
-                codesignSuccess = await Task.Run(() => SignWithRcodesign(rcodesignPath, appBundlePath, effectiveP12, p12Password, entitlementsXml, tempWorkingDir, profileTeamId, effectiveBundleId));
+                var signRes = await Task.Run(() => SignWithRcodesign(rcodesignPath, appBundlePath, effectiveP12, p12Password, entitlementsXml, tempWorkingDir, profileTeamId, effectiveBundleId));
+                codesignSuccess = signRes.Success;
+                codesignError = signRes.Error;
             }
 
             if (!codesignSuccess)
@@ -251,7 +255,8 @@ public class SigningService : ISigningService
                 {
                     throw new InvalidOperationException($"لم يتم العثور على شهادة التوقيع والمفتاح الخاص (P12) لحساب ({config.AppleId}). يرجى التحقق من تسجيل الحساب أو استيراد ملف P12.");
                 }
-                throw new InvalidOperationException("فشلت عملية التوقيع الرقمي عبر rcodesign. يرجى التحقق من صحة الشهادة والملفات.");
+                string errSuffix = !string.IsNullOrWhiteSpace(codesignError) ? $": {codesignError}" : ". يرجى التحقق من صحة الشهادة والملفات.";
+                throw new InvalidOperationException($"فشلت عملية التوقيع الرقمي عبر rcodesign{errSuffix}");
             }
 
             // 6. Repackaging into IPA archive
@@ -296,7 +301,7 @@ public class SigningService : ISigningService
         }
     }
 
-    private bool SignWithRcodesign(string rcodesignPath, string appBundlePath, string p12Path, string p12Password, string? entitlementsXml, string tempWorkingDir, string? teamId = null, string? effectiveBundleId = null)
+    private (bool Success, string Error) SignWithRcodesign(string rcodesignPath, string appBundlePath, string p12Path, string p12Password, string? entitlementsXml, string tempWorkingDir, string? teamId = null, string? effectiveBundleId = null)
     {
         try
         {
@@ -341,10 +346,41 @@ public class SigningService : ISigningService
 
             string relAppDir = Path.GetRelativePath(tempWorkingDir, appBundlePath);
 
+            // rcodesign compatibility: Prefer PEM encoded certificate + private key to avoid OpenSSL 3 PKCS#12 encryption incompatibility
+            string credArg = $"--p12-file \"{p12Path}\" --p12-password \"{p12Password}\"";
+            string tempPemPath = Path.Combine(tempWorkingDir, "signing_identity.pem");
+            string dir = Path.GetDirectoryName(p12Path) ?? "";
+            string companionPem = Path.Combine(dir, "identity.pem");
+
+            if (File.Exists(companionPem))
+            {
+                File.Copy(companionPem, tempPemPath, true);
+                credArg = "--pem-file signing_identity.pem";
+            }
+            else
+            {
+                try
+                {
+                    using var cert = new X509Certificate2(p12Path, p12Password, X509KeyStorageFlags.Exportable);
+                    using var rsa = cert.GetRSAPrivateKey();
+                    if (rsa != null)
+                    {
+                        string certPem = cert.ExportCertificatePem();
+                        string keyPem = rsa.ExportPkcs8PrivateKeyPem();
+                        File.WriteAllText(tempPemPath, certPem + Environment.NewLine + keyPem);
+                        credArg = "--pem-file signing_identity.pem";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Could not export PEM from P12: {Msg}, falling back to --p12-file", ex.Message);
+                }
+            }
+
             var psi = new ProcessStartInfo
             {
                 FileName = rcodesignPath,
-                Arguments = $"sign --timestamp-url none --p12-file \"{p12Path}\" --p12-password \"{p12Password}\" {entArg} \"{relAppDir}\"",
+                Arguments = $"sign --timestamp-url none {credArg} {entArg} \"{relAppDir}\"",
                 WorkingDirectory = tempWorkingDir,
                 UseShellExecute = false,
                 CreateNoWindow = true,
@@ -368,22 +404,24 @@ public class SigningService : ISigningService
             {
                 try { proc.Kill(); } catch { }
                 _logger.LogWarning("rcodesign timed out after 90 seconds.");
-                return false;
+                return (false, "انتهت مهلة التوقيع (rcodesign timed out after 90 seconds)");
             }
 
             if (proc.ExitCode == 0)
             {
                 _logger.LogInformation("rcodesign signed bundle successfully.");
-                return true;
+                return (true, string.Empty);
             }
 
-            _logger.LogWarning("rcodesign failed (exit code {Code}): {Err}", proc.ExitCode, stderrSb.ToString());
-            return false;
+            string err = stderrSb.ToString().Trim();
+            if (string.IsNullOrWhiteSpace(err)) err = stdoutSb.ToString().Trim();
+            _logger.LogWarning("rcodesign failed (exit code {Code}): {Err}", proc.ExitCode, err);
+            return (false, err);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error executing rcodesign: {Message}", ex.Message);
-            return false;
+            return (false, ex.Message);
         }
     }
 

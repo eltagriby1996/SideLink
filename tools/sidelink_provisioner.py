@@ -712,7 +712,7 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
         if not cert_content:
             return {"success": False, "error": "تعذر استخراج شهادة المطور من خوادم Apple."}
 
-        # 5. Export PKCS#12 (.p12)
+        # 5. Export PKCS#12 (.p12) and PEM (.pem)
         cert_obj = x509.load_der_x509_certificate(cert_content)
         p12_data = pkcs12.serialize_key_and_certificates(
             name=b"SideLink Developer",
@@ -724,6 +724,15 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
         p12_path = os.path.join(out_dir, "identity.p12")
         with open(p12_path, "wb") as f:
             f.write(p12_data)
+
+        pem_path = os.path.join(out_dir, "identity.pem")
+        with open(pem_path, "wb") as f:
+            f.write(cert_obj.public_bytes(serialization.Encoding.PEM) + b"\n")
+            f.write(private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.PKCS8,
+                encryption_algorithm=serialization.NoEncryption()
+            ))
 
         # 6. Register App ID / Match Application Identifier
         app_ids_resp = send_dev_request("listAppIds", session, {"teamId": team_id})
