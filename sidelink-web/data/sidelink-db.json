@@ -38,8 +38,8 @@
     "3483cf2fbb8948b985a42a93bd90f300": {
       "sessionId": "3483cf2fbb8948b985a42a93bd90f300",
       "status": "pending",
-      "createdAt": "2026-11-06T15:40:11.350Z",
-      "expiresAt": "2026-11-06T15:55:11.350Z",
+      "createdAt": "2026-11-06T15:40:20.579Z",
+      "expiresAt": "2026-11-06T15:55:20.579Z",
       "verifiedAt": null,
       "challengeNonce": ""
     }
@@ -103,6 +103,15 @@
     }
   ],
   "vipKeys": [
+    {
+      "key": "SL-VIP-JUKY-AISL-OISL",
+      "note": "ترخيص تجريبي للمستخدم",
+      "createdAt": "2026-11-06T15:20:00.000Z",
+      "expiresAt": null,
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
     {
       "key": "SL-VIP-MASTER-2026",
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
