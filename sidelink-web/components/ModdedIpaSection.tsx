@@ -143,7 +143,7 @@ export default function ModdedIpaSection() {
             <span>مكتبة التطبيقات المعدلة الحصرية (Modded IPAs)</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-            تطبيقات بلس ونسخ معدلة جاهزة للتثبيت
+            <span className="text-shimmer">تطبيقات بلس ونسخ معدلة</span> جاهزة للتثبيت
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
             حمل أشهر تطبيقات iOS المعدلة والمحقونة بأحدث أدوات البلس، متوافقة ومجربة للعمل فوراً عبر برنامج <span className="text-blue-400 font-semibold">SideLink</span> بدون إعلانات وبمميزات كاملة.

@@ -98,7 +98,7 @@ export default function SigningToolsSection() {
             <span>تطبيقات التوقيع المباشر وحزم الشهادات المؤسسية</span>
           </div>
           <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-            ESign و KSign وشهادات المؤسسات (P12)
+            <span className="text-shimmer-emerald">ESign و KSign</span> وشهادات المؤسسات (P12)
           </h2>
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
             حمل أشهر أدوات التوقيع الذاتي مباشرة على هاتفك الآيفون، مع شهادات المطورين وملفات التعريف لتوقيع التطبيقات بشكل دائم وتفادي قيود الـ 7 أيام.

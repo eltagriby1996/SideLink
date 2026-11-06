@@ -1,4 +1,5 @@
 import React from 'react';
+import Navbar from '../components/Navbar';
 import TypewriterTitle from '../components/TypewriterTitle';
 import ModdedIpaSection from '../components/ModdedIpaSection';
 import SigningToolsSection from '../components/SigningToolsSection';
@@ -29,59 +30,8 @@ export default function HomePage() {
         <div className="absolute top-[65%] -left-40 w-[550px] h-[380px] bg-cyan-600/10 blur-[130px] rounded-full animate-float" />
       </div>
 
-      {/* Navbar */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur sticky top-0 z-50 transition-all duration-300">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
-              alt="SideLink Logo"
-              className="w-9 h-9 rounded-xl shadow-lg shadow-blue-600/30 object-cover ring-1 ring-blue-500/30 group-hover:scale-105 group-hover:-rotate-3 transition-transform duration-300"
-            />
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-xl tracking-tight text-white group-hover:text-blue-300 transition-colors">
-                SideLink
-              </span>
-              <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                v1.0.0
-              </span>
-            </div>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-6 text-sm text-slate-300 font-medium">
-            <a href="#download" className="hover:text-white hover:-translate-y-0.5 transition-all">
-              تحميل الأداة
-            </a>
-            <a href="#modded-ipas" className="hover:text-white hover:-translate-y-0.5 transition-all text-blue-400 font-bold">
-              تطبيقات IPA معدلة
-            </a>
-            <a href="#esign-ksign" className="hover:text-white hover:-translate-y-0.5 transition-all text-emerald-400 font-bold">
-              ESign والشهادات (P12)
-            </a>
-            <a href="#prerequisites" className="hover:text-white hover:-translate-y-0.5 transition-all">
-              المتطلبات الأساسية
-            </a>
-            <a href="#guide" className="hover:text-white hover:-translate-y-0.5 transition-all">
-              دليل الاستخدام
-            </a>
-            <a href="#features" className="hover:text-white hover:-translate-y-0.5 transition-all">
-              المميزات
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-3">
-            <a
-              href="/downloads/SideLink-v1.0.0-win-x64.zip"
-              download="SideLink-v1.0.0-win-x64.zip"
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:scale-95"
-            >
-              <Download className="w-4 h-4" />
-              <span>تحميل ZIP</span>
-            </a>
-          </div>
-        </div>
-      </header>
+      {/* Interactive Sticky Navbar */}
+      <Navbar />
 
       {/* Hero Section */}
       <section className="pt-20 pb-16 px-4 max-w-5xl mx-auto text-center space-y-6">
@@ -91,7 +41,7 @@ export default function HomePage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight animate-fade-in-up">
-          تثبيت تطبيقات iOS وتجديدها تلقائياً <br />
+          <span className="text-shimmer">تثبيت تطبيقات iOS وتجديدها تلقائياً</span> <br />
           <TypewriterTitle text="SideLink for Windows" className="mt-2" />
         </h1>
 
@@ -100,7 +50,7 @@ export default function HomePage() {
         </p>
 
         {/* CTA Buttons */}
-        <div id="download" className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <div id="download" className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 scroll-mt-28">
           <a
             href="/downloads/SideLink-v1.0.0-win-x64.zip"
             download="SideLink-v1.0.0-win-x64.zip"
@@ -144,7 +94,7 @@ export default function HomePage() {
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>خطوة ضرورية قبل تشغيل الأداة</span>
             </div>
-            <h2 className="text-3xl font-black text-white">المتطلبات الأساسية للتشغيل (Prerequisites)</h2>
+            <h2 className="text-3xl font-black text-white"><span className="text-shimmer">المتطلبات الأساسية للتشغيل</span> (Prerequisites)</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
               لكي تتمكن أداة SideLink من الاتصال بجهاز الآيفون عبر كابل الـ USB وتوقيع وتثبيت التطبيقات، يجب تثبيت البرامج التالية من روابط أبل المباشرة.
             </p>
@@ -289,7 +239,7 @@ export default function HomePage() {
       <section id="guide" className="py-16 px-4 max-w-5xl mx-auto border-t border-slate-800/80 scroll-mt-20">
         <ScrollReveal>
           <div className="text-center space-y-3 mb-12">
-            <h2 className="text-3xl font-black text-white">دليل التثبيت والبدء السريع</h2>
+            <h2 className="text-3xl font-black text-white"><span className="text-shimmer">دليل التثبيت والبدء السريع</span></h2>
             <p className="text-slate-400 text-sm sm:text-base">
               4 خطوات بسيطة لتشغيل الأداة وتثبيت أي تطبيق IPA على هاتفك الآيفون
             </p>
@@ -352,9 +302,9 @@ export default function HomePage() {
       </section>
 
       {/* Core Capabilities */}
-      <section id="features" className="py-16 px-4 max-w-6xl mx-auto border-t border-slate-800/80">
+      <section id="features" className="py-16 px-4 max-w-6xl mx-auto border-t border-slate-800/80 scroll-mt-20">
         <ScrollReveal>
-          <h2 className="text-3xl font-black text-center text-white mb-12">أهم مميزات SideLink</h2>
+          <h2 className="text-3xl font-black text-center text-white mb-12"><span className="text-shimmer">أهم مميزات SideLink</span></h2>
         </ScrollReveal>
         <div className="grid md:grid-cols-3 gap-6 text-right">
           {[
