@@ -41,7 +41,7 @@ export default function HomePage() {
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight animate-fade-in-up">
-          <span className="text-shimmer">تثبيت تطبيقات iOS وتجديدها تلقائياً</span> <br />
+          <span className="heading-gradient-blue">تثبيت تطبيقات iOS وتجديدها تلقائياً</span> <br />
           <TypewriterTitle text="SideLink for Windows" className="mt-2" />
         </h1>
 
@@ -94,7 +94,7 @@ export default function HomePage() {
               <AlertTriangle className="w-3.5 h-3.5" />
               <span>خطوة ضرورية قبل تشغيل الأداة</span>
             </div>
-            <h2 className="text-3xl font-black text-white"><span className="text-shimmer">المتطلبات الأساسية للتشغيل</span> (Prerequisites)</h2>
+            <h2 className="text-3xl font-black text-white"><span className="heading-gradient">المتطلبات الأساسية للتشغيل</span> (Prerequisites)</h2>
             <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
               لكي تتمكن أداة SideLink من الاتصال بجهاز الآيفون عبر كابل الـ USB وتوقيع وتثبيت التطبيقات، يجب تثبيت البرامج التالية من روابط أبل المباشرة.
             </p>
@@ -239,7 +239,7 @@ export default function HomePage() {
       <section id="guide" className="py-16 px-4 max-w-5xl mx-auto border-t border-slate-800/80 scroll-mt-20">
         <ScrollReveal>
           <div className="text-center space-y-3 mb-12">
-            <h2 className="text-3xl font-black text-white"><span className="text-shimmer">دليل التثبيت والبدء السريع</span></h2>
+            <h2 className="text-3xl font-black text-white"><span className="heading-gradient">دليل التثبيت والبدء السريع</span></h2>
             <p className="text-slate-400 text-sm sm:text-base">
               4 خطوات بسيطة لتشغيل الأداة وتثبيت أي تطبيق IPA على هاتفك الآيفون
             </p>
@@ -304,7 +304,7 @@ export default function HomePage() {
       {/* Core Capabilities */}
       <section id="features" className="py-16 px-4 max-w-6xl mx-auto border-t border-slate-800/80 scroll-mt-20">
         <ScrollReveal>
-          <h2 className="text-3xl font-black text-center text-white mb-12"><span className="text-shimmer">أهم مميزات SideLink</span></h2>
+          <h2 className="text-3xl font-black text-center text-white mb-12"><span className="heading-gradient-blue">أهم مميزات SideLink</span></h2>
         </ScrollReveal>
         <div className="grid md:grid-cols-3 gap-6 text-right">
           {[

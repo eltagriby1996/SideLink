@@ -132,89 +132,33 @@ body {
   animation: cursorBlink 0.8s steps(2, start) infinite;
 }
 
-/* Laser Text Shimmer */
-@keyframes textShimmer {
-  0% {
-    background-position: 200% center;
-  }
-  100% {
-    background-position: -200% center;
-  }
-}
-
-.text-shimmer {
-  background: linear-gradient(
-    90deg,
-    #ffffff 0%,
-    #bae6fd 25%,
-    #38bdf8 50%,
-    #ffffff 75%,
-    #bae6fd 100%
-  );
-  background-size: 250% auto;
-  color: transparent;
+/* High-End Clean Typography Gradients & Text Glow */
+.heading-gradient {
+  background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 60%, #94a3b8 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  animation: textShimmer 7s linear infinite;
+  -webkit-text-fill-color: transparent;
 }
 
-.text-shimmer-emerald {
-  background: linear-gradient(
-    90deg,
-    #ffffff 0%,
-    #a7f3d0 25%,
-    #34d399 50%,
-    #ffffff 75%,
-    #a7f3d0 100%
-  );
-  background-size: 250% auto;
-  color: transparent;
+.heading-gradient-blue {
+  background: linear-gradient(135deg, #ffffff 25%, #60a5fa 65%, #38bdf8 100%);
   -webkit-background-clip: text;
   background-clip: text;
-  animation: textShimmer 7s linear infinite;
+  -webkit-text-fill-color: transparent;
 }
 
-/* Target Section Spotlight Glow Flash */
-@keyframes sectionSpotlight {
-  0% {
-    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
-  }
-  25% {
-    box-shadow: 0 0 50px 10px rgba(56, 189, 248, 0.4), inset 0 0 30px rgba(56, 189, 248, 0.15);
-  }
-  60% {
-    box-shadow: 0 0 30px 6px rgba(56, 189, 248, 0.25);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
-  }
+.heading-gradient-emerald {
+  background: linear-gradient(135deg, #ffffff 25%, #6ee7b7 65%, #10b981 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.section-spotlight-active {
-  animation: sectionSpotlight 2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  border-radius: 1.5rem;
+.text-glow-hover {
+  transition: all 0.25s ease;
 }
 
-/* Nav Link Hover Glow Underline */
-.nav-link-underline {
-  position: relative;
-}
-
-.nav-link-underline::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  right: 50%;
-  width: 0%;
-  height: 2px;
-  background: linear-gradient(90deg, #38bdf8, #818cf8);
-  border-radius: 9999px;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
-}
-
-.nav-link-underline:hover::after,
-.nav-link-underline.active::after {
-  width: 100%;
-  right: 0%;
+.text-glow-hover:hover {
+  color: #ffffff !important;
+  text-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
 }
