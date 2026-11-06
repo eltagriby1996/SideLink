@@ -124,6 +124,7 @@ public class AppleIdentityInfo
     public string? MobileProvisionPath { get; set; }
     public string? P12Path { get; set; }
     public List<string> ProvisionedDevices { get; set; } = new();
+    public string? AllowedBundleId { get; set; }
     public bool IsMatchingCurrentDevice { get; set; }
     public bool IsExpired => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;
     public bool IsReadyToSign => !string.IsNullOrEmpty(MobileProvisionPath) && 
@@ -137,7 +138,7 @@ public interface IAppleIdentityService
 {
     Task<IReadOnlyList<string>> DiscoverSystemAppleAccountsAsync();
     Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null);
-    Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid);
+    Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null);
     Task<string?> GetSystemSavedPasswordAsync(string appleId);
 }
 

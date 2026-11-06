@@ -237,53 +237,7 @@ public partial class SigningRefreshViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveCredentialsAsync()
     {
-        if (string.IsNullOrWhiteSpace(AppleId) || !AppleId.Contains("@"))
-        {
-            StatusMessage = "يرجى إدخال بريد Apple ID صحيح أولاً (مثال: user@icloud.com).";
-            IsSuccessStatus = false;
-            return;
-        }
-
-        string effectivePassword = Password;
-        if (string.IsNullOrWhiteSpace(effectivePassword) && HasStoredPassword)
-        {
-            effectivePassword = await _credentialStore.GetApplePasswordAsync(AppleId.Trim()) ?? string.Empty;
-        }
-
-        if (string.IsNullOrWhiteSpace(effectivePassword))
-        {
-            StatusMessage = "يرجى كتابة كلمة مرور Apple ID أو كلمة السر الخاصة بالتطبيق (App-Specific Password).";
-            IsSuccessStatus = false;
-            return;
-        }
-
-        await _credentialStore.SaveApplePasswordAsync(AppleId.Trim(), effectivePassword);
-        HasStoredPassword = true;
-        SavedAccountDisplay = $"الحساب المحفوظ: {AppleId.Trim()}";
-        Is2FaPromptVisible = false;
-
-        await RefreshSavedAccountsListAsync();
-
-        string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
-        await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
-        await RefreshCertificateStatusAsync();
-
-        var identity = await _identityService.GetIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
-        if (identity != null && identity.IsReadyToSign && !identity.IsExpired)
-        {
-            StatusMessage = "✓ تم حفظ وتشفير حساب Apple بنجاح داخل نظام ويندوز (Windows DPAPI)!\nتم العثور على شهادة توقيع صالحة وملف تعريف لهذا الحساب، وهو جاهز للتوقيع فوراً.";
-            IsSuccessStatus = true;
-        }
-        else if (identity != null && identity.IsExpired)
-        {
-            StatusMessage = $"⚠️ تم حفظ الحساب في نظام ويندوز، ولكن ملف التعريف والشهادة المقترنة به منتهية الصلاحية منذ ({identity.ExpirationDate:yyyy-MM-dd}).\nيرجى تجديد الحساب أو استيراد ملف P12 و Mobileprovision صالح من الأسفل لتفادي خطأ 0xe8008015.";
-            IsSuccessStatus = false;
-        }
-        else
-        {
-            StatusMessage = $"⚠️ تم حفظ بيانات الحساب محلياً في ويندوز (DPAPI)، ولكن لم يتم العثور على شهادة توقيع (P12) أو ملف تعريف لهذا الحساب ({AppleId.Trim()}).\nلتوقيع التطبيقات بهذا الحساب، يمكنك استيراد ملف P12 و Mobileprovision من بطاقة (شهادة P12 مخصصة) أدناه.";
-            IsSuccessStatus = false;
-        }
+        await AuthenticateAndSaveAccountAsync();
     }
 
     [RelayCommand]

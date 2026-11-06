@@ -127,12 +127,34 @@ public class SigningService : ISigningService
             string appBundlePath = appDirs[0];
             _logger.LogInformation("Located application bundle: {Bundle}", appBundlePath);
 
-            // 3. Provisioning profile resolution
+            // 3. Bundle ID & Provisioning profile resolution
             ReportProgress(progress, "تطبيق شهادة وملف تعريف التثبيت (Mobileprovision)...", 30);
             string embeddedProvisionTarget = Path.Combine(appBundlePath, "embedded.mobileprovision");
             string? effectiveProfile = config.MobileProvisionPath;
             string? effectiveP12 = config.P12Path;
             string p12Password = config.P12Password ?? "sidelink";
+
+            string originalBundleId = string.Empty;
+            string infoPlistPath = Path.Combine(appBundlePath, "Info.plist");
+            if (File.Exists(infoPlistPath))
+            {
+                try
+                {
+                    string plistXml = BundleIdentifierModifier.ReadPlistAsXmlString(File.ReadAllBytes(infoPlistPath));
+                    var doc = XDocument.Parse(plistXml);
+                    var idKey = doc.Root?.Element("dict")?.Elements("key").FirstOrDefault(k => k.Value == "CFBundleIdentifier");
+                    originalBundleId = idKey?.ElementsAfterSelf().FirstOrDefault()?.Value ?? string.Empty;
+                }
+                catch { }
+            }
+
+            string requestedBundleId = !string.IsNullOrWhiteSpace(config.CustomBundleId) 
+                ? config.CustomBundleId.Trim() 
+                : (config.ModifyBundleId ? $"{originalBundleId}.sidelink" : originalBundleId);
+
+            string? profileAppId = null;
+            string? profileTeamId = null;
+            string? entitlementsXml = null;
 
             if (config.Method == SigningMethodType.PersonalTeam)
             {
@@ -147,7 +169,7 @@ public class SigningService : ISigningService
                     var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId);
                     if (identity == null || !identity.IsReadyToSign)
                     {
-                        identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId);
+                        identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId, requestedBundleId);
                     }
 
                     if (identity != null && identity.IsExpired)
@@ -161,6 +183,7 @@ public class SigningService : ISigningService
                     {
                         effectiveProfile = identity.MobileProvisionPath;
                         effectiveP12 = identity.P12Path;
+                        profileTeamId = identity.TeamId;
                         _logger.LogInformation("Resolved personal team identity: Profile={Profile}, P12={P12}", effectiveProfile, effectiveP12);
                     }
                     else
@@ -171,19 +194,28 @@ public class SigningService : ISigningService
                 }
             }
 
-            string? profileAppId = null;
-            string? profileTeamId = null;
-            string? entitlementsXml = null;
-
             if (!string.IsNullOrWhiteSpace(effectiveProfile) && File.Exists(effectiveProfile))
             {
                 File.Copy(effectiveProfile, embeddedProvisionTarget, true);
                 _logger.LogInformation("Embedded mobileprovision profile to {Target}", embeddedProvisionTarget);
 
-                ExtractProfileDetails(effectiveProfile, out profileAppId, out profileTeamId, out entitlementsXml);
+                ExtractProfileDetails(effectiveProfile, out profileAppId, out var extractedTeamId, out entitlementsXml);
+                if (string.IsNullOrWhiteSpace(profileTeamId))
+                {
+                    profileTeamId = extractedTeamId;
+                }
             }
 
             // 4. Bundle ID Handling & Extension Stripping
+            // Determine effective bundle ID: If profile is bound to a specific App ID (not wildcard),
+            // CFBundleIdentifier MUST match that specific App ID so iOS installd accepts the signature.
+            string effectiveBundleId = requestedBundleId;
+            if (!string.IsNullOrWhiteSpace(profileAppId) && !profileAppId.Contains('*'))
+            {
+                effectiveBundleId = profileAppId;
+                _logger.LogInformation("Aligning CFBundleIdentifier to profile App ID: {Id}", effectiveBundleId);
+            }
+
             if (config.Method == SigningMethodType.PersonalTeam)
             {
                 // Free personal profiles cannot sign App Extensions (PlugIns)
@@ -194,25 +226,13 @@ public class SigningService : ISigningService
                     try { Directory.Delete(pluginsDir, true); } catch { }
                 }
 
-                // If profile is restricted to a specific App ID (e.g. net.whatsapp.WhatsApp.NHDYBV5658)
-                // we must align CFBundleIdentifier to match the profile so iOS installd doesn't reject with ApplicationVerificationFailed.
-                string? targetId = config.CustomBundleId;
-                if (!string.IsNullOrWhiteSpace(profileAppId) && !profileAppId.Contains('*'))
-                {
-                    targetId = profileAppId;
-                    _logger.LogInformation("Aligning CFBundleIdentifier to profile App ID: {Id}", targetId);
-                }
-
-                if (!string.IsNullOrWhiteSpace(targetId) || config.ModifyBundleId)
-                {
-                    ReportProgress(progress, "تعديل معرّف الحزمة ليتطابق مع ملف التعريف والشهادة...", 45);
-                    BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, targetId);
-                }
+                ReportProgress(progress, "تعديل معرّف الحزمة ليتطابق مع ملف التعريف والشهادة...", 45);
+                BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, effectiveBundleId);
             }
             else if (config.ModifyBundleId || !string.IsNullOrWhiteSpace(config.CustomBundleId))
             {
                 ReportProgress(progress, "تعديل معرّف الحزمة (Bundle ID)...", 45);
-                BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, config.CustomBundleId);
+                BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, effectiveBundleId);
             }
 
             // 5. Code Signature generation
@@ -222,7 +242,7 @@ public class SigningService : ISigningService
             bool codesignSuccess = false;
             if (!string.IsNullOrWhiteSpace(rcodesignPath) && !string.IsNullOrWhiteSpace(effectiveP12) && File.Exists(effectiveP12))
             {
-                codesignSuccess = await Task.Run(() => SignWithRcodesign(rcodesignPath, appBundlePath, effectiveP12, p12Password, entitlementsXml, tempWorkingDir));
+                codesignSuccess = await Task.Run(() => SignWithRcodesign(rcodesignPath, appBundlePath, effectiveP12, p12Password, entitlementsXml, tempWorkingDir, profileTeamId, effectiveBundleId));
             }
 
             if (!codesignSuccess)
@@ -276,7 +296,7 @@ public class SigningService : ISigningService
         }
     }
 
-    private bool SignWithRcodesign(string rcodesignPath, string appBundlePath, string p12Path, string p12Password, string? entitlementsXml, string tempWorkingDir)
+    private bool SignWithRcodesign(string rcodesignPath, string appBundlePath, string p12Path, string p12Password, string? entitlementsXml, string tempWorkingDir, string? teamId = null, string? effectiveBundleId = null)
     {
         try
         {
@@ -284,11 +304,35 @@ public class SigningService : ISigningService
 
             if (!string.IsNullOrWhiteSpace(entitlementsXml))
             {
+                string processedEntXml = entitlementsXml;
+                if (!string.IsNullOrWhiteSpace(effectiveBundleId))
+                {
+                    try
+                    {
+                        var doc = XDocument.Parse("<plist version=\"1.0\">" + entitlementsXml + "</plist>");
+                        var dict = doc.Root?.Element("dict");
+                        if (dict != null)
+                        {
+                            var elements = dict.Elements().ToList();
+                            for (int i = 0; i < elements.Count - 1; i += 2)
+                            {
+                                if (elements[i].Name.LocalName == "key" && elements[i].Value == "application-identifier")
+                                {
+                                    string prefix = !string.IsNullOrWhiteSpace(teamId) ? $"{teamId}." : "";
+                                    elements[i + 1].Value = $"{prefix}{effectiveBundleId}";
+                                }
+                            }
+                            processedEntXml = dict.ToString();
+                        }
+                    }
+                    catch { }
+                }
+
                 string entFilePath = Path.Combine(tempWorkingDir, "entitlements.plist");
                 string fullEntXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                                     "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
                                     "<plist version=\"1.0\">\n" +
-                                    entitlementsXml + "\n" +
+                                    processedEntXml + "\n" +
                                     "</plist>";
                 File.WriteAllText(entFilePath, fullEntXml, Encoding.UTF8);
                 // Use relative path so rcodesign on Windows doesn't treat 'C:' drive letter as a subpath specifier

@@ -102,7 +102,7 @@ public class AppleIdentityService : IAppleIdentityService
         }
     }
 
-    public async Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid)
+    public async Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null)
     {
         string cleanId = SanitizeAccountName(appleId);
         string accountDir = Path.Combine(_baseIdentitiesPath, cleanId);
@@ -111,17 +111,33 @@ public class AppleIdentityService : IAppleIdentityService
         string targetProfilePath = Path.Combine(accountDir, "embedded.mobileprovision");
         string targetP12Path = Path.Combine(accountDir, "identity.p12");
 
-        // If profile already exists and is valid, return it
-        if (File.Exists(targetProfilePath))
+        // If profile already exists, is valid, and matches device and bundleId, return it
+        if (File.Exists(targetProfilePath) && File.Exists(targetP12Path))
         {
             var existing = await GetIdentityForAccountAsync(appleId, deviceUdid);
             if (existing != null && existing.IsMatchingCurrentDevice && existing.ExpirationDate > DateTime.UtcNow)
             {
-                if (!File.Exists(targetP12Path))
+                bool bundleMatches = string.IsNullOrWhiteSpace(bundleId) || 
+                                     string.IsNullOrWhiteSpace(existing.AllowedBundleId) || 
+                                     existing.AllowedBundleId == "*" || 
+                                     string.Equals(existing.AllowedBundleId, bundleId, StringComparison.OrdinalIgnoreCase);
+
+                if (bundleMatches)
                 {
-                    TryExportMatchingP12(existing, targetP12Path);
+                    return existing;
                 }
-                return existing;
+            }
+        }
+
+        // 1. Attempt autonomous native provisioning directly from Apple Developer Services
+        bool provisioned = await ProvisionViaSideLinkEngineAsync(appleId, deviceUdid, bundleId);
+        if (provisioned && File.Exists(targetProfilePath) && File.Exists(targetP12Path))
+        {
+            var freshIdentity = await GetIdentityForAccountAsync(appleId, deviceUdid);
+            if (freshIdentity != null && freshIdentity.IsReadyToSign)
+            {
+                _logger.LogInformation("Successfully provisioned certificate and profile natively via SideLink Engine for {Account}", appleId);
+                return freshIdentity;
             }
         }
 
@@ -290,6 +306,24 @@ public class AppleIdentityService : IAppleIdentityService
                         catch { }
                     }
                 }
+                else if (key == "Entitlements" && valNode.Name == "dict")
+                {
+                    var entElements = valNode.ChildNodes;
+                    for (int k = 0; k < entElements.Count; k++)
+                    {
+                        var eNode = entElements[k];
+                        if (eNode.Name == "key" && eNode.InnerText == "application-identifier")
+                        {
+                            var vNode = (k + 1 < entElements.Count) ? entElements[k + 1] : null;
+                            if (vNode != null && !string.IsNullOrWhiteSpace(vNode.InnerText))
+                            {
+                                string fullAppId = vNode.InnerText.Trim();
+                                int dotIdx = fullAppId.IndexOf('.');
+                                info.AllowedBundleId = dotIdx >= 0 ? fullAppId.Substring(dotIdx + 1) : fullAppId;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -432,5 +466,47 @@ public class AppleIdentityService : IAppleIdentityService
                 sb.Append('_');
         }
         return sb.ToString().Replace("@", "_").Replace(".", "_");
+    }
+
+    public async Task<bool> ProvisionViaSideLinkEngineAsync(string appleId, string deviceUdid, string? bundleId = null)
+    {
+        try
+        {
+            string provisionerPath = AppleAuthService.GetProvisionerPath();
+            if (!File.Exists(provisionerPath))
+            {
+                _logger.LogWarning("sidelink-provisioner not found at {Path}", provisionerPath);
+                return false;
+            }
+
+            string bundleArg = !string.IsNullOrWhiteSpace(bundleId) ? $"--bundle-id \"{bundleId}\"" : "--bundle-id \"*\"";
+            _logger.LogInformation("Calling sidelink-provisioner to extract cert and profile for {Account}, device {UDID}, bundle {Bundle}", appleId, deviceUdid, bundleId ?? "*");
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = provisionerPath,
+                Arguments = $"provision --apple-id \"{appleId}\" --udid \"{deviceUdid}\" {bundleArg}",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
+            };
+
+            using var proc = System.Diagnostics.Process.Start(psi);
+            if (proc == null) return false;
+
+            string stdout = await proc.StandardOutput.ReadToEndAsync();
+            string stderr = await proc.StandardError.ReadToEndAsync();
+            await proc.WaitForExitAsync();
+
+            _logger.LogInformation("Native provisioner exit code: {Code}, output: {Out}", proc.ExitCode, stdout);
+            return proc.ExitCode == 0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("ProvisionViaSideLinkEngineAsync error: {Message}", ex.Message);
+            return false;
+        }
     }
 }

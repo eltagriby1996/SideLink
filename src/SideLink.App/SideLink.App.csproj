@@ -19,6 +19,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\tools\rcodesign.exe">
+      <Link>tools\rcodesign.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\tools\sidelink-provisioner.exe">
+      <Link>tools\sidelink-provisioner.exe</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SideLink.Core\SideLink.Core.csproj" />
     <ProjectReference Include="..\SideLink.Device\SideLink.Device.csproj" />
     <ProjectReference Include="..\SideLink.IPA\SideLink.IPA.csproj" />

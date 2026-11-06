@@ -42,6 +42,22 @@ public static class UsbmuxdProtocol
                "</plist>";
     }
 
+    public static string CreateListDevicesRequest()
+    {
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+               "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+               "<plist version=\"1.0\">\n" +
+               "<dict>\n" +
+               "    <key>MessageType</key>\n" +
+               "    <string>ListDevices</string>\n" +
+               "    <key>ClientVersionString</key>\n" +
+               "    <string>SideLink-1.0</string>\n" +
+               "    <key>ProgName</key>\n" +
+               "    <string>SideLink</string>\n" +
+               "</dict>\n" +
+               "</plist>";
+    }
+
     public static string CreateConnectRequest(int deviceId, ushort port)
     {
         // Port needs to be in network byte order (big-endian) converted to integer

@@ -727,12 +727,8 @@
                                     <WrapPanel Orientation="Horizontal" Margin="0,0,0,6">
                                         <Button Style="{StaticResource PrimaryButtonStyle}" 
                                                 Background="#2563EB" 
-                                                Content="📲 تسجيل الدخول والتحقق من Apple (Sign-In &amp; 2FA)" 
+                                                Content="🔐 تسجيل الدخول والتحقق من حساب Apple (Sign-In &amp; 2FA)" 
                                                 Command="{Binding SigningRefresh.Request2FaCommand}" 
-                                                Margin="0,0,10,8" />
-                                        <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                                Content="💾 حفظ الحساب محلياً (Save DPAPI)" 
-                                                Command="{Binding SigningRefresh.SaveCredentialsCommand}" 
                                                 Margin="0,0,10,8" />
                                         <Button Style="{StaticResource SecondaryButtonStyle}" 
                                                 Content="🗑️ مسح هذا الحساب من SideLink" 

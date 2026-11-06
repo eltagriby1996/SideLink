@@ -1,4 +1,5 @@
-using System.Net;
+using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
@@ -8,15 +9,28 @@ namespace SideLink.Signing;
 
 public class AppleAuthService : IAppleAuthService
 {
+    private readonly ICredentialStore _credentialStore;
     private readonly ILogger<AppleAuthService> _logger;
-    private readonly IAnisetteClient _anisetteClient;
-    private readonly CookieContainer _cookieContainer = new();
-    private string? _currentSessionToken;
 
-    public AppleAuthService(IAnisetteClient anisetteClient, ILogger<AppleAuthService> logger)
+    public AppleAuthService(ICredentialStore credentialStore, ILogger<AppleAuthService> logger)
     {
-        _anisetteClient = anisetteClient;
+        _credentialStore = credentialStore;
         _logger = logger;
+    }
+
+    public static string GetProvisionerPath()
+    {
+        var candidates = new[]
+        {
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "sidelink-provisioner.exe"),
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sidelink-provisioner.exe"),
+            @"C:\Users\HD\Desktop\SideLink\tools\sidelink-provisioner.exe"
+        };
+        foreach (var c in candidates)
+        {
+            if (File.Exists(c)) return c;
+        }
+        return candidates[0];
     }
 
     public async Task<(bool Success, bool Requires2Fa, string Message)> AuthenticateAsync(
@@ -31,106 +45,78 @@ public class AppleAuthService : IAppleAuthService
 
         if (string.IsNullOrWhiteSpace(password))
         {
-            return (false, false, "يرجى كتابة كلمة مرور Apple ID أو كلمة السر الخاصة بالتطبيق (App-Specific Password).");
+            return (false, false, "يرجى كتابة كلمة مرور Apple ID.");
         }
 
         string trimmedId = appleId.Trim();
         string trimmedPwd = password.Trim();
 
-        // Standard Apple ID Authentication against Apple Auth Server
-        return await PerformAppleWebAuthAsync(trimmedId, trimmedPwd, cancellationToken);
-    }
-
-    private async Task<(bool Success, bool Requires2Fa, string Message)> PerformAppleWebAuthAsync(
-        string appleId, 
-        string password, 
-        CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Attempting Apple ID web authentication for {Account}", appleId);
+        _logger.LogInformation("Attempting GrandSlam SRP authentication for {Account} via SideLink Provisioner", trimmedId);
 
         try
         {
-            using var handler = new HttpClientHandler
+            string provisionerPath = GetProvisionerPath();
+            if (!File.Exists(provisionerPath))
             {
-                CookieContainer = _cookieContainer,
-                AllowAutoRedirect = true
-            };
-            using var client = new HttpClient(handler);
-            client.Timeout = TimeSpan.FromSeconds(20);
+                return (false, false, $"تعذر العثور على محرك التوقيع sidelink-provisioner.exe في المسار: {provisionerPath}");
+            }
 
-            // 1. Fetch real Anisette device attestation headers
-            try
+            var psi = new ProcessStartInfo
             {
-                var aniHeaders = await _anisetteClient.GetAnisetteHeadersAsync(cancellationToken);
-                foreach (var kvp in aniHeaders)
+                FileName = provisionerPath,
+                Arguments = $"login --apple-id \"{trimmedId}\" --password \"{trimmedPwd}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
+            };
+
+            using var proc = Process.Start(psi);
+            if (proc == null)
+            {
+                return (false, false, "فشل بدء تشغيل محرك تسجيل الدخول.");
+            }
+
+            string stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+            string stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
+            await proc.WaitForExitAsync(cancellationToken);
+
+            _logger.LogInformation("Provisioner login exit code: {Code}, output: {Out}", proc.ExitCode, stdout);
+
+            if (!string.IsNullOrWhiteSpace(stdout))
+            {
+                try
                 {
-                    client.DefaultRequestHeaders.TryAddWithoutValidation(kvp.Key, kvp.Value);
+                    using var doc = JsonDocument.Parse(stdout);
+                    var root = doc.RootElement;
+                    bool success = root.TryGetProperty("success", out var sProp) && sProp.GetBoolean();
+                    bool requires2Fa = root.TryGetProperty("requires_2fa", out var rProp) && rProp.GetBoolean();
+                    string message = root.TryGetProperty("message", out var mProp) ? mProp.GetString() ?? "" : "";
+                    string error = root.TryGetProperty("error", out var eProp) ? eProp.GetString() ?? "" : "";
+
+                    if (requires2Fa)
+                    {
+                        await _credentialStore.SaveApplePasswordAsync(trimmedId, trimmedPwd);
+                        return (false, true, !string.IsNullOrWhiteSpace(message) ? message : "📱 تم بدء إجراء التحقق بخطوتين (2FA) بنجاح من خوادم Apple!\nيرجى التحقق من جهاز الآيفون الخاص بك، ثم إدخال الرمز المكون من 6 أرقام أدناه والضغط على 'تأكيد الرمز'.");
+                    }
+
+                    if (success)
+                    {
+                        await _credentialStore.SaveApplePasswordAsync(trimmedId, trimmedPwd);
+                        return (true, false, !string.IsNullOrWhiteSpace(message) ? message : "✓ تم تسجيل الدخول والتحقق من حساب Apple ID بنجاح!");
+                    }
+
+                    return (false, false, !string.IsNullOrWhiteSpace(error) ? error : "فشل تسجيل الدخول لدى خوادم Apple.");
+                }
+                catch (JsonException)
+                {
+                    _logger.LogWarning("Failed to parse provisioner JSON: {Out}", stdout);
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning("Anisette provider warning: {Message}", ex.Message);
-            }
 
-            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/javascript");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Apple-Domain-Id", "1");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://appleid.apple.com");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://appleid.apple.com/");
-
-            var payload = new
-            {
-                accountName = appleId,
-                password = password,
-                rememberMe = false
-            };
-            string json = JsonSerializer.Serialize(payload);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await client.PostAsync("https://idmsa.apple.com/appleauth/auth/signin", content, cancellationToken);
-            int statusCode = (int)response.StatusCode;
-            string body = await response.Content.ReadAsStringAsync(cancellationToken);
-
-            _logger.LogInformation("Apple signin responded with HTTP {Status}", statusCode);
-
-            if (statusCode == 409 || body.Contains("trustedDevice") || body.Contains("securityCode") || body.Contains("2sv") || body.Contains("2fa"))
-            {
-                // Capture session header if present
-                if (response.Headers.TryGetValues("scnt", out var scntValues))
-                {
-                    _currentSessionToken = scntValues.FirstOrDefault();
-                }
-
-                _logger.LogInformation("2FA challenge received from Apple for {Account}", appleId);
-                return (false, true, "📱 بيانات الحساب صحيحة! تم بدء إجراء التحقق بخطوتين (2FA) من Apple.\nتحقق الآن من ظهور الإشعار على جهاز الآيفون الخاص بك، ثم أدخل الرمز المكون من 6 أرقام أدناه واضغط 'تأكيد الرمز'.");
-            }
-
-            if (statusCode == 401 || statusCode == 400 || body.Contains("auth.error") || body.Contains("invalid") || body.Contains("notFound"))
-            {
-                _logger.LogWarning("Apple rejected credentials for {Account}: {Body}", appleId, body);
-                return (false, false, "❌ فشل تسجيل الدخول: تم رفض بيانات الاعتماد من قبل خوادم Apple.\nاسم المستخدم أو كلمة المرور غير صحيحة.");
-            }
-
-            if (statusCode == 200 || statusCode == 204)
-            {
-                _logger.LogInformation("Apple web authentication successful for {Account}", appleId);
-                return (true, false, "✓ تم التحقق من حساب Apple ID بنجاح من خوادم Apple!");
-            }
-
-            if (statusCode == 503)
-            {
-                _logger.LogWarning("Apple signin blocked by Apple anti-bot / service restriction (HTTP 503)");
-                return (false, false, 
-                    "⚠️ خوادم Apple حظرت تسجيل الدخول المباشر (رمز 503: Service Temporarily Unavailable).\n" +
-                    "Apple تفرض حماية مشددة على واجهة تسجيل الدخول المباشر.\n" +
-                    "💡 لتوقيع وتثبيت تطبيقاتك فوراً يمكنك استخدام:\n" +
-                    "1. خيار (شهادة P12 مخصصة) لاختيار ملف P12 و Mobileprovision صالحين.\n" +
-                    "2. أو قم بتسجيل الدخول عبر أداة iloader ليتم استخراج الشهادة تلقائياً إلى نظام ويندوز، وسيلتقطها SideLink فوراً.");
-            }
-
-            _logger.LogWarning("Apple signin responded with unexpected status {Status}: {Body}", statusCode, body);
-            return (false, false, $"❌ فشل تسجيل الدخول لدى خوادم Apple (رمز الاستجابة: {statusCode}). يرجى التأكد من كتابة البريد وكلمة المرور بشكل صحيح.");
+            string errOut = !string.IsNullOrWhiteSpace(stderr) ? stderr : stdout;
+            return (false, false, $"❌ خطأ أثناء الاتصال بخوادم Apple: {errOut}");
         }
         catch (OperationCanceledException)
         {
@@ -138,8 +124,8 @@ public class AppleAuthService : IAppleAuthService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to connect to Apple auth servers for {Account}", appleId);
-            return (false, false, $"❌ تعذر الاتصال بخوادم Apple: {ex.Message}. يرجى التأكد من اتصال الإنترنت وحاول مجدداً.");
+            _logger.LogError(ex, "Authentication failure for {Account}", appleId);
+            return (false, false, $"❌ خطأ أثناء محاولة تسجيل الدخول: {ex.Message}");
         }
     }
 
@@ -153,74 +139,73 @@ public class AppleAuthService : IAppleAuthService
             return (false, "يرجى إدخال رمز التحقق المكون من 6 أرقام بالكامل.");
         }
 
+        string trimmedId = appleId.Trim();
         string cleanCode = code.Trim();
-        _logger.LogInformation("Verifying 2FA code with Apple for account {Account}", appleId);
+
+        string? savedPassword = await _credentialStore.GetApplePasswordAsync(trimmedId);
+        if (string.IsNullOrWhiteSpace(savedPassword))
+        {
+            return (false, "يرجى إعادة إدخال كلمة المرور مع رمز التحقق.");
+        }
+
+        _logger.LogInformation("Submitting 2FA verification code to Apple for account {Account}", trimmedId);
 
         try
         {
-            using var handler = new HttpClientHandler
+            string provisionerPath = GetProvisionerPath();
+            if (!File.Exists(provisionerPath))
             {
-                CookieContainer = _cookieContainer,
-                AllowAutoRedirect = true
-            };
-            using var client = new HttpClient(handler);
-            client.Timeout = TimeSpan.FromSeconds(20);
-
-            try
-            {
-                var aniHeaders = await _anisetteClient.GetAnisetteHeadersAsync(cancellationToken);
-                foreach (var kvp in aniHeaders)
-                {
-                    client.DefaultRequestHeaders.TryAddWithoutValidation(kvp.Key, kvp.Value);
-                }
-            }
-            catch { }
-
-            client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json, text/javascript");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Apple-Domain-Id", "1");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("X-Requested-With", "XMLHttpRequest");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://appleid.apple.com");
-            client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://appleid.apple.com/");
-
-            if (!string.IsNullOrEmpty(_currentSessionToken))
-            {
-                client.DefaultRequestHeaders.TryAddWithoutValidation("scnt", _currentSessionToken);
+                return (false, $"تعذر العثور على محرك التوقيع sidelink-provisioner.exe في المسار: {provisionerPath}");
             }
 
-            var payload = new
+            var psi = new ProcessStartInfo
             {
-                securityCode = new { code = cleanCode }
+                FileName = provisionerPath,
+                Arguments = $"login --apple-id \"{trimmedId}\" --password \"{savedPassword}\" --code \"{cleanCode}\"",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8
             };
-            string json = JsonSerializer.Serialize(payload);
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var response = await client.PostAsync("https://idmsa.apple.com/appleauth/auth/verify/trusteddevice", content, cancellationToken);
-            int statusCode = (int)response.StatusCode;
-
-            if (statusCode != 200 && statusCode != 204)
+            using var proc = Process.Start(psi);
+            if (proc == null)
             {
-                // Fallback attempt: SMS / Phone verification endpoint
+                return (false, "فشل بدء تشغيل محرك التحقق.");
+            }
+
+            string stdout = await proc.StandardOutput.ReadToEndAsync(cancellationToken);
+            string stderr = await proc.StandardError.ReadToEndAsync(cancellationToken);
+            await proc.WaitForExitAsync(cancellationToken);
+
+            _logger.LogInformation("Provisioner 2FA exit code: {Code}, output: {Out}", proc.ExitCode, stdout);
+
+            if (!string.IsNullOrWhiteSpace(stdout))
+            {
                 try
                 {
-                    using var phoneContent = new StringContent(json, Encoding.UTF8, "application/json");
-                    var phoneResponse = await client.PostAsync("https://idmsa.apple.com/appleauth/auth/verify/phone", phoneContent, cancellationToken);
-                    if (phoneResponse.IsSuccessStatusCode)
+                    using var doc = JsonDocument.Parse(stdout);
+                    var root = doc.RootElement;
+                    bool success = root.TryGetProperty("success", out var sProp) && sProp.GetBoolean();
+                    string message = root.TryGetProperty("message", out var mProp) ? mProp.GetString() ?? "" : "";
+                    string error = root.TryGetProperty("error", out var eProp) ? eProp.GetString() ?? "" : "";
+
+                    if (success)
                     {
-                        statusCode = (int)phoneResponse.StatusCode;
+                        return (true, !string.IsNullOrWhiteSpace(message) ? message : "✓ تم تأكيد رمز 2FA بنجاح من خوادم Apple! الحساب موثق وجاهز لتوقيع التطبيقات.");
                     }
+
+                    return (false, !string.IsNullOrWhiteSpace(error) ? error : "رمز التحقق غير صحيح أو منتهي الصلاحية.");
                 }
-                catch { }
+                catch (JsonException)
+                {
+                    _logger.LogWarning("Failed to parse 2FA response JSON: {Out}", stdout);
+                }
             }
 
-            if (statusCode == 200 || statusCode == 204)
-            {
-                _logger.LogInformation("2FA code accepted by Apple for account {Account}", appleId);
-                return (true, "✓ تم التحقق من رمز المصادقة الثنائية (2FA) بنجاح من خوادم Apple! الحساب مفعل وجاهز للتوقيع.");
-            }
-
-            _logger.LogWarning("Apple rejected 2FA code: HTTP {Status}", statusCode);
-            return (false, "❌ رمز التحقق غير صحيح أو انتهت صلاحيته لدى خوادم Apple. يرجى التأكد من كتابة الأرقام الستة بشكل صحيح أو طلب رمز جديد.");
+            string errOut = !string.IsNullOrWhiteSpace(stderr) ? stderr : stdout;
+            return (false, $"❌ خطأ أثناء تأكيد رمز 2FA: {errOut}");
         }
         catch (OperationCanceledException)
         {

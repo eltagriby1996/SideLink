@@ -55,6 +55,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         _monitoringCts = new CancellationTokenSource();
         _monitoringTask = Task.Run(() => MonitorUsbmuxdLoopAsync(_monitoringCts.Token), CancellationToken.None);
         _logger.LogInformation("Started iOS device discovery monitoring.");
+        _ = RefreshDevicesAsync(CancellationToken.None);
         return Task.CompletedTask;
     }
 
@@ -92,14 +93,13 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             await client.ConnectAsync("127.0.0.1", UsbmuxdProtocol.UsbmuxdPort, cancellationToken);
             using var stream = client.GetStream();
 
-            string listenXml = UsbmuxdProtocol.CreateListenRequest();
-            byte[] packet = UsbmuxdProtocol.CreateUsbmuxPacket(listenXml);
+            string listXml = UsbmuxdProtocol.CreateListDevicesRequest();
+            byte[] packet = UsbmuxdProtocol.CreateUsbmuxPacket(listXml);
             await stream.WriteAsync(packet, cancellationToken);
             await stream.FlushAsync(cancellationToken);
 
-            // Read first broadcast response if any
             using var shortCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            shortCts.CancelAfter(TimeSpan.FromMilliseconds(1500));
+            shortCts.CancelAfter(TimeSpan.FromMilliseconds(2000));
 
             try
             {
@@ -115,7 +115,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Direct device refresh query completed with note: {Message}", ex.Message);
+            _logger.LogWarning("Failed to query usbmuxd devices: {Message}", ex.Message);
             return ConnectedDevices;
         }
     }
@@ -138,12 +138,38 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
 
                 _logger.LogInformation("Connected to Apple usbmuxd service on port {Port}.", UsbmuxdProtocol.UsbmuxdPort);
 
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    string? msg = await UsbmuxdProtocol.ReadUsbmuxMessageAsync(stream, cancellationToken);
-                    if (msg == null) break; // Disconnected from daemon
+                _ = RefreshDevicesAsync(cancellationToken);
 
-                    ProcessUsbmuxMessage(msg);
+                using var pollCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                _ = Task.Run(async () =>
+                {
+                    while (!pollCts.Token.IsCancellationRequested)
+                    {
+                        try
+                        {
+                            await Task.Delay(3500, pollCts.Token);
+                            if (ConnectedDevices.Count == 0)
+                            {
+                                await RefreshDevicesAsync(pollCts.Token);
+                            }
+                        }
+                        catch { break; }
+                    }
+                }, pollCts.Token);
+
+                try
+                {
+                    while (!cancellationToken.IsCancellationRequested)
+                    {
+                        string? msg = await UsbmuxdProtocol.ReadUsbmuxMessageAsync(stream, cancellationToken);
+                        if (msg == null) break; // Disconnected from daemon
+
+                        ProcessUsbmuxMessage(msg);
+                    }
+                }
+                finally
+                {
+                    pollCts.Cancel();
                 }
             }
             catch (OperationCanceledException)
@@ -177,6 +203,44 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             var doc = XDocument.Parse(xml);
             var rootDict = doc.Root?.Element("dict");
             if (rootDict == null) return;
+
+            if (xml.Contains("<key>DeviceList</key>"))
+            {
+                var array = doc.Descendants("array").FirstOrDefault();
+                if (array != null)
+                {
+                    foreach (var devDict in array.Elements("dict"))
+                    {
+                        int dId = 0;
+                        string sNum = string.Empty;
+                        int cSpeed = 0;
+                        var dElements = devDict.Elements().ToList();
+                        for (int k = 0; k < dElements.Count - 1; k += 2)
+                        {
+                            if (dElements[k].Value.Equals("DeviceID", StringComparison.OrdinalIgnoreCase))
+                                int.TryParse(dElements[k + 1].Value, out dId);
+                            else if (dElements[k].Value.Equals("Properties", StringComparison.OrdinalIgnoreCase) && dElements[k + 1].Name.LocalName == "dict")
+                            {
+                                var pList = dElements[k + 1].Elements().ToList();
+                                for (int m = 0; m < pList.Count - 1; m += 2)
+                                {
+                                    if (pList[m].Value.Equals("SerialNumber", StringComparison.OrdinalIgnoreCase))
+                                        sNum = pList[m + 1].Value;
+                                    else if (pList[m].Value.Equals("ConnectionSpeed", StringComparison.OrdinalIgnoreCase))
+                                        int.TryParse(pList[m + 1].Value, out cSpeed);
+                                }
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(sNum))
+                        {
+                            _logger.LogInformation("Discovered existing iOS Device: UDID={UDID}, DeviceID={ID}", sNum, dId);
+                            _ = Task.Run(async () => await HandleDeviceAttachedAsync(dId, sNum, cSpeed));
+                        }
+                    }
+                }
+                return;
+            }
 
             string messageType = string.Empty;
             int deviceId = 0;
