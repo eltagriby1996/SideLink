@@ -50,6 +50,14 @@
       "expiresAt": "2026-11-06T15:56:46.930Z",
       "verifiedAt": null,
       "challengeNonce": ""
+    },
+    "4fc8d1490abe4c76b78bde8907a16674": {
+      "sessionId": "4fc8d1490abe4c76b78bde8907a16674",
+      "status": "pending",
+      "createdAt": "2026-11-06T16:20:50.806Z",
+      "expiresAt": "2026-11-06T16:35:50.806Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
     }
   },
   "ipas": [
@@ -163,7 +171,7 @@
       "expiresAt": null,
       "usedCount": 0,
       "maxUses": 0,
-      "isActive": false
+      "isActive": true
     }
   ],
   "blacklist": [],
