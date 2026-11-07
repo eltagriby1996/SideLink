@@ -333,8 +333,17 @@
                                                     <ColumnDefinition Width="150" />
                                                     <ColumnDefinition Width="*" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="معرّف التثبيت (Target ID):" FontSize="12" Foreground="#93C5FD" VerticalAlignment="Center" />
-                                                <TextBox Grid.Column="1" Text="{Binding IpaLibrary.TargetBundleId, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12" Padding="10,6" IsEnabled="{Binding IpaLibrary.AutoModifyBundleId}" />
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto" />
+                                                    <RowDefinition Height="8" />
+                                                    <RowDefinition Height="Auto" />
+                                                </Grid.RowDefinitions>
+
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="اسم التطبيق (App Name):" FontSize="12" Foreground="#93C5FD" VerticalAlignment="Center" />
+                                                <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding IpaLibrary.CustomDisplayName, UpdateSourceTrigger=PropertyChanged}" FontSize="12" Padding="10,6" />
+
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="معرّف التثبيت (Target ID):" FontSize="12" Foreground="#93C5FD" VerticalAlignment="Center" />
+                                                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding IpaLibrary.TargetBundleId, UpdateSourceTrigger=PropertyChanged}" FontFamily="Consolas" FontSize="12" Padding="10,6" IsEnabled="{Binding IpaLibrary.AutoModifyBundleId}" />
                                             </Grid>
                                         </StackPanel>
                                     </Border>
@@ -1171,6 +1180,188 @@
                                 </Border>
                             </StackPanel>
                         </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ======================================================== -->
+            <!-- MANDATORY FORCED UPDATE OVERLAY (Panel.ZIndex="1001")    -->
+            <!-- ======================================================== -->
+            <Grid Grid.Row="1" Background="#F2030712" Panel.ZIndex="1001">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Setter Property="IsHitTestVisible" Value="False" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsForceUpdateRequired}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Setter Property="IsHitTestVisible" Value="True" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Border Width="520" 
+                        Background="#0F172A" 
+                        BorderBrush="#0284C7" 
+                        BorderThickness="1.5" 
+                        CornerRadius="20" 
+                        Padding="36" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#0284C7" BlurRadius="40" ShadowDepth="0" Opacity="0.4" />
+                    </Border.Effect>
+                    <StackPanel>
+                        <!-- Header Icon -->
+                        <Border Width="64" Height="64" CornerRadius="32" Background="#1E293B" BorderBrush="#38BDF8" BorderThickness="1.5" HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <TextBlock Text="🚀" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+
+                        <TextBlock Text="تحديث إجباري مطلوب" 
+                                   FontSize="20" 
+                                   FontWeight="Bold" 
+                                   Foreground="White" 
+                                   HorizontalAlignment="Center" />
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,14">
+                            <TextBlock Text="يتوفر إصدار جديد من SideLink برقم: " FontSize="13" Foreground="#94A3B8" />
+                            <Border Background="#0369A1" CornerRadius="6" Padding="6,2" Margin="6,0,0,0">
+                                <TextBlock Text="{Binding ForceUpdateVersion, StringFormat='v{0}'}" FontSize="12" FontWeight="Bold" Foreground="White" FontFamily="Consolas" />
+                            </Border>
+                        </StackPanel>
+
+                        <!-- Release Notes Box -->
+                        <Border Background="#020617" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="12" Padding="16,14" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="ملاحظات وتفاصيل التحديث:" FontSize="12" FontWeight="Bold" Foreground="#38BDF8" Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding ForceUpdateNotes}" 
+                                           FontSize="12" 
+                                           Foreground="#CBD5E1" 
+                                           TextWrapping="Wrap" 
+                                           LineHeight="20" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="لضمان استمرار عمل التوقيع الرقمي والاتصال بأجهزتك بشكل سليم، يلزم ترقية البرنامج للمتابعة." 
+                                   FontSize="11.5" 
+                                   Foreground="#64748B" 
+                                   TextAlignment="Center" 
+                                   TextWrapping="Wrap" 
+                                   Margin="0,0,0,20" />
+
+                        <!-- Action Buttons -->
+                        <Button Content="تحميل وتثبيت التحديث الآن (Download Update)" 
+                                Command="{Binding OpenForceUpdateUrlCommand}" 
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Height="44" 
+                                FontSize="13" 
+                                FontWeight="Bold" 
+                                Margin="0,0,0,10" />
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" 
+                                    Content="إعادة الفحص" 
+                                    Command="{Binding RetryGovernanceCheckCommand}" 
+                                    Style="{StaticResource SecondaryButtonStyle}" 
+                                    Height="36" 
+                                    FontSize="11" />
+                            <Button Grid.Column="2" 
+                                    Content="إغلاق البرنامج" 
+                                    Command="{Binding ExitApplicationCommand}" 
+                                    Style="{StaticResource SecondaryButtonStyle}" 
+                                    Height="36" 
+                                    FontSize="11" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ======================================================== -->
+            <!-- REMOTE EMERGENCY KILL SWITCH OVERLAY (Panel.ZIndex="1002")-->
+            <!-- ======================================================== -->
+            <Grid Grid.Row="1" Background="#F8030712" Panel.ZIndex="1002">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Setter Property="IsHitTestVisible" Value="False" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEmergencyLocked}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                                <Setter Property="IsHitTestVisible" Value="True" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Border Width="520" 
+                        Background="#0F172A" 
+                        BorderBrush="#EF4444" 
+                        BorderThickness="1.5" 
+                        CornerRadius="20" 
+                        Padding="36" 
+                        HorizontalAlignment="Center" 
+                        VerticalAlignment="Center">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#EF4444" BlurRadius="40" ShadowDepth="0" Opacity="0.4" />
+                    </Border.Effect>
+                    <StackPanel>
+                        <!-- Header Icon -->
+                        <Border Width="64" Height="64" CornerRadius="32" Background="#450A0A" BorderBrush="#DC2626" BorderThickness="1.5" HorizontalAlignment="Center" Margin="0,0,0,16">
+                            <TextBlock Text="🛑" FontSize="30" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+
+                        <TextBlock Text="تم إيقاف تشغيل الأداة مؤقتاً" 
+                                   FontSize="20" 
+                                   FontWeight="Bold" 
+                                   Foreground="White" 
+                                   HorizontalAlignment="Center" />
+
+                        <TextBlock Text="تنبيه إداري طارئ (System Suspended)" 
+                                   FontSize="12" 
+                                   Foreground="#F87171" 
+                                   HorizontalAlignment="Center" 
+                                   Margin="0,4,0,18" />
+
+                        <!-- Admin Message Box -->
+                        <Border Background="#1C0B0E" BorderBrush="#7F1D1D" BorderThickness="1" CornerRadius="12" Padding="18,16" Margin="0,0,0,22">
+                            <StackPanel>
+                                <TextBlock Text="رسالة الإدارة:" FontSize="12" FontWeight="Bold" Foreground="#FCA5A5" Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding EmergencyLockMessage}" 
+                                           FontSize="13" 
+                                           FontWeight="SemiBold" 
+                                           Foreground="#FEE2E2" 
+                                           TextWrapping="Wrap" 
+                                           LineHeight="22" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="تم تعليق عمليات التوقيع والتثبيت لحماية النظام مؤقتاً. سيتم استئناف الخدمة قريباً." 
+                                   FontSize="11.5" 
+                                   Foreground="#64748B" 
+                                   TextAlignment="Center" 
+                                   TextWrapping="Wrap" 
+                                   Margin="0,0,0,20" />
+
+                        <!-- Action Buttons -->
+                        <Button Content="إعادة المحاولة والتحقق الآن" 
+                                Command="{Binding RetryGovernanceCheckCommand}" 
+                                Style="{StaticResource PrimaryButtonStyle}" 
+                                Height="42" 
+                                FontSize="12" 
+                                FontWeight="Bold" 
+                                Margin="0,0,0,10" />
+
+                        <Button Content="إغلاق التطبيق" 
+                                Command="{Binding ExitApplicationCommand}" 
+                                Style="{StaticResource SecondaryButtonStyle}" 
+                                Height="36" 
+                                FontSize="11" />
                     </StackPanel>
                 </Border>
             </Grid>

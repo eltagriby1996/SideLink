@@ -29,7 +29,8 @@ import {
   Flame,
   UserCheck,
   DollarSign,
-  Megaphone
+  Megaphone,
+  Laptop
 } from 'lucide-react';
 
 interface AdsConfigState {
@@ -84,6 +85,9 @@ interface VipKey {
   usedCount: number;
   maxUses: number;
   isActive: boolean;
+  boundHwid?: string | null;
+  boundMachine?: string | null;
+  boundAt?: string | null;
 }
 
 interface BlacklistedIp {
@@ -402,6 +406,23 @@ export default function AdminPage() {
       if (res.ok) {
         showToast('تم حذف المفتاح نهائياً.');
         fetchAllData();
+      }
+    } catch {
+      alert('خطأ في الاتصال.');
+    }
+  };
+
+  // Reset HWID binding for VIP Key
+  const handleResetHwid = async (key: string) => {
+    if (!confirm(`هل تريد فك ربط جهاز الكمبيوتر بهذا المفتاح (${key})؟ سيمكن للمستخدم الآن تفعيله على جهاز جديد.`)) return;
+    try {
+      const res = await fetch(`/api/admin/vip-keys?key=${encodeURIComponent(key)}&action=reset-hwid`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast('✓ ' + (data.message || 'تم فك ارتباط الجهاز بنجاح!'));
+        fetchAllData();
+      } else {
+        alert(data.error || 'فشل فك ارتباط الجهاز.');
       }
     } catch {
       alert('خطأ في الاتصال.');
@@ -1379,6 +1400,7 @@ export default function AdminPage() {
                       <th className="p-3.5">الملاحظة</th>
                       <th className="p-3.5">الصلاحية</th>
                       <th className="p-3.5">الاستخدامات</th>
+                      <th className="p-3.5">الجهاز المقترن (HWID)</th>
                       <th className="p-3.5">الحالة</th>
                       <th className="p-3.5 text-center">إجراءات</th>
                     </tr>
@@ -1406,6 +1428,26 @@ export default function AdminPage() {
                           {k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('ar-EG') : 'مدى الحياة (Lifetime)'}
                         </td>
                         <td className="p-3.5 text-slate-300 font-mono">{k.usedCount} مرة</td>
+                        <td className="p-3.5">
+                          {k.boundMachine ? (
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[11px] font-mono">
+                                <Laptop className="w-3 h-3 text-blue-400" />
+                                {k.boundMachine}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleResetHwid(k.key)}
+                                className="px-1.5 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500 text-amber-300 hover:text-black text-[10px] font-semibold transition"
+                                title="فك ربط الجهاز (HWID) للسماح بتفعيله على جهاز جديد"
+                              >
+                                فك الارتباط
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 font-medium">لم يُربط بعد (متاح)</span>
+                          )}
+                        </td>
                         <td className="p-3.5">
                           {k.isActive ? (
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">

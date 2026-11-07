@@ -34,3 +34,13 @@ public record AuthorizationResponse
     public string Token { get; init; } = string.Empty;
     public DateTimeOffset ExpiresAt { get; init; }
 }
+
+public record RemoteConfigDto
+{
+    public bool EmergencyKillSwitch { get; init; }
+    public string KillSwitchMessage { get; init; } = string.Empty;
+    public string LatestVersion { get; init; } = "1.0.0";
+    public string DownloadUrl { get; init; } = string.Empty;
+    public bool ForceUpdate { get; init; }
+    public string ReleaseNotes { get; init; } = string.Empty;
+}

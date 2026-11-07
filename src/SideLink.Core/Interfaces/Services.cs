@@ -82,6 +82,7 @@ public interface ILinkUnlockService
     Task<bool> AuthorizeAndUnlockAsync(string sessionId, CancellationToken cancellationToken = default);
     void InvalidateCurrentSession();
     string GetVerificationBrowserUrl(string sessionId);
+    Task<RemoteConfigDto?> FetchRemoteConfigAsync(CancellationToken cancellationToken = default);
 }
 
 public interface IAppRepository
@@ -137,7 +138,7 @@ public class AppleIdentityInfo
 public interface IAppleIdentityService
 {
     Task<IReadOnlyList<string>> DiscoverSystemAppleAccountsAsync();
-    Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null);
+    Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null, string? bundleId = null);
     Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null);
     Task<string?> GetSystemSavedPasswordAsync(string appleId);
 }

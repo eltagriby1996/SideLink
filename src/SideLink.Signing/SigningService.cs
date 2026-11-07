@@ -167,7 +167,7 @@ public class SigningService : ISigningService
 
                 if (!string.IsNullOrWhiteSpace(appleId))
                 {
-                    var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId);
+                    var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId, requestedBundleId);
                     if (identity == null || !identity.IsReadyToSign || identity.IsExpired)
                     {
                         identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId, requestedBundleId);
@@ -234,6 +234,12 @@ public class SigningService : ISigningService
             {
                 ReportProgress(progress, "تعديل معرّف الحزمة (Bundle ID)...", 45);
                 BundleIdentifierModifier.ModifyBundleIdentifier(appBundlePath, effectiveBundleId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(config.CustomDisplayName))
+            {
+                ReportProgress(progress, "تعديل اسم التطبيق المعروض...", 48);
+                BundleIdentifierModifier.ModifyAppDisplayName(appBundlePath, config.CustomDisplayName);
             }
 
             // 5. Code Signature generation

@@ -54,6 +54,9 @@ export interface VipKey {
   usedCount: number;
   maxUses: number;
   isActive: boolean;
+  boundHwid?: string | null;
+  boundMachine?: string | null;
+  boundAt?: string | null;
 }
 
 export interface BlacklistedIp {

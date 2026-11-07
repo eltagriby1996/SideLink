@@ -52,17 +52,43 @@ public class AppleIdentityService : IAppleIdentityService
         return await _credentialStore.GetApplePasswordAsync(appleId.Trim());
     }
 
-    public async Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null)
+    public async Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null, string? bundleId = null)
     {
         if (string.IsNullOrWhiteSpace(appleId))
             return null;
 
         string cleanId = SanitizeAccountName(appleId);
         string accountDir = Path.Combine(_baseIdentitiesPath, cleanId);
-        string profilePath = Path.Combine(accountDir, "embedded.mobileprovision");
+        string profilesDir = Path.Combine(accountDir, "profiles");
+        string defaultProfilePath = Path.Combine(accountDir, "embedded.mobileprovision");
         string p12Path = Path.Combine(accountDir, "identity.p12");
 
-        if (!File.Exists(profilePath))
+        var candidateProfilePaths = new List<string>();
+
+        if (Directory.Exists(profilesDir))
+        {
+            try
+            {
+                candidateProfilePaths.AddRange(Directory.GetFiles(profilesDir, "*.mobileprovision", SearchOption.TopDirectoryOnly));
+            }
+            catch { }
+        }
+
+        if (Directory.Exists(accountDir))
+        {
+            try
+            {
+                candidateProfilePaths.AddRange(Directory.GetFiles(accountDir, "profile_*.mobileprovision", SearchOption.TopDirectoryOnly));
+            }
+            catch { }
+        }
+
+        if (File.Exists(defaultProfilePath) && !candidateProfilePaths.Contains(defaultProfilePath))
+        {
+            candidateProfilePaths.Add(defaultProfilePath);
+        }
+
+        if (candidateProfilePaths.Count == 0)
         {
             if (File.Exists(p12Path))
             {
@@ -76,67 +102,116 @@ public class AppleIdentityService : IAppleIdentityService
             return null;
         }
 
-        try
+        AppleIdentityInfo? exactMatch = null;
+        AppleIdentityInfo? wildcardMatch = null;
+        AppleIdentityInfo? generalMatch = null;
+
+        foreach (var pPath in candidateProfilePaths)
         {
-            var info = await ParseMobileProvisionAsync(profilePath, appleId);
-            if (!File.Exists(p12Path))
+            try
             {
-                TryExportMatchingP12(info, p12Path);
-            }
-            if (File.Exists(p12Path))
-            {
-                info.P12Path = p12Path;
-            }
+                var info = await ParseMobileProvisionAsync(pPath, appleId);
+                if (info == null || info.IsExpired)
+                    continue;
 
-            if (!string.IsNullOrEmpty(deviceUdid))
-            {
-                info.IsMatchingCurrentDevice = info.ProvisionedDevices.Any(d => string.Equals(d, deviceUdid, StringComparison.OrdinalIgnoreCase));
-            }
+                if (!string.IsNullOrEmpty(deviceUdid))
+                {
+                    info.IsMatchingCurrentDevice = info.ProvisionedDevices.Any(d => string.Equals(d, deviceUdid, StringComparison.OrdinalIgnoreCase));
+                    if (!info.IsMatchingCurrentDevice)
+                        continue;
+                }
 
-            return info;
+                if (!File.Exists(p12Path))
+                {
+                    TryExportMatchingP12(info, p12Path);
+                }
+                if (File.Exists(p12Path))
+                {
+                    info.P12Path = p12Path;
+                }
+
+                bool isWildcard = !string.IsNullOrWhiteSpace(info.AllowedBundleId) && info.AllowedBundleId.Contains('*');
+                bool isExact = !string.IsNullOrWhiteSpace(bundleId) && 
+                               !string.IsNullOrWhiteSpace(info.AllowedBundleId) && 
+                               string.Equals(info.AllowedBundleId, bundleId, StringComparison.OrdinalIgnoreCase);
+
+                if (isExact)
+                {
+                    exactMatch = info;
+                    break;
+                }
+                else if (isWildcard && wildcardMatch == null)
+                {
+                    wildcardMatch = info;
+                }
+                else if (generalMatch == null)
+                {
+                    generalMatch = info;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Failed to parse candidate profile {Path}: {Msg}", pPath, ex.Message);
+            }
         }
-        catch (Exception ex)
+
+        if (exactMatch != null) return exactMatch;
+        if (wildcardMatch != null) return wildcardMatch;
+
+        // If a specific bundle ID was requested, but no exact or wildcard profile exists for it,
+        // return null so that AutoConfigureIdentityForAccountAsync triggers provisioning for this specific bundle ID!
+        if (!string.IsNullOrWhiteSpace(bundleId))
         {
-            _logger.LogError(ex, "Failed to parse provisioning profile for {AppleId}", appleId);
+            _logger.LogInformation("No matching profile found on disk for account {Account} with bundle ID {Bundle}", appleId, bundleId);
             return null;
         }
+
+        return generalMatch;
     }
 
     public async Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null)
     {
         string cleanId = SanitizeAccountName(appleId);
         string accountDir = Path.Combine(_baseIdentitiesPath, cleanId);
+        string profilesDir = Path.Combine(accountDir, "profiles");
         Directory.CreateDirectory(accountDir);
+        Directory.CreateDirectory(profilesDir);
 
-        string targetProfilePath = Path.Combine(accountDir, "embedded.mobileprovision");
+        string defaultProfilePath = Path.Combine(accountDir, "embedded.mobileprovision");
         string targetP12Path = Path.Combine(accountDir, "identity.p12");
 
         // If profile already exists, is valid, and matches device and bundleId, return it
-        if (File.Exists(targetProfilePath) && File.Exists(targetP12Path))
+        var existing = await GetIdentityForAccountAsync(appleId, deviceUdid, bundleId);
+        if (existing != null && existing.IsMatchingCurrentDevice && !existing.IsExpired && existing.IsReadyToSign)
         {
-            var existing = await GetIdentityForAccountAsync(appleId, deviceUdid);
-            if (existing != null && existing.IsMatchingCurrentDevice && existing.ExpirationDate > DateTime.UtcNow)
-            {
-                bool bundleMatches = string.IsNullOrWhiteSpace(bundleId) || 
-                                     string.IsNullOrWhiteSpace(existing.AllowedBundleId) || 
-                                     existing.AllowedBundleId == "*" || 
-                                     string.Equals(existing.AllowedBundleId, bundleId, StringComparison.OrdinalIgnoreCase);
-
-                if (bundleMatches)
-                {
-                    return existing;
-                }
-            }
+            _logger.LogInformation("Found existing valid profile for {Account} and bundle {Bundle}", appleId, bundleId ?? "*");
+            return existing;
         }
 
         // 1. Attempt autonomous native provisioning directly from Apple Developer Services
         bool provisioned = await ProvisionViaSideLinkEngineAsync(appleId, deviceUdid, bundleId);
-        if (provisioned && File.Exists(targetProfilePath) && File.Exists(targetP12Path))
+        if (provisioned)
         {
-            var freshIdentity = await GetIdentityForAccountAsync(appleId, deviceUdid);
+            // If sidelink-provisioner placed embedded.mobileprovision, ensure it is mirrored into profiles/
+            if (File.Exists(defaultProfilePath))
+            {
+                try
+                {
+                    var provInfo = await ParseMobileProvisionAsync(defaultProfilePath, appleId);
+                    if (!string.IsNullOrWhiteSpace(provInfo.AllowedBundleId))
+                    {
+                        string safeBundle = SanitizeBundleFileName(provInfo.AllowedBundleId);
+                        string specificProfile = Path.Combine(profilesDir, $"{safeBundle}.mobileprovision");
+                        File.Copy(defaultProfilePath, specificProfile, true);
+                    }
+                }
+                catch { }
+            }
+
+            var freshIdentity = await GetIdentityForAccountAsync(appleId, deviceUdid, bundleId);
             if (freshIdentity != null && freshIdentity.IsReadyToSign)
             {
-                _logger.LogInformation("Successfully provisioned certificate and profile natively via SideLink Engine for {Account}", appleId);
+                _logger.LogInformation("Successfully provisioned certificate and profile natively via SideLink Engine for {Account} (Bundle: {Bundle})", appleId, bundleId ?? "*");
                 return freshIdentity;
             }
         }
@@ -188,7 +263,12 @@ public class AppleIdentityService : IAppleIdentityService
                 bool matchesAccount = !string.IsNullOrEmpty(candidateInfo.CertificateSubject) &&
                                       candidateInfo.CertificateSubject.Contains(appleId, StringComparison.OrdinalIgnoreCase);
 
-                if (hasDevice && matchesAccount && candidateInfo.ExpirationDate > DateTime.UtcNow)
+                bool matchesBundle = string.IsNullOrWhiteSpace(bundleId) ||
+                                     string.IsNullOrWhiteSpace(candidateInfo.AllowedBundleId) ||
+                                     candidateInfo.AllowedBundleId.Contains('*') ||
+                                     string.Equals(candidateInfo.AllowedBundleId, bundleId, StringComparison.OrdinalIgnoreCase);
+
+                if (hasDevice && matchesAccount && matchesBundle && candidateInfo.ExpirationDate > DateTime.UtcNow)
                 {
                     matchedInfo = candidateInfo;
                     matchedSource = candidate;
@@ -201,22 +281,37 @@ public class AppleIdentityService : IAppleIdentityService
         if (matchedInfo != null && !string.IsNullOrEmpty(matchedSource))
         {
             _logger.LogInformation("Found matching active provisioning profile at {Source}", matchedSource);
-            File.Copy(matchedSource, targetProfilePath, true);
-            matchedInfo.MobileProvisionPath = targetProfilePath;
+            File.Copy(matchedSource, defaultProfilePath, true);
+            if (!string.IsNullOrWhiteSpace(matchedInfo.AllowedBundleId))
+            {
+                string safeBundle = SanitizeBundleFileName(matchedInfo.AllowedBundleId);
+                string specificProfile = Path.Combine(profilesDir, $"{safeBundle}.mobileprovision");
+                File.Copy(matchedSource, specificProfile, true);
+                matchedInfo.MobileProvisionPath = specificProfile;
+            }
+            else
+            {
+                matchedInfo.MobileProvisionPath = defaultProfilePath;
+            }
+
             matchedInfo.IsMatchingCurrentDevice = true;
 
             // Try to find matching private key from Windows Credential Manager and export P12
             TryExportMatchingP12(matchedInfo, targetP12Path);
+            if (File.Exists(targetP12Path))
+            {
+                matchedInfo.P12Path = targetP12Path;
+            }
 
             return matchedInfo;
         }
 
         // Fallback: parse existing target profile if present, or return unconfigured info
-        if (File.Exists(targetProfilePath))
+        if (File.Exists(defaultProfilePath))
         {
             try
             {
-                var existingInfo = await ParseMobileProvisionAsync(targetProfilePath, appleId);
+                var existingInfo = await ParseMobileProvisionAsync(defaultProfilePath, appleId);
                 if (File.Exists(targetP12Path))
                 {
                     existingInfo.P12Path = targetP12Path;
@@ -233,10 +328,23 @@ public class AppleIdentityService : IAppleIdentityService
         return new AppleIdentityInfo
         {
             AppleId = appleId,
-            MobileProvisionPath = File.Exists(targetProfilePath) ? targetProfilePath : null,
+            MobileProvisionPath = File.Exists(defaultProfilePath) ? defaultProfilePath : null,
             P12Path = File.Exists(targetP12Path) ? targetP12Path : null,
             IsMatchingCurrentDevice = false
         };
+    }
+
+    private static string SanitizeBundleFileName(string bundleId)
+    {
+        var sb = new StringBuilder();
+        foreach (char c in bundleId)
+        {
+            if (char.IsLetterOrDigit(c) || c == '.' || c == '_' || c == '-')
+                sb.Append(c);
+            else
+                sb.Append('_');
+        }
+        return sb.ToString();
     }
 
     private static async Task<AppleIdentityInfo> ParseMobileProvisionAsync(string profilePath, string appleId)

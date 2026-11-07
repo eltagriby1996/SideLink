@@ -47,18 +47,23 @@ public partial class IpaLibraryViewModel : ObservableObject
     private string _targetBundleId = string.Empty;
 
     [ObservableProperty]
+    private string _customDisplayName = string.Empty;
+
+    [ObservableProperty]
     private bool _autoModifyBundleId = true;
 
     partial void OnSelectedIpaChanged(IpaMetadata? value)
     {
         if (value != null)
         {
+            CustomDisplayName = value.EffectiveTitle;
             TargetBundleId = AutoModifyBundleId
                 ? GenerateDistinctBundleId(value.BundleIdentifier)
                 : value.BundleIdentifier;
         }
         else
         {
+            CustomDisplayName = string.Empty;
             TargetBundleId = string.Empty;
         }
     }
@@ -250,9 +255,11 @@ public partial class IpaLibraryViewModel : ObservableObject
 
                 string? targetBundleId = AutoModifyBundleId && !string.IsNullOrWhiteSpace(TargetBundleId) 
                     ? TargetBundleId.Trim() 
-                    : SelectedIpa?.BundleIdentifier;
+                    : (!string.IsNullOrWhiteSpace(TargetBundleId) && TargetBundleId != SelectedIpa?.BundleIdentifier 
+                        ? TargetBundleId.Trim() 
+                        : SelectedIpa?.BundleIdentifier);
 
-                var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId);
+                var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId, targetBundleId);
                 if (identity == null || !identity.IsReadyToSign || identity.IsExpired)
                 {
                     identity = await _identityService.AutoConfigureIdentityForAccountAsync(activeAppleId, device.DeviceId, targetBundleId);
@@ -302,8 +309,13 @@ public partial class IpaLibraryViewModel : ObservableObject
                 MobileProvisionPath = _signingRefresh.MobileProvisionPath,
                 CustomBundleId = AutoModifyBundleId && !string.IsNullOrWhiteSpace(TargetBundleId) 
                     ? TargetBundleId.Trim() 
-                    : null,
-                ModifyBundleId = AutoModifyBundleId
+                    : (!string.IsNullOrWhiteSpace(TargetBundleId) && TargetBundleId != SelectedIpa?.BundleIdentifier 
+                        ? TargetBundleId.Trim() 
+                        : null),
+                ModifyBundleId = AutoModifyBundleId,
+                CustomDisplayName = !string.IsNullOrWhiteSpace(CustomDisplayName)
+                    ? CustomDisplayName.Trim()
+                    : null
             };
             string signedIpa = await _signingService.SignIpaAsync(SelectedIpa.FilePath, config, device, progress);
 

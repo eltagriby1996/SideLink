@@ -9,6 +9,7 @@ import os
 import sys
 import io
 import json
+import re
 
 if sys.platform == "win32":
     try:
@@ -757,19 +758,35 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
 
         # Try creating new App ID if not found
         if not app_id_obj:
-            target_ident = f"com.sidelink.{clean_account}" if clean_bundle_id == "*" else clean_bundle_id
-            try:
-                name_suffix = target_ident.split(".")[-1] if "." in target_ident else target_ident
-                add_app_resp = send_dev_request("addAppId", session, {
-                    "teamId": team_id,
-                    "identifier": target_ident,
-                    "name": f"SideLink {name_suffix[:15]}"
-                })
-                app_id_obj = add_app_resp.get("appId")
-            except Exception:
-                # If creating failed (e.g. limit reached), reuse first available App ID from the account
-                if app_ids:
-                    app_id_obj = app_ids[0]
+            candidates = []
+            if clean_bundle_id != "*":
+                candidates.append(clean_bundle_id)
+                # If clean_bundle_id is globally taken (e.g. original store bundle id), try namespaced fallbacks
+                clean_acc_slug = re.sub(r'[^a-zA-Z0-9]', '', clean_account)
+                suffix = clean_bundle_id.split(".")[-1] if "." in clean_bundle_id else clean_bundle_id
+                candidates.append(f"com.sidelink.{clean_acc_slug}.{suffix}")
+                candidates.append(f"{clean_bundle_id}.sidelink")
+            else:
+                candidates.append(f"com.sidelink.{clean_account}")
+
+            for target_ident in candidates:
+                try:
+                    name_suffix = target_ident.split(".")[-1] if "." in target_ident else target_ident
+                    add_app_resp = send_dev_request("addAppId", session, {
+                        "teamId": team_id,
+                        "identifier": target_ident,
+                        "name": f"SideLink {name_suffix[:15]}"
+                    })
+                    app_id_obj = add_app_resp.get("appId")
+                    if app_id_obj:
+                        break
+                except Exception:
+                    # Identifier might be already registered globally by another developer, try next
+                    continue
+
+            # Fallback only if all registrations failed (e.g. 10 App ID weekly limit reached)
+            if not app_id_obj and app_ids:
+                app_id_obj = app_ids[0]
 
         if not app_id_obj:
             return {"success": False, "error": "تعذر تسجيل معرف التطبيق (App ID) لدى Apple."}
@@ -791,6 +808,19 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
 
         allowed_bundle_id = app_id_obj.get("identifier", "*")
 
+        # Save per-bundle profile in profiles/ directory so multiple apps never overwrite each other
+        specific_profile_path = profile_path
+        try:
+            profiles_dir = os.path.join(out_dir, "profiles")
+            os.makedirs(profiles_dir, exist_ok=True)
+            safe_bundle = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', allowed_bundle_id)
+            bundle_file = os.path.join(profiles_dir, f"{safe_bundle}.mobileprovision")
+            with open(bundle_file, "wb") as f:
+                f.write(encoded_bytes)
+            specific_profile_path = bundle_file
+        except Exception:
+            pass
+
         return {
             "success": True,
             "apple_id": apple_id,
@@ -798,7 +828,7 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
             "team_name": team_name,
             "p12_path": p12_path,
             "pem_path": pem_path,
-            "profile_path": profile_path,
+            "profile_path": specific_profile_path,
             "allowed_bundle_id": allowed_bundle_id,
             "expiration": str(prov_profile.get("dateExpire", ""))
         }

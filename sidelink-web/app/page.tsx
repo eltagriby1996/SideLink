@@ -52,23 +52,24 @@ export default function HomePage() {
         {/* CTA Buttons */}
         <div id="download" className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 scroll-mt-28">
           <a
-            href="/downloads/SideLink-v1.0.0-win-x64.zip"
-            download="SideLink-v1.0.0-win-x64.zip"
+            href="/downloads/SideLink-v1.0.0-Setup.exe"
+            download="SideLink-v1.0.0-Setup.exe"
             className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 active:scale-95 border border-blue-400/30 group"
           >
             <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
             <div className="text-right">
-              <div>تحميل برنامج SideLink للويندوز</div>
-              <div className="text-xs font-normal text-blue-200">النسخة الرسمية v1.0.0 (ملف مضغوط ZIP • 25 MB)</div>
+              <div>تحميل برنامج التثبيت (Setup Wizard)</div>
+              <div className="text-xs font-normal text-blue-200">النسخة الرسمية المعتمدة v1.0.0 (ملف تنفيذي EXE • 34 MB)</div>
             </div>
           </a>
 
           <a
-            href="#prerequisites"
+            href="/downloads/SideLink-v1.0.0-win-x64.zip"
+            download="SideLink-v1.0.0-win-x64.zip"
             className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 text-slate-200 hover:text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-1 border border-slate-800 hover:border-slate-700"
           >
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <span>المتطلبات الأساسية (iTunes &amp; iCloud)</span>
+            <Download className="w-4 h-4 text-slate-400" />
+            <span>تحميل نسخة محمولة (Portable ZIP)</span>
           </a>
         </div>
 
@@ -382,18 +383,20 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
               <a
-                href="/downloads/SideLink-v1.0.0-win-x64.zip"
-                download="SideLink-v1.0.0-win-x64.zip"
+                href="/downloads/SideLink-v1.0.0-Setup.exe"
+                download="SideLink-v1.0.0-Setup.exe"
                 className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-base shadow-lg shadow-blue-600/30 hover:shadow-blue-500/50 transition-all duration-300 hover:-translate-y-1 active:scale-95 group"
               >
                 <Download className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-                <span>تحميل SideLink v1.0.0 (ملف ZIP)</span>
+                <span>تحميل برنامج التثبيت (Setup Wizard EXE)</span>
               </a>
               <a
-                href="#prerequisites"
+                href="/downloads/SideLink-v1.0.0-win-x64.zip"
+                download="SideLink-v1.0.0-win-x64.zip"
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition-all duration-300 hover:-translate-y-1"
               >
-                <span>مراجعة المتطلبات الأساسية</span>
+                <Download className="w-4 h-4 text-slate-400" />
+                <span>تحميل نسخة محمولة (ZIP)</span>
               </a>
             </div>
 

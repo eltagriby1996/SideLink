@@ -53,6 +53,7 @@ public record SigningConfiguration
     public SigningMethodType Method { get; init; } = SigningMethodType.PersonalTeam;
     public string? CustomBundleId { get; init; }
     public bool ModifyBundleId { get; init; } = true;
+    public string? CustomDisplayName { get; init; }
 }
 
 public enum DiagnosticSeverity

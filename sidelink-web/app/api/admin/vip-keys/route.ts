@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAuthorizedAdmin } from '@/lib/security/adminAuth';
-import { getVipKeys, generateVipKey, revokeVipKey, activateVipKey, deleteVipKey } from '@/lib/database/adminStore';
+import { getVipKeys, generateVipKey, revokeVipKey, activateVipKey, deleteVipKey, resetVipKeyHwid } from '@/lib/database/adminStore';
 import { dbInstance } from '@/lib/database/db';
 
 export async function GET(request: NextRequest) {
@@ -48,6 +48,14 @@ export async function DELETE(request: NextRequest) {
 
   if (!key) {
     return NextResponse.json({ error: 'Missing key parameter' }, { status: 400 });
+  }
+
+  if (action === 'reset-hwid') {
+    const ok = await resetVipKeyHwid(key);
+    return NextResponse.json({
+      success: ok,
+      message: ok ? 'تم فك ربط الجهاز (HWID) بنجاح. يمكن للمستخدم الآن تفعيله على جهاز جديد.' : 'المفتاح غير موجود.',
+    });
   }
 
   if (action === 'revoke') {

@@ -83,8 +83,9 @@ public class RefreshService : IRefreshService
 
         try
         {
-            // 1. Re-sign IPA
-            string signedIpa = await _signingService.SignIpaAsync(app.OriginalIpaPath, config, device, progress, cancellationToken);
+            // 1. Re-sign IPA with the app's specific registered bundle identifier
+            var appConfig = config with { CustomBundleId = app.BundleIdentifier };
+            string signedIpa = await _signingService.SignIpaAsync(app.OriginalIpaPath, appConfig, device, progress, cancellationToken);
 
             // 2. Re-install IPA
             ReportProgress(progress, $"Re-installing {app.AppName} to {device.FriendlyModelName}...", 60);

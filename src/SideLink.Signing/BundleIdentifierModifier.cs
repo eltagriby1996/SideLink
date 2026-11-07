@@ -107,6 +107,97 @@ public static class BundleIdentifierModifier
         }
     }
 
+    /// <summary>
+    /// Modifies the display name (CFBundleDisplayName and CFBundleName) in the main Info.plist
+    /// and any localized InfoPlist.strings files.
+    /// </summary>
+    public static void ModifyAppDisplayName(string appBundlePath, string? newDisplayName)
+    {
+        if (string.IsNullOrWhiteSpace(newDisplayName)) return;
+        newDisplayName = newDisplayName.Trim();
+
+        string mainPlistPath = Path.Combine(appBundlePath, "Info.plist");
+        if (File.Exists(mainPlistPath))
+        {
+            try
+            {
+                byte[] mainBytes = File.ReadAllBytes(mainPlistPath);
+                string mainXml = ReadPlistAsXmlString(mainBytes);
+                var mainDoc = XDocument.Parse(mainXml);
+                var dict = mainDoc.Root?.Element("dict");
+                if (dict != null)
+                {
+                    SetOrUpdatePlistString(dict, "CFBundleDisplayName", newDisplayName);
+                    SetOrUpdatePlistString(dict, "CFBundleName", newDisplayName);
+                    SavePlist(mainDoc, mainPlistPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error modifying app display name: {ex.Message}");
+            }
+        }
+
+        // Also update any localized InfoPlist.strings in *.lproj
+        try
+        {
+            foreach (var lprojDir in Directory.GetDirectories(appBundlePath, "*.lproj"))
+            {
+                string stringsPath = Path.Combine(lprojDir, "InfoPlist.strings");
+                if (!File.Exists(stringsPath)) continue;
+
+                try
+                {
+                    byte[] strBytes = File.ReadAllBytes(stringsPath);
+                    string content = ReadPlistAsXmlString(strBytes);
+                    if (content.Contains("<?xml"))
+                    {
+                        var sDoc = XDocument.Parse(content);
+                        var sDict = sDoc.Root?.Element("dict");
+                        if (sDict != null)
+                        {
+                            SetOrUpdatePlistString(sDict, "CFBundleDisplayName", newDisplayName);
+                            SetOrUpdatePlistString(sDict, "CFBundleName", newDisplayName);
+                            SavePlist(sDoc, stringsPath);
+                        }
+                    }
+                    else
+                    {
+                        string text = Encoding.UTF8.GetString(strBytes);
+                        text = System.Text.RegularExpressions.Regex.Replace(
+                            text, 
+                            @"CFBundleDisplayName\s*=\s*""[^""]*"";?", 
+                            $"CFBundleDisplayName = \"{newDisplayName}\";");
+                        text = System.Text.RegularExpressions.Regex.Replace(
+                            text, 
+                            @"CFBundleName\s*=\s*""[^""]*"";?", 
+                            $"CFBundleName = \"{newDisplayName}\";");
+                        File.WriteAllText(stringsPath, text, Encoding.UTF8);
+                    }
+                }
+                catch { }
+            }
+        }
+        catch { }
+    }
+
+    private static void SetOrUpdatePlistString(XElement dict, string keyName, string value)
+    {
+        var keyNode = dict.Elements("key").FirstOrDefault(k => k.Value == keyName);
+        if (keyNode != null)
+        {
+            var valNode = keyNode.ElementsAfterSelf().FirstOrDefault();
+            if (valNode != null)
+            {
+                valNode.Value = value;
+                return;
+            }
+        }
+
+        dict.Add(new XElement("key", keyName));
+        dict.Add(new XElement("string", value));
+    }
+
     private static void UpdateExtensionBundleIdentifiers(string appBundlePath, string subFolder, string oldBundleId, string newBundleId)
     {
         string folder = Path.Combine(appBundlePath, subFolder);

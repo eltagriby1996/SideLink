@@ -6,12 +6,14 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const key = body.key;
+    const hwid = typeof body.hwid === 'string' ? body.hwid.trim() : undefined;
+    const machineName = typeof body.machineName === 'string' ? body.machineName.trim() : undefined;
 
     if (!key || typeof key !== 'string') {
       return NextResponse.json({ error: 'يرجى إدخال مفتاح الـ VIP.' }, { status: 400 });
     }
 
-    const check = await validateVipKey(key);
+    const check = await validateVipKey(key, hwid, machineName);
     if (!check.isValid) {
       return NextResponse.json({ error: check.reason || 'المفتاح غير صالح.' }, { status: 400 });
     }

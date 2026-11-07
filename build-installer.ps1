@@ -31,9 +31,13 @@ if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
 Compress-Archive -Path "$DistDir\*" -DestinationPath $ZipPath -CompressionLevel Optimal
 
 # 5. Check if Inno Setup is available to compile the .exe installer
-$Iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-if (Test-Path $Iscc) {
-    Write-Host "Compiling Windows Installer with Inno Setup..." -ForegroundColor Yellow
+$IsccCandidates = @(
+    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
+)
+$Iscc = $IsccCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($Iscc) {
+    Write-Host "Compiling Windows Installer with Inno Setup ($Iscc)..." -ForegroundColor Yellow
     & $Iscc "$ScriptDir\installer\SideLinkSetup.iss"
 } else {
     Write-Host "Inno Setup compiler (ISCC.exe) not found on path. Portable ZIP archive created at $ZipPath." -ForegroundColor Green

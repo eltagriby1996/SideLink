@@ -7,6 +7,8 @@ namespace SideLink.App.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    public const string CurrentAppVersion = "1.0.0";
+
     private readonly IDeviceDiscoveryService _deviceService;
     private readonly ITelemetryClient _telemetryClient;
     private System.Threading.Timer? _authWatchdogTimer;
@@ -16,6 +18,24 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isAppUnlocked;
+
+    [ObservableProperty]
+    private bool _isEmergencyLocked;
+
+    [ObservableProperty]
+    private string _emergencyLockMessage = "تم إيقاف تشغيل الأداة مؤقتاً لأعمال الصيانة والتطوير الأمني.";
+
+    [ObservableProperty]
+    private bool _isForceUpdateRequired;
+
+    [ObservableProperty]
+    private string _forceUpdateVersion = "1.0.0";
+
+    [ObservableProperty]
+    private string _forceUpdateNotes = string.Empty;
+
+    [ObservableProperty]
+    private string _forceUpdateUrl = "https://sidelink-app.vercel.app";
 
     [ObservableProperty]
     private IosDevice? _currentDevice;
@@ -74,7 +94,16 @@ public partial class MainViewModel : ObservableObject
     {
         _ = _telemetryClient.TrackEventAsync("app_launch", "success");
 
-        // Check if this machine has a saved license
+        // 1. Mandatory Remote Governance Check (Kill Switch & Forced Update)
+        bool govOk = await CheckRemoteGovernanceAsync();
+        if (!govOk)
+        {
+            // App locked by Kill Switch or Forced Update
+            StartAuthWatchdog();
+            return;
+        }
+
+        // 2. Check if this machine has a saved license
         if (LinkUnlock.CheckMachineAuthorized())
         {
             // Verify online with server to ensure key wasn't revoked or deleted in admin panel
@@ -116,6 +145,119 @@ public partial class MainViewModel : ObservableObject
 
         // Initialize signing & accounts in background
         _ = SigningRefresh.InitializeAsync();
+
+        StartAuthWatchdog();
+    }
+
+    public async Task<bool> CheckRemoteGovernanceAsync()
+    {
+        try
+        {
+            var config = await LinkUnlock.FetchRemoteConfigAsync();
+            if (config == null) return true;
+
+            bool isKillActive = config.EmergencyKillSwitch;
+            string killMsg = string.IsNullOrWhiteSpace(config.KillSwitchMessage)
+                ? "تم إيقاف تشغيل الأداة مؤقتاً من قبل الإدارة لأعمال الصيانة والتطوير الأمني."
+                : config.KillSwitchMessage;
+
+            bool isForced = false;
+            if (config.ForceUpdate && !string.IsNullOrWhiteSpace(config.LatestVersion))
+            {
+                if (IsVersionNewer(config.LatestVersion, CurrentAppVersion))
+                {
+                    isForced = true;
+                }
+            }
+
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                if (isKillActive)
+                {
+                    IsEmergencyLocked = true;
+                    EmergencyLockMessage = killMsg;
+                    IsAppUnlocked = false;
+                }
+                else
+                {
+                    IsEmergencyLocked = false;
+                }
+
+                if (isForced)
+                {
+                    IsForceUpdateRequired = true;
+                    ForceUpdateVersion = config.LatestVersion;
+                    ForceUpdateNotes = !string.IsNullOrWhiteSpace(config.ReleaseNotes)
+                        ? config.ReleaseNotes
+                        : "يتضمن هذا التحديث تحسينات أمنية وإصلاحات ضرورية لا غنى عنها لعمل الأداة بكفاءة.";
+                    ForceUpdateUrl = !string.IsNullOrWhiteSpace(config.DownloadUrl)
+                        ? config.DownloadUrl
+                        : "https://sidelink-app.vercel.app";
+                    IsAppUnlocked = false;
+                }
+                else
+                {
+                    IsForceUpdateRequired = false;
+                }
+            });
+
+            return !isKillActive && !isForced;
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private static bool IsVersionNewer(string remoteVerStr, string localVerStr)
+    {
+        try
+        {
+            string cleanRemote = remoteVerStr.TrimStart('v', 'V').Trim();
+            string cleanLocal = localVerStr.TrimStart('v', 'V').Trim();
+
+            if (Version.TryParse(cleanRemote, out var remote) && Version.TryParse(cleanLocal, out var local))
+            {
+                return remote > local;
+            }
+
+            return string.Compare(cleanRemote, cleanLocal, StringComparison.OrdinalIgnoreCase) > 0;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    [RelayCommand]
+    public void OpenForceUpdateUrl()
+    {
+        try
+        {
+            string url = !string.IsNullOrWhiteSpace(ForceUpdateUrl) ? ForceUpdateUrl : "https://sidelink-app.vercel.app";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    public void ExitApplication()
+    {
+        System.Windows.Application.Current?.Shutdown();
+    }
+
+    [RelayCommand]
+    public async Task RetryGovernanceCheckAsync()
+    {
+        bool ok = await CheckRemoteGovernanceAsync();
+        if (ok && LinkUnlock.CheckMachineAuthorized())
+        {
+            bool onlineValid = await LinkUnlock.ValidateAuthorizationOnlineAsync();
+            if (onlineValid)
+            {
+                App.Current?.Dispatcher?.Invoke(() => IsAppUnlocked = true);
+            }
+        }
     }
 
     private void StartAuthWatchdog()
@@ -123,11 +265,18 @@ public partial class MainViewModel : ObservableObject
         _authWatchdogTimer?.Dispose();
         _authWatchdogTimer = new System.Threading.Timer(async _ =>
         {
-            if (!IsAppUnlocked) return;
-
             try
             {
-                // Only if machine is using a VIP key, validate VIP key online
+                // Always check remote governance first
+                bool govOk = await CheckRemoteGovernanceAsync();
+                if (!govOk)
+                {
+                    return;
+                }
+
+                if (!IsAppUnlocked) return;
+
+                // Validate VIP key if machine is authorized via VIP
                 string? vipKey = LinkUnlock.GetSavedVipKey();
                 if (!string.IsNullOrEmpty(vipKey))
                 {
@@ -145,28 +294,12 @@ public partial class MainViewModel : ObservableObject
                         });
                     }
                 }
-                else
-                {
-                    // For normal browser-verified sessions, check emergency kill switch
-                    bool killSwitchActive = await LinkUnlock.CheckEmergencyKillSwitchAsync();
-                    if (killSwitchActive)
-                    {
-                        App.Current?.Dispatcher?.Invoke(() =>
-                        {
-                            IsAppUnlocked = false;
-                            LinkUnlock.IsUnlocked = false;
-                            LinkUnlock.HasError = true;
-                            LinkUnlock.ErrorMessage = "تم إيقاف التطبيق مؤقتاً بواسطة زر الطوارئ من لوحة التحكم.";
-                            _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
-                        });
-                    }
-                }
             }
             catch
             {
                 // Ignore transient network errors
             }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4));
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
     }
 
     private void OnVerificationCompleted()

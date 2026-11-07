@@ -78,6 +78,9 @@ public partial class LinkUnlockViewModel : ObservableObject
 
     public string? GetSavedVipKey() => _linkUnlockService.GetSavedVipKey();
 
+    public Task<RemoteConfigDto?> FetchRemoteConfigAsync(CancellationToken cancellationToken = default)
+        => _linkUnlockService.FetchRemoteConfigAsync(cancellationToken);
+
     public async Task<bool> CheckEmergencyKillSwitchAsync()
     {
         try
@@ -139,19 +142,26 @@ public partial class LinkUnlockViewModel : ObservableObject
             VipStatusMessage = "جاري التحقق من صلاحية مفتاح VIP...";
 
             string key = VipKeyInput.Trim().ToUpperInvariant();
+            string hwid = SideLink.Verification.LinkUnlockService.GetMachineHwid();
 
             // Online verification via sidelink-web API first (so admin control is absolute)
             try
             {
                 using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(6) };
-                var resp = await http.PostAsJsonAsync("https://sidelink-web.vercel.app/api/app/vip/verify", new { key });
+                var payload = new
+                {
+                    key,
+                    hwid,
+                    machineName = Environment.MachineName
+                };
+                var resp = await http.PostAsJsonAsync("https://sidelink-web.vercel.app/api/app/vip/verify", payload);
                 if (resp.IsSuccessStatusCode)
                 {
                     var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                     if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
                     {
                         _linkUnlockService.SavePersistentVipLicense(key);
-                        VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP بنجاح!";
+                        VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP بنجاح على هذا الجهاز!";
                         IsSuccessAnimation = true;
                         await Task.Delay(1000);
                         App.Current?.Dispatcher?.Invoke(() =>
@@ -173,21 +183,6 @@ public partial class LinkUnlockViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                // Only if offline without internet, check emergency master key
-                if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase))
-                {
-                    _linkUnlockService.SavePersistentVipLicense(key);
-                    VipStatusMessage = "✓ تم تفعيل ترخيص الطوارئ دون اتصال بنجاح!";
-                    IsSuccessAnimation = true;
-                    await Task.Delay(1000);
-                    App.Current?.Dispatcher?.Invoke(() =>
-                    {
-                        IsSuccessAnimation = false;
-                        IsUnlocked = true;
-                        VerificationCompleted?.Invoke();
-                    });
-                    return;
-                }
                 VipStatusMessage = "تعذر الاتصال بالخادم للتحقق من المفتاح: " + ex.Message;
                 return;
             }

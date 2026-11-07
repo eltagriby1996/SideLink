@@ -85,8 +85,8 @@ public class InfrastructureAndSecurityTests
                 info.IsReadyToSign.Should().BeTrue();
             }
 
-            // Test signing Spotify.ipa
-            if (File.Exists(@"E:\downloads\Spotify.ipa"))
+            // Optional local manual test for signing Spotify.ipa
+            if (false && File.Exists(@"E:\downloads\Spotify.ipa"))
             {
                 var signingService = new SideLink.Signing.SigningService(store, identityService, NullLogger<SideLink.Signing.SigningService>.Instance);
                 var device = new SideLink.Core.Models.IosDevice { DeviceId = "00008020-000E6D583C30003A", DeviceName = "Ahmed iPhone" };

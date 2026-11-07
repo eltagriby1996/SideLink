@@ -34,3 +34,9 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+
+# Python build artifacts
+__pycache__/
+*.pyc
+tools/build/
+tools/isideload_repo/
