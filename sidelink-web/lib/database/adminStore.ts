@@ -197,7 +197,11 @@ export async function deleteVipKey(key: string): Promise<boolean> {
   return deleted;
 }
 
-export async function validateVipKey(key: string): Promise<{ isValid: boolean; reason?: string }> {
+export async function validateVipKey(
+  key: string,
+  hwid?: string,
+  machineName?: string
+): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
   const isVipFormat = /^SL-VIP(-[A-Z0-9]{3,8}){2,4}$/i.test(cleanKey) || cleanKey.startsWith('SL-VIP-');
@@ -216,8 +220,23 @@ export async function validateVipKey(key: string): Promise<{ isValid: boolean; r
     if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
       return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
     }
-    if (found.maxUses > 0 && found.usedCount >= found.maxUses) {
+    if (found.maxUses > 0 && found.usedCount >= found.maxUses && (!found.boundHwid || found.boundHwid !== hwid)) {
       return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+    }
+
+    // HWID Machine Binding Check
+    if (found.boundHwid) {
+      if (hwid && found.boundHwid !== hwid) {
+        const boundName = found.boundMachine || 'جهاز كمبيوتر آخر';
+        return {
+          isValid: false,
+          reason: `هذا المفتاح مرتبط بجهاز (${boundName}) بالفعل. يرجى التواصل مع الإدارة لفك الارتباط لاستخدامه على هذا الجهاز.`,
+        };
+      }
+    } else if (hwid) {
+      found.boundHwid = hwid;
+      found.boundMachine = machineName || 'جهاز كمبيوتر';
+      found.boundAt = new Date().toISOString();
     }
 
     found.usedCount += 1;
@@ -235,6 +254,9 @@ export async function validateVipKey(key: string): Promise<{ isValid: boolean; r
       usedCount: 1,
       maxUses: 0,
       isActive: true,
+      boundHwid: hwid || null,
+      boundMachine: machineName || 'جهاز كمبيوتر',
+      boundAt: new Date().toISOString(),
     };
     db.vipKeys.unshift(newKey);
     await dbInstance.saveAsync();
@@ -244,7 +266,10 @@ export async function validateVipKey(key: string): Promise<{ isValid: boolean; r
   return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو غير صالح.' };
 }
 
-export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean; reason?: string }> {
+export async function checkVipKeyStatus(
+  key: string,
+  hwid?: string
+): Promise<{ isValid: boolean; reason?: string }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
 
@@ -262,13 +287,35 @@ export async function checkVipKeyStatus(key: string): Promise<{ isValid: boolean
     if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
       return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
     }
-    if (found.maxUses > 0 && found.usedCount > found.maxUses) {
-      return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+    if (found.boundHwid && hwid && found.boundHwid !== hwid) {
+      return { isValid: false, reason: 'هذا المفتاح مرتبط بجهاز كمبيوتر آخر.' };
     }
     return { isValid: true };
   }
 
   return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو تم حذفه من قبل الإدارة.' };
+}
+
+export async function resetVipKeyHwid(key: string): Promise<boolean> {
+  const db = dbInstance.getDb();
+  const cleanKey = key.trim().toUpperCase();
+
+  let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+
+  if (!found) {
+    await dbInstance.refreshFromCloud();
+    found = dbInstance.getDb().vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
+  }
+
+  if (found) {
+    found.boundHwid = null;
+    found.boundMachine = null;
+    found.boundAt = null;
+    await dbInstance.saveAsync();
+    return true;
+  }
+
+  return false;
 }
 
 // Blacklist Methods
