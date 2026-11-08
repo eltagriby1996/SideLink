@@ -193,4 +193,47 @@ public class InfrastructureAndSecurityTests
         bool isInvalidSession = service.ValidateAuthorizationToken(jwtString, "other-session-id");
         isInvalidSession.Should().BeFalse();
     }
+
+    [Fact]
+    public void SanitizeNestedBundles_InjectsMissingIdentifierAndPurgesOldSignatures()
+    {
+        string tempApp = Path.Combine(Path.GetTempPath(), $"TestApp_{Guid.NewGuid():N}.app");
+        string nestedBundle = Path.Combine(tempApp, "ApplilinkNetworkResources.bundle");
+        string sigDir = Path.Combine(nestedBundle, "_CodeSignature");
+
+        try
+        {
+            Directory.CreateDirectory(nestedBundle);
+            Directory.CreateDirectory(sigDir);
+            File.WriteAllText(Path.Combine(sigDir, "CodeResources"), "fake-signature");
+
+            // Create Info.plist without CFBundleIdentifier
+            string plistNoId = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                               "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                               "<plist version=\"1.0\">\n" +
+                               "<dict>\n" +
+                               "    <key>CFBundleName</key>\n    <string>ApplilinkNetworkResources</string>\n" +
+                               "    <key>CFBundlePackageType</key>\n    <string>BNDL</string>\n" +
+                               "</dict>\n" +
+                               "</plist>";
+            string plistPath = Path.Combine(nestedBundle, "Info.plist");
+            File.WriteAllText(plistPath, plistNoId);
+
+            // Execute Sanitization
+            SideLink.Signing.BundleIdentifierModifier.SanitizeNestedBundles(tempApp, "com.kipas.football.ios");
+
+            // Assert _CodeSignature was purged
+            Directory.Exists(sigDir).Should().BeFalse();
+
+            // Assert CFBundleIdentifier was injected
+            byte[] bytes = File.ReadAllBytes(plistPath);
+            string xml = SideLink.Signing.BundleIdentifierModifier.ReadPlistAsXmlString(bytes);
+            xml.Should().Contain("CFBundleIdentifier");
+            xml.Should().Contain("com.kipas.football.ios.ApplilinkNetworkResources");
+        }
+        finally
+        {
+            if (Directory.Exists(tempApp)) Directory.Delete(tempApp, true);
+        }
+    }
 }

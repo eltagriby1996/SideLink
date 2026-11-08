@@ -242,6 +242,10 @@ public class SigningService : ISigningService
                 BundleIdentifierModifier.ModifyAppDisplayName(appBundlePath, config.CustomDisplayName);
             }
 
+            // Sanitize all nested bundles (inject missing CFBundleIdentifier in resource bundles/frameworks, clear old signatures)
+            ReportProgress(progress, "تهيئة وتجهيز حزم الموارد والملفات الملحقة للتوقيع...", 55);
+            BundleIdentifierModifier.SanitizeNestedBundles(appBundlePath, effectiveBundleId);
+
             // 5. Code Signature generation
             ReportProgress(progress, "توقيع التطبيق والملفات التنفيذية رقمياً (Code Signing)...", 65);
             string rcodesignPath = FindRcodesignExecutable();

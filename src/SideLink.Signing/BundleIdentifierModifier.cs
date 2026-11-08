@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace SideLink.Signing;
@@ -181,17 +183,137 @@ public static class BundleIdentifierModifier
         catch { }
     }
 
+    /// <summary>
+    /// Scans the app bundle and all nested bundles/frameworks/plugins to ensure:
+    /// 1. Every nested bundle directory (*.bundle, *.framework, *.appex, *.plugin, *.xpc)
+    ///    defines a valid CFBundleIdentifier in its Info.plist (required by rcodesign).
+    /// 2. If Info.plist is missing or lacks CFBundleIdentifier, it creates/injects a valid identifier.
+    /// 3. Purges stale _CodeSignature directories so fresh signatures can be written cleanly.
+    /// </summary>
+    public static void SanitizeNestedBundles(string appBundlePath, string effectiveBundleId)
+    {
+        if (string.IsNullOrWhiteSpace(appBundlePath) || !Directory.Exists(appBundlePath))
+            return;
+
+        // 1. Purge existing stale _CodeSignature folders across the entire bundle
+        try
+        {
+            foreach (var sigDir in Directory.GetDirectories(appBundlePath, "_CodeSignature", SearchOption.AllDirectories))
+            {
+                try { Directory.Delete(sigDir, true); } catch { }
+            }
+        }
+        catch { }
+
+        // 2. Discover all nested bundle directories
+        var candidateDirs = new List<string>();
+        try
+        {
+            var allDirs = Directory.GetDirectories(appBundlePath, "*", SearchOption.AllDirectories);
+            foreach (var dir in allDirs)
+            {
+                string ext = Path.GetExtension(dir).ToLowerInvariant();
+                if (ext == ".bundle" || ext == ".framework" || ext == ".appex" || ext == ".plugin" || ext == ".xpc")
+                {
+                    candidateDirs.Add(dir);
+                }
+            }
+        }
+        catch { }
+
+        // 3. Ensure each bundle has a valid Info.plist with CFBundleIdentifier
+        foreach (var bundleDir in candidateDirs)
+        {
+            try
+            {
+                string ext = Path.GetExtension(bundleDir).ToLowerInvariant();
+                string rawName = Path.GetFileNameWithoutExtension(bundleDir);
+                string cleanName = Regex.Replace(rawName, @"[^a-zA-Z0-9_\-\.]", "");
+                if (string.IsNullOrWhiteSpace(cleanName)) cleanName = "bundle";
+
+                string injectedBundleId = $"{effectiveBundleId}.{cleanName}";
+                string infoPlistPath = Path.Combine(bundleDir, "Info.plist");
+                if (!File.Exists(infoPlistPath))
+                {
+                    string resPlist = Path.Combine(bundleDir, "Resources", "Info.plist");
+                    if (File.Exists(resPlist))
+                    {
+                        infoPlistPath = resPlist;
+                    }
+                }
+
+                if (File.Exists(infoPlistPath))
+                {
+                    byte[] plistBytes = File.ReadAllBytes(infoPlistPath);
+                    string plistXml = ReadPlistAsXmlString(plistBytes);
+
+                    if (!string.IsNullOrWhiteSpace(plistXml))
+                    {
+                        var doc = XDocument.Parse(plistXml);
+                        var dict = doc.Root?.Element("dict");
+                        if (dict != null)
+                        {
+                            var idKey = dict.Elements("key").FirstOrDefault(k => k.Value == "CFBundleIdentifier");
+                            var idVal = idKey?.ElementsAfterSelf().FirstOrDefault();
+
+                            if (idVal == null || string.IsNullOrWhiteSpace(idVal.Value) || idVal.Name.LocalName == "key")
+                            {
+                                SetOrUpdatePlistString(dict, "CFBundleIdentifier", injectedBundleId);
+
+                                // Ensure CFBundlePackageType
+                                var pkgKey = dict.Elements("key").FirstOrDefault(k => k.Value == "CFBundlePackageType");
+                                if (pkgKey == null)
+                                {
+                                    string pkg = ext == ".framework" ? "FMWK" : (ext == ".appex" ? "XPC!" : "BNDL");
+                                    SetOrUpdatePlistString(dict, "CFBundlePackageType", pkg);
+                                }
+
+                                SavePlist(doc, infoPlistPath);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Info.plist does not exist in this bundle directory: create minimal valid plist
+                    string pkg = ext == ".framework" ? "FMWK" : (ext == ".appex" ? "XPC!" : "BNDL");
+                    string newXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                                    "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                                    "<plist version=\"1.0\">\n" +
+                                    "<dict>\n" +
+                                    $"    <key>CFBundleIdentifier</key>\n    <string>{injectedBundleId}</string>\n" +
+                                    $"    <key>CFBundleName</key>\n    <string>{cleanName}</string>\n" +
+                                    $"    <key>CFBundlePackageType</key>\n    <string>{pkg}</string>\n" +
+                                    "    <key>CFBundleInfoDictionaryVersion</key>\n    <string>6.0</string>\n" +
+                                    "    <key>CFBundleShortVersionString</key>\n    <string>1.0</string>\n" +
+                                    "    <key>CFBundleVersion</key>\n    <string>1.0</string>\n" +
+                                    "</dict>\n" +
+                                    "</plist>";
+
+                    var doc = XDocument.Parse(newXml);
+                    SavePlist(doc, infoPlistPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error sanitizing bundle {bundleDir}: {ex.Message}");
+            }
+        }
+    }
+
     private static void SetOrUpdatePlistString(XElement dict, string keyName, string value)
     {
         var keyNode = dict.Elements("key").FirstOrDefault(k => k.Value == keyName);
         if (keyNode != null)
         {
             var valNode = keyNode.ElementsAfterSelf().FirstOrDefault();
-            if (valNode != null)
+            if (valNode != null && valNode.Name.LocalName != "key")
             {
                 valNode.Value = value;
                 return;
             }
+            keyNode.AddAfterSelf(new XElement("string", value));
+            return;
         }
 
         dict.Add(new XElement("key", keyName));
