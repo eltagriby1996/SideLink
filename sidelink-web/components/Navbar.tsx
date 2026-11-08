@@ -104,7 +104,7 @@ export default function Navbar() {
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-all duration-300 text-xs sm:text-sm shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 hover:-translate-y-0.5 active:scale-95 group"
           >
             <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-            <span className="hidden sm:inline">تحميل الأداة (Setup Wizard)</span>
+            <span className="hidden sm:inline">تحميل الأداة (Setup)</span>
             <span className="sm:hidden">تحميل</span>
           </a>
 

@@ -125,6 +125,7 @@ public class AppleIdentityInfo
     public string? MobileProvisionPath { get; set; }
     public string? P12Path { get; set; }
     public List<string> ProvisionedDevices { get; set; } = new();
+    public List<string> DeveloperCertificatesThumbprints { get; set; } = new();
     public string? AllowedBundleId { get; set; }
     public bool IsMatchingCurrentDevice { get; set; }
     public bool IsExpired => ExpirationDate.HasValue && ExpirationDate.Value <= DateTime.UtcNow;

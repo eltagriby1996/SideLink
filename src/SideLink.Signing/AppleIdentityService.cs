@@ -106,6 +106,17 @@ public class AppleIdentityService : IAppleIdentityService
         AppleIdentityInfo? wildcardMatch = null;
         AppleIdentityInfo? generalMatch = null;
 
+        string? activeP12Thumbprint = null;
+        if (File.Exists(p12Path))
+        {
+            try
+            {
+                using var p12Cert = new X509Certificate2(p12Path, "sidelink");
+                activeP12Thumbprint = p12Cert.Thumbprint;
+            }
+            catch { }
+        }
+
         foreach (var pPath in candidateProfilePaths)
         {
             try
@@ -113,6 +124,18 @@ public class AppleIdentityService : IAppleIdentityService
                 var info = await ParseMobileProvisionAsync(pPath, appleId);
                 if (info == null || info.IsExpired)
                     continue;
+
+                // Validate that this profile was generated with the currently active certificate
+                if (!string.IsNullOrEmpty(activeP12Thumbprint) && info.DeveloperCertificatesThumbprints.Count > 0)
+                {
+                    bool certMatches = info.DeveloperCertificatesThumbprints.Any(tp => string.Equals(tp, activeP12Thumbprint, StringComparison.OrdinalIgnoreCase));
+                    if (!certMatches)
+                    {
+                        _logger.LogInformation("Profile {Path} contains an outdated certificate that does not match active P12 ({Active}). Removing stale profile.", pPath, activeP12Thumbprint);
+                        try { File.Delete(pPath); } catch { }
+                        continue;
+                    }
+                }
 
                 if (!string.IsNullOrEmpty(deviceUdid))
                 {
@@ -401,15 +424,21 @@ public class AppleIdentityService : IAppleIdentityService
                 }
                 else if (key == "DeveloperCertificates" && valNode.Name == "array")
                 {
-                    var dataNode = valNode.FirstChild;
-                    if (dataNode != null)
+                    foreach (XmlNode devCertNode in valNode.ChildNodes)
                     {
                         try
                         {
-                            string b64 = dataNode.InnerText.Replace("\r", "").Replace("\n", "").Trim();
+                            string b64 = devCertNode.InnerText.Replace("\r", "").Replace("\n", "").Trim();
                             byte[] certBytes = Convert.FromBase64String(b64);
                             using var cert = new X509Certificate2(certBytes);
-                            info.CertificateSubject = cert.Subject;
+                            if (string.IsNullOrEmpty(info.CertificateSubject))
+                            {
+                                info.CertificateSubject = cert.Subject;
+                            }
+                            if (!string.IsNullOrEmpty(cert.Thumbprint))
+                            {
+                                info.DeveloperCertificatesThumbprints.Add(cert.Thumbprint);
+                            }
                         }
                         catch { }
                     }

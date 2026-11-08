@@ -189,6 +189,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         if (string.IsNullOrWhiteSpace(key))
         {
             _isUnlocked = false;
+            return (false, "لا يوجد ترخيص VIP محفوظ على هذا الجهاز.");
             return (false, "لا يوجد ترخيص VIP محفوظ أو متوافق مع عتاد هذا الجهاز.");
         }
 
@@ -248,6 +249,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning("Unable to contact verification server for license check: {Msg}", ex.Message);
+            // If offline, check if local file signature is intact
             // If offline, check if local file signature and HWID is intact
             if (IsMachineAlreadyAuthorized())
             {

@@ -94,6 +94,7 @@ public partial class MainViewModel : ObservableObject
     {
         _ = _telemetryClient.TrackEventAsync("app_launch", "success");
 
+        // Check if this machine has a saved license
         // 1. Mandatory Remote Governance Check (Kill Switch & Forced Update)
         bool govOk = await CheckRemoteGovernanceAsync();
         if (!govOk)
@@ -265,8 +266,11 @@ public partial class MainViewModel : ObservableObject
         _authWatchdogTimer?.Dispose();
         _authWatchdogTimer = new System.Threading.Timer(async _ =>
         {
+            if (!IsAppUnlocked) return;
+
             try
             {
+                // Only if machine is using a VIP key, validate VIP key online
                 // Always check remote governance first
                 bool govOk = await CheckRemoteGovernanceAsync();
                 if (!govOk)
@@ -294,12 +298,28 @@ public partial class MainViewModel : ObservableObject
                         });
                     }
                 }
+                else
+                {
+                    // For normal browser-verified sessions, check emergency kill switch
+                    bool killSwitchActive = await LinkUnlock.CheckEmergencyKillSwitchAsync();
+                    if (killSwitchActive)
+                    {
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            IsAppUnlocked = false;
+                            LinkUnlock.IsUnlocked = false;
+                            LinkUnlock.HasError = true;
+                            LinkUnlock.ErrorMessage = "تم إيقاف التطبيق مؤقتاً بواسطة زر الطوارئ من لوحة التحكم.";
+                            _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
+                        });
+                    }
+                }
             }
             catch
             {
                 // Ignore transient network errors
             }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5));
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4));
     }
 
     private void OnVerificationCompleted()
