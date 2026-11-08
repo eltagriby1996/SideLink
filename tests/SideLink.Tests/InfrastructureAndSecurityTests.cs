@@ -230,6 +230,34 @@ public class InfrastructureAndSecurityTests
             string xml = SideLink.Signing.BundleIdentifierModifier.ReadPlistAsXmlString(bytes);
             xml.Should().Contain("CFBundleIdentifier");
             xml.Should().Contain("com.kipas.football.ios.ApplilinkNetworkResources");
+
+            // Test 2: If binary plist from KIPAS_FOOTBALL.ipa exists, test it
+            string ipaPath = @"C:\Users\HD\Downloads\KIPAS_FOOTBALL.ipa";
+            if (File.Exists(ipaPath))
+            {
+                using var zip = System.IO.Compression.ZipFile.OpenRead(ipaPath);
+                var entry = zip.Entries.FirstOrDefault(e => e.FullName.Contains("ApplilinkNetworkResources.bundle/Info.plist"));
+                if (entry != null)
+                {
+                    using (var s = entry.Open())
+                    using (var fs = File.Create(plistPath))
+                    {
+                        s.CopyTo(fs);
+                    }
+                    // Verify it's bplist00
+                    var raw = File.ReadAllBytes(plistPath);
+                    System.Text.Encoding.ASCII.GetString(raw, 0, 8).Should().Be("bplist00");
+
+                    // Sanitize
+                    SideLink.Signing.BundleIdentifierModifier.SanitizeNestedBundles(tempApp, "com.kipas.football.ios");
+
+                    // Verify injection into binary plist
+                    var sanitizedRaw = File.ReadAllBytes(plistPath);
+                    string sanitizedXml = SideLink.Signing.BundleIdentifierModifier.ReadPlistAsXmlString(sanitizedRaw);
+                    sanitizedXml.Should().Contain("CFBundleIdentifier");
+                    sanitizedXml.Should().Contain("com.kipas.football.ios.ApplilinkNetworkResources");
+                }
+            }
         }
         finally
         {
