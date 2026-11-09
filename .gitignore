@@ -40,3 +40,5 @@ __pycache__/
 *.pyc
 tools/build/
 tools/isideload_repo/
+
+*.ipa

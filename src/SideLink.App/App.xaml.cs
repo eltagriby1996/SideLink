@@ -94,6 +94,7 @@ public partial class App : Application
             services.AddSingleton<IAppleAuthService, AppleAuthService>();
             services.AddSingleton<IInstallationService, InstallationService>();
             services.AddSingleton<IRefreshService, RefreshService>();
+            services.AddSingleton<IMobileCompanionService, MobileCompanionService>();
 
             services.AddSingleton<ILinkUnlockService>(sp =>
                 new LinkUnlockService(
@@ -115,6 +116,7 @@ public partial class App : Application
             services.AddSingleton<LogsViewModel>();
             services.AddSingleton<SettingsViewModel>();
             services.AddSingleton<LinkUnlockViewModel>();
+            services.AddSingleton<MobileCompanionViewModel>();
             services.AddSingleton<MainViewModel>();
 
             // Main Window

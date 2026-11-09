@@ -1,4 +1,4 @@
-# SideLink Automated Release Packager
+﻿# SideLink Automated Release Packager
 param(
     [string]$Configuration = "Release"
 )
@@ -24,6 +24,13 @@ $DistDir = "$ScriptDir\dist\SideLink"
 Write-Host "Publishing Windows Desktop Client to $DistDir..." -ForegroundColor Yellow
 dotnet publish "$ScriptDir\src\SideLink.App\SideLink.App.csproj" -c $Configuration -o $DistDir -p:UseSharedCompilation=false
 
+# 3.1 Copy Companion assets
+if (Test-Path "$ScriptDir\assets\SideStore.ipa") {
+    $DistAssets = "$DistDir\assets"
+    if (-not (Test-Path $DistAssets)) { New-Item -ItemType Directory -Path $DistAssets -Force | Out-Null }
+    Copy-Item "$ScriptDir\assets\SideStore.ipa" -Destination "$DistAssets\SideStore.ipa" -Force
+}
+
 # 4. Create ZIP Distribution Archive
 $ZipPath = "$ScriptDir\dist\SideLink-v1.0.0-win-x64.zip"
 Write-Host "Creating portable ZIP archive: $ZipPath..." -ForegroundColor Yellow
@@ -41,6 +48,37 @@ if ($Iscc) {
     & $Iscc "$ScriptDir\installer\SideLinkSetup.iss"
 } else {
     Write-Host "Inno Setup compiler (ISCC.exe) not found on path. Portable ZIP archive created at $ZipPath." -ForegroundColor Green
+}
+
+# 6. Synchronize release builds to Desktop and Web downloads
+Write-Host "Synchronizing release artifacts to Desktop folders..." -ForegroundColor Yellow
+
+$DesktopLinkDir = "C:\Users\HD\Desktop\SideLink1"
+if (Test-Path $DesktopLinkDir) {
+    Copy-Item "$DistDir\*" -Destination $DesktopLinkDir -Recurse -Force
+    Write-Host "✓ Updated $DesktopLinkDir (Active Desktop shortcut target)" -ForegroundColor Green
+}
+
+$DesktopDistDir = "C:\Users\HD\Desktop\SideLink-v1.0.0-win-x64"
+if (Test-Path $DesktopDistDir) {
+    Copy-Item "$DistDir\*" -Destination $DesktopDistDir -Recurse -Force
+    Write-Host "✓ Updated $DesktopDistDir" -ForegroundColor Green
+}
+
+$InstallerExe = "$ScriptDir\dist\Installer\SideLink-v1.0.0-Setup.exe"
+if (Test-Path $InstallerExe) {
+    Copy-Item $InstallerExe -Destination "C:\Users\HD\Desktop\SideLink-v1.0.0-Setup.exe" -Force
+    $WebDownloads = "$ScriptDir\sidelink-web\public\downloads"
+    if (-not (Test-Path $WebDownloads)) { New-Item -ItemType Directory -Path $WebDownloads -Force | Out-Null }
+    Copy-Item $InstallerExe -Destination "$WebDownloads\SideLink-v1.0.0-Setup.exe" -Force
+    Write-Host "✓ Copied Installer to Desktop and Web public downloads" -ForegroundColor Green
+}
+
+if (Test-Path $ZipPath) {
+    Copy-Item $ZipPath -Destination "C:\Users\HD\Desktop\SideLink-v1.0.0-win-x64.zip" -Force
+    $WebDownloads = "$ScriptDir\sidelink-web\public\downloads"
+    Copy-Item $ZipPath -Destination "$WebDownloads\SideLink-v1.0.0-win-x64.zip" -Force
+    Write-Host "✓ Copied ZIP to Desktop and Web public downloads" -ForegroundColor Green
 }
 
 Write-Host "=== Packaging Complete! ===" -ForegroundColor Green

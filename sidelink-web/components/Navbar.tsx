@@ -7,10 +7,12 @@ interface NavItem {
   id: string;
   label: string;
   badge?: string;
+  href?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { id: 'download', label: 'تحميل الأداة' },
+  { id: 'mobile', label: 'التجديد بالآيفون', badge: 'جديد', href: '/mobile' },
   { id: 'modded-ipas', label: 'تطبيقات معدلة', badge: 'VIP' },
   { id: 'esign-ksign', label: 'ESign و KSign و DNS', badge: 'OTA' },
   { id: 'prerequisites', label: 'المتطلبات الأساسية' },
@@ -82,8 +84,10 @@ export default function Navbar() {
           {NAV_ITEMS.map((item) => (
             <a
               key={item.id}
-              href={`#${item.id}`}
-              onClick={(e) => scrollToSection(e, item.id)}
+              href={item.href || `#${item.id}`}
+              onClick={(e) => {
+                if (!item.href) scrollToSection(e, item.id);
+              }}
               className="text-glow-hover hover:-translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span>{item.label}</span>
@@ -125,8 +129,14 @@ export default function Navbar() {
           {NAV_ITEMS.map((item) => (
             <a
               key={item.id}
-              href={`#${item.id}`}
-              onClick={(e) => scrollToSection(e, item.id)}
+              href={item.href || `#${item.id}`}
+              onClick={(e) => {
+                if (!item.href) {
+                  scrollToSection(e, item.id);
+                } else {
+                  setMobileMenuOpen(false);
+                }
+              }}
               className="flex items-center justify-between p-3 rounded-xl text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-900 transition"
             >
               <span>{item.label}</span>

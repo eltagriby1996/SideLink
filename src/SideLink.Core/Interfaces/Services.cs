@@ -144,4 +144,33 @@ public interface IAppleIdentityService
     Task<string?> GetSystemSavedPasswordAsync(string appleId);
 }
 
+public class MobilePairingInfo
+{
+    public string Udid { get; set; } = string.Empty;
+    public string PairingFilePath { get; set; } = string.Empty;
+    public bool Exists => !string.IsNullOrEmpty(PairingFilePath) && System.IO.File.Exists(PairingFilePath);
+    public long FileSizeBytes { get; set; }
+    public DateTime? LastModified { get; set; }
+}
+
+public interface IMobileCompanionService
+{
+    MobilePairingInfo DetectPairingFile(string udid);
+
+    Task<(bool Success, string Message, string? DownloadUrl)> SyncPairingToCloudAsync(
+        string udid,
+        string deviceName,
+        string appleId,
+        CancellationToken cancellationToken = default);
+
+    string GenerateWireGuardConfig();
+
+    Task<bool> PrepareAndInstallCompanionAsync(
+        IosDevice device,
+        string appleId,
+        IProgress<AppOperationProgress>? progress = null,
+        CancellationToken cancellationToken = default);
+}
+
+
 

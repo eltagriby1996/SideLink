@@ -49,6 +49,7 @@ public partial class MainViewModel : ObservableObject
     public LogsViewModel Logs { get; }
     public SettingsViewModel Settings { get; }
     public LinkUnlockViewModel LinkUnlock { get; }
+    public MobileCompanionViewModel MobileCompanion { get; }
 
     public MainViewModel(
         DashboardViewModel dashboard,
@@ -60,6 +61,7 @@ public partial class MainViewModel : ObservableObject
         LogsViewModel logs,
         SettingsViewModel settings,
         LinkUnlockViewModel linkUnlock,
+        MobileCompanionViewModel mobileCompanion,
         IDeviceDiscoveryService deviceService,
         ITelemetryClient telemetryClient)
     {
@@ -72,6 +74,7 @@ public partial class MainViewModel : ObservableObject
         Logs = logs;
         Settings = settings;
         LinkUnlock = linkUnlock;
+        MobileCompanion = mobileCompanion;
         _deviceService = deviceService;
         _telemetryClient = telemetryClient;
 
