@@ -11,6 +11,7 @@ public interface IDeviceDiscoveryService : IDisposable
     Task StartMonitoringAsync(CancellationToken cancellationToken = default);
     Task StopMonitoringAsync();
     Task<IReadOnlyList<IosDevice>> RefreshDevicesAsync(CancellationToken cancellationToken = default);
+    Task<bool> EnableWiFiSyncAsync(IosDevice device, CancellationToken cancellationToken = default);
 }
 
 public interface IIpaInspectorService

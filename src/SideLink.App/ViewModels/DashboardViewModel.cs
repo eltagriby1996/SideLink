@@ -87,14 +87,15 @@ public partial class DashboardViewModel : ObservableObject
             }
             else
             {
-                DeviceStatusText = $"{device.FriendlyModelName} (iOS {device.ProductVersion}) - Paired & Ready";
+                string medium = device.IsWiFiConnection ? "📶 Wi-Fi" : "🔌 USB";
+                DeviceStatusText = $"{device.FriendlyModelName} (iOS {device.ProductVersion}) - {medium} Paired & Ready";
             }
-            AddActivity($"Device detected: {device.FriendlyModelName}");
+            AddActivity($"Device detected: {device.FriendlyModelName} via {device.ConnectionMedium}");
         }
         else
         {
             IsDeviceConnected = false;
-            DeviceStatusText = "Connect iPhone via USB cable to begin";
+            DeviceStatusText = "Connect iPhone via USB or Wi-Fi to begin";
         }
     }
 

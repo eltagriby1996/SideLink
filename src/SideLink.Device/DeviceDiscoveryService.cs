@@ -214,11 +214,14 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
                         int dId = 0;
                         string sNum = string.Empty;
                         int cSpeed = 0;
+                        string connType = "USB";
                         var dElements = devDict.Elements().ToList();
                         for (int k = 0; k < dElements.Count - 1; k += 2)
                         {
                             if (dElements[k].Value.Equals("DeviceID", StringComparison.OrdinalIgnoreCase))
                                 int.TryParse(dElements[k + 1].Value, out dId);
+                            else if (dElements[k].Value.Equals("ConnectionType", StringComparison.OrdinalIgnoreCase))
+                                connType = dElements[k + 1].Value;
                             else if (dElements[k].Value.Equals("Properties", StringComparison.OrdinalIgnoreCase) && dElements[k + 1].Name.LocalName == "dict")
                             {
                                 var pList = dElements[k + 1].Elements().ToList();
@@ -228,14 +231,17 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
                                         sNum = pList[m + 1].Value;
                                     else if (pList[m].Value.Equals("ConnectionSpeed", StringComparison.OrdinalIgnoreCase))
                                         int.TryParse(pList[m + 1].Value, out cSpeed);
+                                    else if (pList[m].Value.Equals("ConnectionType", StringComparison.OrdinalIgnoreCase))
+                                        connType = pList[m + 1].Value;
                                 }
                             }
                         }
 
                         if (!string.IsNullOrWhiteSpace(sNum))
                         {
-                            _logger.LogInformation("Discovered existing iOS Device: UDID={UDID}, DeviceID={ID}", sNum, dId);
-                            _ = Task.Run(async () => await HandleDeviceAttachedAsync(dId, sNum, cSpeed));
+                            bool isWifi = connType.Equals("Network", StringComparison.OrdinalIgnoreCase) || connType.Equals("WiFi", StringComparison.OrdinalIgnoreCase);
+                            _logger.LogInformation("Discovered existing iOS Device: UDID={UDID}, DeviceID={ID}, WiFi={IsWifi}", sNum, dId, isWifi);
+                            _ = Task.Run(async () => await HandleDeviceAttachedAsync(dId, sNum, cSpeed, isWifi));
                         }
                     }
                 }
@@ -246,6 +252,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             int deviceId = 0;
             string serialNumber = string.Empty;
             int connectionSpeed = 0;
+            string attachedConnType = "USB";
 
             var elements = rootDict.Elements().ToList();
             for (int i = 0; i < elements.Count - 1; i += 2)
@@ -262,6 +269,10 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
                     else if (key.Equals("DeviceID", StringComparison.OrdinalIgnoreCase))
                     {
                         int.TryParse(val.Value, out deviceId);
+                    }
+                    else if (key.Equals("ConnectionType", StringComparison.OrdinalIgnoreCase))
+                    {
+                        attachedConnType = val.Value;
                     }
                     else if (key.Equals("Properties", StringComparison.OrdinalIgnoreCase) && val.Name.LocalName == "dict")
                     {
@@ -281,6 +292,10 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
                                 {
                                     int.TryParse(pVal, out connectionSpeed);
                                 }
+                                else if (pKey.Equals("ConnectionType", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    attachedConnType = pVal;
+                                }
                             }
                         }
                     }
@@ -289,8 +304,9 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
 
             if (messageType.Equals("Attached", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(serialNumber))
             {
-                _logger.LogInformation("iOS Device attached: UDID={UDID}, DeviceID={ID}", serialNumber, deviceId);
-                _ = Task.Run(async () => await HandleDeviceAttachedAsync(deviceId, serialNumber, connectionSpeed));
+                bool isWifi = attachedConnType.Equals("Network", StringComparison.OrdinalIgnoreCase) || attachedConnType.Equals("WiFi", StringComparison.OrdinalIgnoreCase);
+                _logger.LogInformation("iOS Device attached: UDID={UDID}, DeviceID={ID}, WiFi={IsWifi}", serialNumber, deviceId, isWifi);
+                _ = Task.Run(async () => await HandleDeviceAttachedAsync(deviceId, serialNumber, connectionSpeed, isWifi));
             }
             else if (messageType.Equals("Detached", StringComparison.OrdinalIgnoreCase))
             {
@@ -304,7 +320,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         }
     }
 
-    private async Task HandleDeviceAttachedAsync(int deviceId, string udid, int speed)
+    private async Task HandleDeviceAttachedAsync(int deviceId, string udid, int speed, bool isWifi)
     {
         IosDevice? device = null;
 
@@ -345,6 +361,8 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             LastSeen = DateTimeOffset.UtcNow
         };
 
+        device = device with { IsWiFiConnection = isWifi };
+
         lock (_lock)
         {
             _connectedDevices.RemoveAll(d => d.DeviceId.Equals(udid, StringComparison.OrdinalIgnoreCase));
@@ -352,6 +370,64 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         }
 
         DeviceStateChanged?.Invoke(this, device);
+    }
+
+    public async Task<bool> EnableWiFiSyncAsync(IosDevice device, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var client = new TcpClient();
+            await client.ConnectAsync("127.0.0.1", UsbmuxdProtocol.UsbmuxdPort, cancellationToken);
+            using var stream = client.GetStream();
+
+            string listXml = UsbmuxdProtocol.CreateListDevicesRequest();
+            byte[] listPkt = UsbmuxdProtocol.CreateUsbmuxPacket(listXml);
+            await stream.WriteAsync(listPkt, cancellationToken);
+            await stream.FlushAsync(cancellationToken);
+
+            string? listResp = await UsbmuxdProtocol.ReadUsbmuxMessageAsync(stream, cancellationToken);
+            int devId = 0;
+            if (!string.IsNullOrWhiteSpace(listResp))
+            {
+                var doc = XDocument.Parse(listResp);
+                foreach (var dDict in doc.Descendants("dict"))
+                {
+                    var elems = dDict.Elements().ToList();
+                    for (int i = 0; i < elems.Count - 1; i += 2)
+                    {
+                        if (elems[i].Value == "SerialNumber" && string.Equals(elems[i + 1].Value, device.DeviceId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var idElem = elems.FirstOrDefault(e => e.PreviousNode is XElement prev && prev.Value == "DeviceID");
+                            if (idElem != null) int.TryParse(idElem.Value, out devId);
+                        }
+                    }
+                }
+            }
+
+            using var lockClient = new TcpClient();
+            await lockClient.ConnectAsync("127.0.0.1", UsbmuxdProtocol.UsbmuxdPort, cancellationToken);
+            using var lockStream = lockClient.GetStream();
+
+            string connectXml = UsbmuxdProtocol.CreateConnectRequest(devId, UsbmuxdProtocol.LockdownPort);
+            byte[] packet = UsbmuxdProtocol.CreateUsbmuxPacket(connectXml);
+            await lockStream.WriteAsync(packet, cancellationToken);
+            await lockStream.FlushAsync(cancellationToken);
+
+            string? connectResp = await UsbmuxdProtocol.ReadUsbmuxMessageAsync(lockStream, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(connectResp) && connectResp.Contains("<integer>0</integer>"))
+            {
+                bool ok = await LockdownClient.EnableWiFiSyncAsync(lockStream, cancellationToken);
+                _logger.LogInformation("EnableWiFiSync result for {Device}: {Result}", device.DeviceId, ok);
+                return ok;
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to enable WiFi sync for device {UDID}", device.DeviceId);
+            return false;
+        }
     }
 
     private void HandleDeviceDetached(int deviceId)

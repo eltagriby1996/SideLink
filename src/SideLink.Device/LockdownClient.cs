@@ -64,6 +64,32 @@ public static class LockdownClient
         }
     }
 
+    public static async Task<bool> EnableWiFiSyncAsync(NetworkStream lockdownStream, CancellationToken cancellationToken)
+    {
+        try
+        {
+            string setWifiReq = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                                "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                                "<plist version=\"1.0\">\n" +
+                                "<dict>\n" +
+                                "    <key>Label</key><string>SideLink</string>\n" +
+                                "    <key>Request</key><string>SetValue</string>\n" +
+                                "    <key>Domain</key><string>com.apple.mobile.wireless_lockdown</string>\n" +
+                                "    <key>Key</key><string>EnableWiFiConnections</string>\n" +
+                                "    <key>Value</key><true/>\n" +
+                                "</dict>\n" +
+                                "</plist>";
+
+            await SendLockdownMessageAsync(lockdownStream, setWifiReq, cancellationToken);
+            string? resp = await ReadLockdownMessageAsync(lockdownStream, cancellationToken);
+            return resp != null && !resp.Contains("<key>Error</key>");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static async Task SendLockdownMessageAsync(NetworkStream stream, string xml, CancellationToken cancellationToken)
     {
         byte[] payload = Encoding.UTF8.GetBytes(xml);

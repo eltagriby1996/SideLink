@@ -11,10 +11,12 @@ public record IosDevice
     public bool IsConnected { get; init; }
     public bool IsTrusted { get; init; }
     public bool IsLocked { get; init; }
+    public bool IsWiFiConnection { get; init; }
     public DateTimeOffset LastSeen { get; init; } = DateTimeOffset.UtcNow;
 
+    public string ConnectionMedium => IsWiFiConnection ? "📶 Wi-Fi" : "🔌 USB";
     public string FriendlyModelName => ModelLookup.GetFriendlyName(ProductType);
-    public string DisplayTitle => string.IsNullOrWhiteSpace(DeviceName) ? FriendlyModelName : $"{DeviceName} ({FriendlyModelName})";
+    public string DisplayTitle => string.IsNullOrWhiteSpace(DeviceName) ? $"{FriendlyModelName} ({ConnectionMedium})" : $"{DeviceName} ({FriendlyModelName}) — {ConnectionMedium}";
 }
 
 public static class ModelLookup

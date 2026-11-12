@@ -95,6 +95,7 @@ public partial class App : Application
             services.AddSingleton<IInstallationService, InstallationService>();
             services.AddSingleton<IRefreshService, RefreshService>();
             services.AddSingleton<IMobileCompanionService, MobileCompanionService>();
+            services.AddSingleton<SideLink.App.Services.WiFiAutoRefreshService>();
 
             services.AddSingleton<ILinkUnlockService>(sp =>
                 new LinkUnlockService(
@@ -150,6 +151,10 @@ public partial class App : Application
                 {
                     await mainVm.InitializeAsync();
                     LogBoot("MainViewModel initialized!");
+
+                    var wifiAutoRefresh = _serviceProvider.GetRequiredService<SideLink.App.Services.WiFiAutoRefreshService>();
+                    await wifiAutoRefresh.StartAsync(CancellationToken.None);
+                    LogBoot("WiFiAutoRefreshService started successfully!");
                 }
                 catch (Exception initEx)
                 {
@@ -180,6 +185,13 @@ public partial class App : Application
         LogBoot($"OnExit called! ExitCode: {e.ApplicationExitCode}");
         if (_serviceProvider != null)
         {
+            try
+            {
+                var wifiService = _serviceProvider.GetService<SideLink.App.Services.WiFiAutoRefreshService>();
+                wifiService?.Dispose();
+            }
+            catch { }
+
             var deviceService = _serviceProvider.GetService<IDeviceDiscoveryService>();
             if (deviceService != null)
             {
