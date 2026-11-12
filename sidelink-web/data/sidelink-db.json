@@ -29,35 +29,27 @@
   "sessions": {
     "3a457a0ad2f64b0b863f93ff0d191e9e": {
       "sessionId": "3a457a0ad2f64b0b863f93ff0d191e9e",
-      "status": "expired",
+      "status": "pending",
       "createdAt": "2026-11-06T15:24:23.178Z",
       "expiresAt": "2026-11-06T15:39:23.178Z",
       "verifiedAt": null,
       "challengeNonce": ""
     },
-    "3483cf2fbb8948b985a42a93bd90f300": {
-      "sessionId": "3483cf2fbb8948b985a42a93bd90f300",
-      "status": "pending",
-      "createdAt": "2026-11-06T15:39:35.192Z",
-      "expiresAt": "2026-11-06T15:54:35.192Z",
-      "verifiedAt": null,
-      "challengeNonce": ""
+    "session-cycle-abc": {
+      "sessionId": "session-cycle-abc",
+      "status": "verified",
+      "createdAt": "2026-11-12T09:35:15.532Z",
+      "expiresAt": "2026-11-12T09:36:15.532Z",
+      "verifiedAt": "2026-11-12T09:35:15.535Z",
+      "challengeNonce": "valid-challenge-nonce-789"
     },
-    "73ea57a5d7c9456699db92ffd8cbf90e": {
-      "sessionId": "73ea57a5d7c9456699db92ffd8cbf90e",
-      "status": "pending",
-      "createdAt": "2026-11-06T15:41:46.930Z",
-      "expiresAt": "2026-11-06T15:56:46.930Z",
+    "session-expired-xyz": {
+      "sessionId": "session-expired-xyz",
+      "status": "expired",
+      "createdAt": "2026-11-12T09:35:15.538Z",
+      "expiresAt": "2026-11-12T09:35:14.538Z",
       "verifiedAt": null,
-      "challengeNonce": ""
-    },
-    "4fc8d1490abe4c76b78bde8907a16674": {
-      "sessionId": "4fc8d1490abe4c76b78bde8907a16674",
-      "status": "pending",
-      "createdAt": "2026-11-06T16:20:50.806Z",
-      "expiresAt": "2026-11-06T16:35:50.806Z",
-      "verifiedAt": null,
-      "challengeNonce": ""
+      "challengeNonce": "nonce-xyz"
     }
   },
   "ipas": [
@@ -120,11 +112,20 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-3TDZ-WRYK-M8G2",
+      "note": "لالا",
+      "createdAt": "2026-11-06T15:30:00.000Z",
+      "expiresAt": "2026-11-09T23:59:59.000Z",
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-JUKY-AISL-OISL",
       "note": "ترخيص تجريبي للمستخدم",
       "createdAt": "2026-11-06T15:20:00.000Z",
       "expiresAt": null,
-      "usedCount": 1,
+      "usedCount": 0,
       "maxUses": 0,
       "isActive": true
     },
@@ -133,7 +134,7 @@
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
       "expiresAt": null,
-      "usedCount": 1,
+      "usedCount": 0,
       "maxUses": 0,
       "isActive": true
     },
@@ -145,48 +146,8 @@
       "usedCount": 0,
       "maxUses": 0,
       "isActive": true
-    },
-    {
-      "key": "SL-VIP-3TDZ-WRYK-M8G2",
-      "note": "لالا",
-      "createdAt": "2026-11-06T15:30:00.000Z",
-      "expiresAt": "2026-11-09T23:59:59.000Z",
-      "usedCount": 1,
-      "maxUses": 0,
-      "isActive": false
-    },
-    {
-      "key": "SL-VIP-TEST-AUTO-PASS",
-      "note": "مفتاح تم إيقافه من الإدارة",
-      "createdAt": "2026-11-06T16:02:34.264Z",
-      "expiresAt": null,
-      "usedCount": 1,
-      "maxUses": 0,
-      "isActive": false
-    },
-    {
-      "key": "SL-VIP-F57R-H7RT-UOWX",
-      "note": "مفتاح تم إيقافه من الإدارة",
-      "createdAt": "2026-11-06T16:08:02.057Z",
-      "expiresAt": null,
-      "usedCount": 1,
-      "maxUses": 0,
-      "isActive": false
     }
   ],
   "blacklist": [],
-  "telemetry": [
-    {
-      "clientVersion": "1.0.0",
-      "deviceModel": "Windows Client Device",
-      "iosVersion": "iOS Device",
-      "action": "app_launch",
-      "status": "success",
-      "errorCode": null,
-      "errorMessage": null,
-      "clientIp": "57.154.3.144",
-      "id": "evt-mw554at5-uuy1",
-      "timestamp": "2026-11-06T15:39:34.457Z"
-    }
-  ]
+  "telemetry": []
 }

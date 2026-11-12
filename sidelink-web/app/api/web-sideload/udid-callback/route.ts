@@ -41,3 +41,4 @@ export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin || 'https://www.sidelinktool.me';
   return NextResponse.redirect(`${origin}/web-sideload`, 302);
 }
+

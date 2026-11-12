@@ -29,6 +29,11 @@ if (Test-Path "$ScriptDir\assets\SideStore.ipa") {
     $DistAssets = "$DistDir\assets"
     if (-not (Test-Path $DistAssets)) { New-Item -ItemType Directory -Path $DistAssets -Force | Out-Null }
     Copy-Item "$ScriptDir\assets\SideStore.ipa" -Destination "$DistAssets\SideStore.ipa" -Force
+    
+    $WebDownloads = "$ScriptDir\sidelink-web\public\downloads"
+    if (Test-Path $WebDownloads) {
+        Copy-Item "$ScriptDir\assets\SideStore.ipa" -Destination "$WebDownloads\SideStore.ipa" -Force
+    }
 }
 
 # 4. Create ZIP Distribution Archive

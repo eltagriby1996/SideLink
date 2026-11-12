@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import Link from 'next/link';
 import {
   Smartphone,
   ShieldCheck,
@@ -12,21 +13,20 @@ import {
   Sparkles,
   CheckCircle2,
   AlertTriangle,
-  Play,
   RotateCw,
   QrCode,
   Terminal,
   ExternalLink,
   Laptop,
-  Check,
   HelpCircle,
-  FileCode2,
   Lock,
-  Layers,
-  ArrowRight,
   Zap,
   Info,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  Flame,
+  ArrowLeft
 } from 'lucide-react';
 
 interface ReadyApp {
@@ -37,17 +37,58 @@ interface ReadyApp {
   icon: string;
   size: string;
   category: string;
+  badge?: string;
+  featured?: boolean;
+  directPlist?: string;
+  directIpa?: string;
 }
 
 const READY_APPS: ReadyApp[] = [
   {
+    id: 'esign',
+    name: 'ESign (الشهادة الرسمية المعتمدة)',
+    bundleId: 'com.khoindvn.esignvietnamrubber',
+    version: '5.0.2',
+    icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
+    size: '9.9 MB',
+    category: 'أداة توقيع مباشرة',
+    featured: true,
+    badge: 'الأكثر استقراراً ⭐',
+    directPlist: 'https://website.khoindvn.io.vn/plists/dgaefbobaeop.plist',
+    directIpa: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
+  },
+  {
+    id: 'ksign',
+    name: 'KSign (تطبيق التوقيع فائق السرعة)',
+    bundleId: 'com.khoindvn.ksignvietnamrubber',
+    version: '1.2.0',
+    icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
+    size: '16.3 MB',
+    category: 'أداة توقيع خفيفة',
+    featured: true,
+    badge: 'تثبيت سريع ⚡',
+    directPlist: 'https://website.khoindvn.io.vn/plists/idjbbheelkpp.plist',
+    directIpa: 'https://website.khoindvn.io.vn/apps/l8vr7.ipa',
+  },
+  {
+    id: 'esign-powerchina',
+    name: 'ESign (سيرفر بديل - PowerChina)',
+    bundleId: 'com.khoindvn.esignpowerchina',
+    version: '5.0.2',
+    icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
+    size: '9.9 MB',
+    category: 'سيرفر احتياطي',
+    directPlist: 'https://website.khoindvn.io.vn/plists/eoekkbmccjbc.plist',
+  },
+  {
     id: 'sidestore',
-    name: 'SideStore (التجديد التلقائي من الآيفون)',
+    name: 'SideStore (التجديد التلقائي بدون كمبيوتر)',
     bundleId: 'com.SideStore.SideStore',
     version: '0.5.8',
     icon: 'https://sidestore.io/images/logo.png',
-    size: '18.2 MB',
+    size: '27.7 MB',
     category: 'أداة نظام',
+    directIpa: '/downloads/SideStore.ipa',
   },
   {
     id: 'spotify',
@@ -101,9 +142,10 @@ export default function WebSideloadPage() {
   const [selectedApp, setSelectedApp] = useState<ReadyApp>(READY_APPS[0]);
   const [customIpaName, setCustomIpaName] = useState<string | null>(null);
 
-  // Enrollment modal
+  // Modals & Accordions
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const [pcQrModalOpen, setPcQrModalOpen] = useState(false);
+  const [showTroubleshooting, setShowTroubleshooting] = useState(false);
 
   // Signing progress
   const [isSigning, setIsSigning] = useState(false);
@@ -112,6 +154,7 @@ export default function WebSideloadPage() {
   const [signResult, setSignResult] = useState<{
     success: boolean;
     installUrl?: string;
+    fallbackInstallUrl?: string;
     appName?: string;
     bundleId?: string;
     signingMode?: string;
@@ -194,53 +237,51 @@ export default function WebSideloadPage() {
         return;
       }
       if (!password) {
-        setErrorMsg('يرجى إدخال كلمة المرور أو كلمة مرور التطبيق الخاصة بـ Apple ID.');
+        setErrorMsg('يرجى إدخال كلمة المرور الخاصة بحساب Apple ID.');
         return;
       }
     }
 
-    if (!udid || udid.trim().length < 15) {
-      setErrorMsg('يرجى إدخال معرّف الجهاز (UDID) أو الضغط على زر "جلب UDID الآيفون تلقائياً".');
-      return;
-    }
+    // UDID is strictly required only if Apple ID mode, optional for direct enterprise
+    const finalUdid = udid.trim() || '00008101-GENERIC';
 
     try {
       if (appleId) localStorage.setItem('sidelink_saved_appleid', appleId);
-      localStorage.setItem('sidelink_saved_udid', udid);
+      if (udid) localStorage.setItem('sidelink_saved_udid', udid);
     } catch {}
 
     setIsSigning(true);
-    setProgress(10);
+    setProgress(15);
     setLogs([
-      `[${new Date().toLocaleTimeString()}] 🚀 بدء معالجة التثبيت المباشر على الآيفون...`,
-      `[${new Date().toLocaleTimeString()}] 📱 فحص توافق الجهاز (${detectedModel || 'Apple iOS Device'})...`,
+      `[${new Date().toLocaleTimeString()}] 🚀 بدء تجهيز التثبيت المباشر على الآيفون...`,
+      `[${new Date().toLocaleTimeString()}] 📱 فحص جهاز iOS (${detectedModel || 'Apple iPhone'})...`,
     ]);
 
     try {
-      await new Promise((r) => setTimeout(r, 600));
-      setProgress(30);
+      await new Promise((r) => setTimeout(r, 400));
+      setProgress(40);
 
       if (signingMode === 'apple-id') {
         setLogs((prev) => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] 🌐 الاتصال بنظام Anisette السحابي لتوليد مفاتيح X-Apple-I-MD-M...`,
-          `[${new Date().toLocaleTimeString()}] 🔐 مصادقة حساب Apple Developer واستخراج الشهادة الشخصية (${appleId})...`,
+          `[${new Date().toLocaleTimeString()}] 🌐 الاتصال بخادم Anisette لمصادقة الحساب (${appleId})...`,
+          `[${new Date().toLocaleTimeString()}] 🔐 فحص صلاحيات المطور والشهادة الشخصية...`,
         ]);
-        await new Promise((r) => setTimeout(r, 800));
-        setProgress(55);
+        await new Promise((r) => setTimeout(r, 600));
+        setProgress(65);
         setLogs((prev) => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] ✓ تم تسجيل وتجهيز Provisioning Profile لجهازك (UDID: ${udid.slice(0, 10)}...).`,
-          `[${new Date().toLocaleTimeString()}] 📦 فك حزمة الـ IPA وتوقيع الثنائيات رقمياً وحقن ملفات التجديد...`,
+          `[${new Date().toLocaleTimeString()}] ✓ تم تجهيز ترخيص الجهاز (${finalUdid.slice(0, 10)}...).`,
+          `[${new Date().toLocaleTimeString()}] 📦 فك وتجهيز حزمة التطبيق مع توقيع الثنائيات...`,
         ]);
       } else {
         setLogs((prev) => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] 🛡️ تجهيز حزمة الـ IPA بشهادة مؤسسات معتمدة وفحص خلوها من الأخطاء...`,
-          `[${new Date().toLocaleTimeString()}] ⚡ تهيئة مسار التوزيع السحابي المباشر Over-The-Air (OTA)...`,
+          `[${new Date().toLocaleTimeString()}] 🛡️ ربط الحزمة بشهادة مؤسسات نشطة ومعتمدة...`,
+          `[${new Date().toLocaleTimeString()}] ⚡ تهيئة مسار التوزيع السحابي Over-The-Air (OTA)...`,
         ]);
-        await new Promise((r) => setTimeout(r, 700));
-        setProgress(65);
+        await new Promise((r) => setTimeout(r, 500));
+        setProgress(70);
       }
 
       // Call API
@@ -251,7 +292,7 @@ export default function WebSideloadPage() {
           mode: signingMode,
           appleId: signingMode === 'apple-id' ? appleId : undefined,
           password: signingMode === 'apple-id' ? password : undefined,
-          udid,
+          udid: finalUdid,
           appName: selectedApp.name,
           bundleId: selectedApp.bundleId,
           appId: selectedApp.id,
@@ -263,36 +304,37 @@ export default function WebSideloadPage() {
         throw new Error(data.error || 'فشلت معالجة التوقيع على الخادم.');
       }
 
-      await new Promise((r) => setTimeout(r, 600));
-      setProgress(85);
+      await new Promise((r) => setTimeout(r, 400));
+      setProgress(90);
       setLogs((prev) => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] ✓ تم إنشاء ملف الـ Manifest وتجهيز بروتوكول itms-services الرسمي.`,
-        `[${new Date().toLocaleTimeString()}] 📲 جاري إرسال إشعار التثبيت الفوري للآيفون...`,
+        `[${new Date().toLocaleTimeString()}] ✓ تم بناء ملف manifest.plist المتوافق مع بروتوكول itms-services.`,
+        `[${new Date().toLocaleTimeString()}] 📲 جاري إطلاق نافذة التثبيت الرسمية على الآيفون...`,
       ]);
 
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 300));
       setProgress(100);
       setLogs((prev) => [
         ...prev,
-        `[${new Date().toLocaleTimeString()}] 🎉 جاهز! تم إطلاق رابط التثبيت المباشر بنجاح 100%.`,
+        `[${new Date().toLocaleTimeString()}] 🎉 جاهز! اضغط على زر التثبيت أدناه إذا لم تظهر نافذة التثبيت تلقائياً.`,
       ]);
 
       setSignResult({
         success: true,
         installUrl: data.installUrl,
+        fallbackInstallUrl: data.fallbackInstallUrl,
         appName: data.appName,
         bundleId: data.bundleId,
         signingMode: data.signingMode,
         expiresAt: data.expiresAt,
       });
 
-      // If on iOS, automatically prompt the install dialog!
+      // On iOS Safari, automatically trigger the native prompt
       if (isIOSDevice && data.installUrl) {
         window.location.href = data.installUrl;
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب.');
+      setErrorMsg(err.message || 'حدث خطأ غير متوقع أثناء تجهيز التثبيت.');
       setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ❌ خطأ: ${err.message}`]);
     } finally {
       setIsSigning(false);
@@ -319,13 +361,13 @@ export default function WebSideloadPage() {
               </div>
               <div className="text-right">
                 <div className="font-bold text-white text-sm sm:text-base flex items-center gap-2">
-                  <span>أنت الآن في وضع التثبيت المباشر على الآيفون 📲</span>
+                  <span>أنت الآن تتصفح من الآيفون مباشرة 📲</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    Direct iOS
+                    Direct iOS Safari
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  يمكنك تثبيت أي تطبيق وتشغيله فوراً على هذا الجهاز بدون الحاجة للكمبيوتر أو اللابتوب.
+                  يمكنك تثبيت أي تطبيق وتشغيله فوراً على هاتفك بنقرة واحدة بدون كمبيوتر أو كابلات!
                 </p>
               </div>
             </div>
@@ -335,7 +377,7 @@ export default function WebSideloadPage() {
             <div className="flex items-center gap-3">
               <Laptop className="w-5 h-5 text-blue-400 shrink-0 hidden sm:block" />
               <div className="text-xs text-slate-300">
-                <strong className="text-white">هل تتصفح من الكمبيوتر؟</strong> يمكنك فتح هذه الصفحة مباشرة من متصفح Safari بالآيفون للتثبيت المباشر بدون كابل!
+                <strong className="text-white">هل تتصفح من الكمبيوتر؟</strong> افتح هذا الرابط مباشرة من متصفح Safari بالآيفون للتثبيت المباشر بنقرة واحدة!
               </div>
             </div>
             <button
@@ -378,7 +420,7 @@ export default function WebSideloadPage() {
               <span className="w-3 h-3 rounded-full bg-amber-500/80" />
               <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
               <span className="text-xs sm:text-sm font-bold text-white mr-2">
-                تثبيت تطبيقات iOS أونلاين — SideLink Direct Studio
+                تثبيت تطبيقات iOS أونلاين — SideLink Web Studio
               </span>
             </div>
             <span className="text-[11px] font-mono text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
@@ -387,49 +429,11 @@ export default function WebSideloadPage() {
           </div>
 
           <div className="p-5 sm:p-7 space-y-6">
-            {/* Step 1: Device Detection / UDID */}
-            <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 font-bold text-white text-sm">
-                  <div className="w-6 h-6 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-xs">
-                    1
-                  </div>
-                  <span>معرّف الآيفون (UDID) للترخيص والتثبيت:</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAutoFetchUdid}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-md active:scale-95"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>جلب UDID الآيفون تلقائياً ⚡</span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  required
-                  value={udid}
-                  onChange={(e) => setUdid(e.target.value)}
-                  placeholder="00008101-001234567890001E أو 40 حرفاً"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition font-mono uppercase dir-ltr text-right"
-                />
-              </div>
-
-              {detectedModel && (
-                <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 pt-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>جهاز معتمد: {detectedName || 'iPhone'} • الطراز: {detectedModel}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Step 2: Choose Signing Method */}
+            {/* Step 1: Choose Signing Method */}
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
               <div className="flex items-center gap-2 font-bold text-white text-sm">
                 <div className="w-6 h-6 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs">
-                  2
+                  1
                 </div>
                 <span>اختر طريقة التثبيت على الآيفون:</span>
               </div>
@@ -440,30 +444,30 @@ export default function WebSideloadPage() {
                   onClick={() => setSigningMode('direct-enterprise')}
                   className={`p-4 rounded-xl border cursor-pointer transition flex items-start gap-3 ${
                     signingMode === 'direct-enterprise'
-                      ? 'bg-blue-600/15 border-blue-500 shadow-md'
+                      ? 'bg-blue-600/15 border-blue-500 shadow-md ring-1 ring-blue-500/40'
                       : 'bg-slate-900/60 border-slate-800 hover:bg-slate-900'
                   }`}
                 >
                   <Zap className={`w-5 h-5 shrink-0 ${signingMode === 'direct-enterprise' ? 'text-blue-400' : 'text-slate-400'}`} />
                   <div className="space-y-1">
                     <div className="font-bold text-xs sm:text-sm text-white flex items-center gap-1.5">
-                      <span>تثبيت مباشر وفوري (Direct OTA)</span>
+                      <span>تثبيت مباشر OTA (بدون كمبيوتر)</span>
                       <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                        موصى به
+                        موصى به للآيفون 🟢
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      تثبيت بلمسة واحدة بدون كتابة إيميل أو باسوورد أبل وبدون كمبيوتر.
+                      تثبيت فوري بلمسة واحدة من متصفح Safari بدون إيميل وبدون كمبيوتر.
                     </p>
                   </div>
                 </div>
 
-                {/* Mode 2: Personal Apple ID 7-Day */}
+                {/* Mode 2: Personal Apple ID */}
                 <div
                   onClick={() => setSigningMode('apple-id')}
                   className={`p-4 rounded-xl border cursor-pointer transition flex items-start gap-3 ${
                     signingMode === 'apple-id'
-                      ? 'bg-blue-600/15 border-blue-500 shadow-md'
+                      ? 'bg-blue-600/15 border-blue-500 shadow-md ring-1 ring-blue-500/40'
                       : 'bg-slate-900/60 border-slate-800 hover:bg-slate-900'
                   }`}
                 >
@@ -473,7 +477,7 @@ export default function WebSideloadPage() {
                       توقيع بحساب Apple ID السحابي
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      شهادة مطور شخصية 7 أيام مع دعم التجديد التلقائي عبر SideStore و WireGuard.
+                      ربط الحساب للتجديد التلقائي (يتطلب تفعيل نمط المطور في الآيفون).
                     </p>
                   </div>
                 </div>
@@ -482,10 +486,21 @@ export default function WebSideloadPage() {
               {/* Apple ID credentials box (shown only if Apple ID mode selected) */}
               {signingMode === 'apple-id' && (
                 <div className="p-4 mt-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3 animate-fade-in">
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-200">
+                      <Info className="w-4 h-4 shrink-0" />
+                      <span>تنبيه هام حول التثبيت بحساب أبل الشخصي (iCloud):</span>
+                    </div>
+                    <p className="text-[11px] text-amber-300/90 leading-relaxed">
+                      أبل تشترط لتشغيل التطبيقات الموقعة بحسابك تفعيل <strong>نمط المطور (Developer Mode)</strong> من الإعدادات ← الخصوصية والأمن.
+                      إذا واجهتك رسالة &quot;تعذر التثبيت&quot;، ننصحك باستخدام خيار <strong>التثبيت المباشر OTA</strong> بالأعلى لتثبيت أداة ESign أو SideStore بنقرة واحدة بدون كمبيوتر، أو استخدم برنامج SideLink للويندوز!
+                    </p>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-300 mb-1">
-                        حساب Apple ID (البريد):
+                        حساب Apple ID (البريد الإلكتروني):
                       </label>
                       <input
                         type="email"
@@ -521,25 +536,73 @@ export default function WebSideloadPage() {
                       />
                     </div>
                   </div>
+
                   <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
                     <Lock className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>يتم التشفير محلياً وتمريره لخوادم Apple عبر بروتوكول Anisette السحابي بدون تخزين أسرارك.</span>
+                    <span>يتم التشفير محلياً وتمريره لخوادم Apple عبر بروتوكول Anisette السحابي بدون حفظ أي أسرار.</span>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Step 2: Device UDID */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-bold text-white text-sm">
+                  <div className="w-6 h-6 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 text-xs">
+                    2
+                  </div>
+                  <span>
+                    معرّف الآيفون (UDID){' '}
+                    <span className="text-xs font-normal text-slate-400">
+                      {signingMode === 'direct-enterprise' ? '(اختياري في التثبيت المباشر)' : '(مطلوب لترخيص الحساب)'}
+                    </span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAutoFetchUdid}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold transition shadow-md active:scale-95"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>جلب UDID الآيفون تلقائياً ⚡</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={udid}
+                  onChange={(e) => setUdid(e.target.value)}
+                  placeholder="00008101-001234567890001E أو اتركه فارغاً للتثبيت المباشر"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 transition font-mono uppercase dir-ltr text-right"
+                />
+              </div>
+
+              {detectedModel && (
+                <div className="text-[11px] text-emerald-400 flex items-center gap-1.5 pt-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>جهاز معتمد: {detectedName || 'iPhone'} • الطراز: {detectedModel}</span>
                 </div>
               )}
             </div>
 
             {/* Step 3: Select or Upload App */}
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
-              <div className="flex items-center gap-2 font-bold text-white text-sm">
-                <div className="w-6 h-6 rounded-lg bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xs">
-                  3
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 font-bold text-white text-sm">
+                  <div className="w-6 h-6 rounded-lg bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xs">
+                    3
+                  </div>
+                  <span>اختر التطبيق المراد تثبيته على الآيفون:</span>
                 </div>
-                <span>اختر التطبيق المراد تثبيته على الآيفون:</span>
+                <span className="text-[11px] text-slate-400">
+                  {READY_APPS.length} تطبيقات جاهزة
+                </span>
               </div>
 
               {/* Ready apps list */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-56 overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
                 {READY_APPS.map((app) => (
                   <div
                     key={app.id}
@@ -549,7 +612,7 @@ export default function WebSideloadPage() {
                     }}
                     className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition ${
                       selectedApp.id === app.id && !customIpaName
-                        ? 'bg-blue-600/15 border-blue-500 text-white shadow'
+                        ? 'bg-blue-600/15 border-blue-500 text-white shadow-md ring-1 ring-blue-500/30'
                         : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-900'
                     }`}
                   >
@@ -558,12 +621,19 @@ export default function WebSideloadPage() {
                       <img
                         src={app.icon}
                         alt={app.name}
-                        className="w-8 h-8 rounded-lg object-contain bg-slate-950 p-1 border border-slate-800 shrink-0"
+                        className="w-9 h-9 rounded-xl object-contain bg-slate-950 p-1 border border-slate-800 shrink-0"
                       />
                       <div className="text-right">
-                        <h4 className="font-bold text-xs text-white">{app.name}</h4>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-bold text-xs text-white">{app.name}</h4>
+                          {app.badge && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                              {app.badge}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-[10px] text-slate-400">
-                          v{app.version} • {app.size}
+                          v{app.version} • {app.size} • {app.category}
                         </span>
                       </div>
                     </div>
@@ -670,19 +740,29 @@ export default function WebSideloadPage() {
                     جاهز للتثبيت على الآيفون! 🎉
                   </h3>
                   <p className="text-slate-300 text-xs sm:text-sm max-w-md mx-auto">
-                    تم توقيع <strong>{selectedApp.name}</strong> وتجهيز حزمة التثبيت اللاسلكية المباشرة OTA.
+                    تم تجهيز <strong>{selectedApp.name}</strong> برابط التثبيت اللاسلكي المباشر OTA.
                   </p>
                 </div>
 
                 {/* 1-Click Install Button */}
-                <div className="pt-1">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
                   <a
                     href={signResult.installUrl}
-                    className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-xl shadow-emerald-600/30 hover:shadow-emerald-500/40 transition-all hover:-translate-y-1 active:scale-95"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-xl shadow-emerald-600/30 hover:shadow-emerald-500/40 transition-all hover:-translate-y-1 active:scale-95"
                   >
                     <Download className="w-5 h-5 animate-bounce" />
-                    <span>اضغط لتثبيت التطبيق على هذا الآيفون الآن (Install)</span>
+                    <span>اضغط لتثبيت التطبيق على الآيفون الآن (Install)</span>
                   </a>
+
+                  {signResult.fallbackInstallUrl && signResult.fallbackInstallUrl !== signResult.installUrl && (
+                    <a
+                      href={signResult.fallbackInstallUrl}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs transition"
+                    >
+                      <Zap className="w-4 h-4 text-amber-400" />
+                      <span>سيرفر تثبيت احتياطي ⚡</span>
+                    </a>
+                  )}
                 </div>
 
                 {/* Quick 3-Step Setup Help */}
@@ -691,7 +771,7 @@ export default function WebSideloadPage() {
                     <HelpCircle className="w-4 h-4 text-emerald-400" />
                     <span>خطوات التفعيل بعد الضغط على &quot;تثبيت&quot;:</span>
                   </div>
-                  <ol className="list-decimal list-inside space-y-1 text-slate-400 text-[11px]">
+                  <ol className="list-decimal list-inside space-y-1.5 text-slate-300 text-[11px] leading-relaxed">
                     <li>ستظهر لك رسالة من نظام iOS: اضغط <strong>تثبيت (Install)</strong> وانتظر نزول الأيقونة على الشاشة الرئيسية.</li>
                     <li>اذهب إلى: <strong>الإعدادات ⚙️ ← عام ← إدارة الجهاز (VPN &amp; Device Management)</strong> واضغط <strong>الوثوق بالشهادة</strong>.</li>
                     <li>(لنظام iOS 16 وأحدث): تأكد من تفعيل <strong>نمط المطور (Developer Mode)</strong> من الإعدادات ← الخصوصية والأمن.</li>
@@ -699,7 +779,87 @@ export default function WebSideloadPage() {
                 </div>
               </div>
             )}
+
+            {/* Troubleshooting Accordion */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                onClick={() => setShowTroubleshooting(!showTroubleshooting)}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-slate-950/50 hover:bg-slate-950 border border-slate-800 text-xs text-slate-300 font-bold transition"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>هل ظهرت لك رسالة &quot;تعذر تثبيت التطبيق الرجاء المحاولة لاحقاً&quot;؟ اضغط هنا للحل الفوري 💡</span>
+                </div>
+                {showTroubleshooting ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showTroubleshooting && (
+                <div className="p-4 mt-2 rounded-2xl bg-slate-950/90 border border-amber-500/30 text-xs text-slate-300 space-y-3 text-right animate-fade-in">
+                  <p className="leading-relaxed">
+                    إذا ظهرت لك رسالة الخطأ من أبل، فهذا يعود لأحد الأسباب التالية وحلها بسيط جداً:
+                  </p>
+                  <div className="space-y-2 text-[11px] text-slate-300 leading-relaxed">
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                      <strong className="text-white block mb-0.5">1. افتح الرابط في متصفح Safari الرسمي حصراً:</strong>
+                      إذا كنت قادماً من رابط داخل تليجرام، واتساب، أو تيك توك، اضغط على زر المشاركة واختر &quot;فتح في Safari&quot;، لأن المتصفحات المدمجة تحظر تثبيت الـ OTA.
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                      <strong className="text-white block mb-0.5">2. فعّل نمط المطور (Developer Mode) في iOS 16 أو 17 أو 18:</strong>
+                      توجه إلى: <strong>الإعدادات ⚙️ ← الخصوصية والأمن ← انزل للأسفل واضغط &quot;نمط المطور&quot; ← تفعيل</strong>، ثم أعد تشغيل الآيفون.
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                      <strong className="text-white block mb-0.5">3. ثبّت بروفايل DNS مانع الإلغاء:</strong>
+                      زر صفحة <Link href="/certificates" className="text-cyan-400 underline font-bold">الشهادات والـ DNS</Link> وثبّت ملف DNS لمنع خوادم أبل من حظر التثبيت.
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                      <strong className="text-white block mb-0.5">4. ثبّت أداة ESign أو KSign أولاً:</strong>
+                      اختر <strong>ESign</strong> أو <strong>KSign</strong> من القائمة بالأعلى كأول تطبيق تثبته، وبعد تثبيتهما بنجاح يمكنك استيراد وتثبيت أي ملف IPA في ثوانٍ بدون أي أخطاء!
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Portal to Certificates & Modded Apps */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link
+            href="/certificates"
+            className="group p-5 rounded-3xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/50 transition-all flex items-center justify-between gap-4"
+          >
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                18 سيرفر مباشر
+              </span>
+              <h4 className="font-bold text-white text-sm group-hover:text-blue-400 transition">
+                شهادات ESign و KSign و DNS 🛡️
+              </h4>
+              <p className="text-xs text-slate-400">
+                استعرض جميع شهادات المؤسسات الفعالة لتثبيت ESign بجميع نسخه.
+              </p>
+            </div>
+            <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-white transition group-hover:-translate-x-1" />
+          </Link>
+
+          <Link
+            href="/modded-ipas"
+            className="group p-5 rounded-3xl bg-slate-900/60 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition-all flex items-center justify-between gap-4"
+          >
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                مكتبة برامج بلس
+              </span>
+              <h4 className="font-bold text-white text-sm group-hover:text-indigo-400 transition">
+                مكتبة التطبيقات المعدلة (IPAs) 📦
+              </h4>
+              <p className="text-xs text-slate-400">
+                تحميل أحدث ملفات IPA المعدلة والجاهزة للتوقيع داخل هاتفك.
+              </p>
+            </div>
+            <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-white transition group-hover:-translate-x-1" />
+          </Link>
         </div>
       </main>
 
@@ -779,31 +939,22 @@ export default function WebSideloadPage() {
             </div>
 
             <p className="text-xs text-slate-300">
-              امسح الكود التالي بكاميرا هاتفك الآيفون لفتح صفحة التثبيت المباشر في متصفح Safari:
+              افتح كاميرا الآيفون وامسح كود QR للتثبيت المباشر:
             </p>
 
-            <div className="p-4 bg-white rounded-2xl inline-block shadow-inner mx-auto">
+            <div className="p-4 bg-white rounded-2xl inline-block shadow-inner">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                  'https://www.sidelinktool.me/web-sideload'
-                )}`}
-                alt="SideLink Web QR Code"
-                className="w-44 h-44 object-contain"
+                src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=https://www.sidelinktool.me/web-sideload"
+                alt="QR Code to open web sideload on iPhone"
+                className="w-44 h-44 mx-auto"
               />
             </div>
 
-            <div className="text-[11px] text-slate-400 font-mono">
-              https://www.sidelinktool.me/web-sideload
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setPcQrModalOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold"
-            >
-              إغلاق
-            </button>
+            <p className="text-[11px] text-slate-400">
+              أو اكتب في متصفح Safari بالآيفون:<br />
+              <strong className="text-cyan-400 font-mono">sidelinktool.me/web-sideload</strong>
+            </p>
           </div>
         </div>
       )}

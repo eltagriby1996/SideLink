@@ -42,3 +42,4 @@ tools/build/
 tools/isideload_repo/
 
 *.ipa
+!sidelink-web/public/downloads/*.ipa
