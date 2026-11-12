@@ -50,22 +50,6 @@
       "expiresAt": "2026-11-12T10:27:11.282Z",
       "verifiedAt": null,
       "challengeNonce": "nonce-xyz"
-    },
-    "ca9a10a00a0243e9827da8c06cdcacef": {
-      "sessionId": "ca9a10a00a0243e9827da8c06cdcacef",
-      "status": "pending",
-      "createdAt": "2026-11-12T16:23:08.037Z",
-      "expiresAt": "2026-11-12T16:38:08.037Z",
-      "verifiedAt": null,
-      "challengeNonce": ""
-    },
-    "1914e35302164ababeedf6b25b025e1e": {
-      "sessionId": "1914e35302164ababeedf6b25b025e1e",
-      "status": "pending",
-      "createdAt": "2026-11-12T16:26:45.631Z",
-      "expiresAt": "2026-11-12T16:41:45.631Z",
-      "verifiedAt": null,
-      "challengeNonce": ""
     }
   },
   "ipas": [
@@ -127,6 +111,15 @@
     }
   ],
   "vipKeys": [
+    {
+      "key": "SL-VIP-1MQD-HZQ2-EVCV",
+      "note": "Delete Test Key",
+      "createdAt": "2026-11-12T16:35:22.431Z",
+      "expiresAt": "2026-11-12T17:35:22.431Z",
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
     {
       "key": "SL-VIP-3TDZ-WRYK-M8G2",
       "note": "لالا",
@@ -195,18 +188,6 @@
       "boundHwid": "HWID-TEST-003",
       "boundMachine": "MACHINE-C",
       "boundAt": "2026-11-12T14:36:38.151Z"
-    },
-    {
-      "key": "SL-VIP-DD4I-UNE5-BNMS",
-      "note": "sa",
-      "createdAt": "2026-11-12T16:24:46.547Z",
-      "expiresAt": "2026-11-12T17:24:46.547Z",
-      "usedCount": 1,
-      "maxUses": 1,
-      "isActive": false,
-      "boundHwid": "727AE365BAFEFB801E4AAFF185139DDA311C4606078BA0638DD75DA19E713A4F",
-      "boundMachine": "DESKTOP-KCR0OLA",
-      "boundAt": "2026-11-12T16:25:05.625Z"
     }
   ],
   "blacklist": [],
