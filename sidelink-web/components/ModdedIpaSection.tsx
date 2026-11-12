@@ -6,8 +6,6 @@ import {
   Download,
   Search,
   Sparkles,
-  ExternalLink,
-  ShieldCheck,
   Music,
   Share2,
   Gamepad2,
@@ -15,8 +13,6 @@ import {
   Check,
   Layers,
   ArrowUpRight,
-  RefreshCw,
-  Loader2,
 } from 'lucide-react';
 
 interface ModdedApp {
@@ -34,68 +30,140 @@ interface ModdedApp {
 
 const INITIAL_TOP_APPS: ModdedApp[] = [
   {
-    id: 'spotify-deluxe',
-    name: 'Spotify++ Deluxe',
-    category: 'music',
-    version: 'v8.7.90',
-    size: '60 MB',
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg',
+    id: 'youtube-uyou',
+    name: 'YouTube uYouEnhanced (يوتيوب بلس)',
+    category: 'social',
+    version: 'v21.20.4',
+    size: '128 MB',
+    icon: 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png',
     badge: 'الأكثر تحميلاً 🔥',
-    description: 'نسخة سبوتيفاي المعدلة مع فتح مميزات بريميوم: تخطي لا نهائي، جودة صوت قصوى (Very High)، ومنع الإعلانات الصوتية والمرئية بالكامل.',
-    features: ['بدون أي إعلانات', 'تخطي أغاني غير محدود', 'صوت فائق الجودة 320kbps', 'تفعيل ميزة الاستماع عند الطلب'],
-    downloadUrl: 'https://github.com/swaggyP36000/TrollStore-IPAs/releases/download/12-09-2022/SpotifyDeluxe-8.7.90.ipa',
+    description: 'أفضل نسخة يوتيوب معدلة للآيفون: بدون أي إعلانات، تشغيل المقاطع في الخلفية والشاشة مقفلة، نافذة صورة داخل صورة (PiP)، وتنزيل الفيديوهات والصوتيات حتى 4K.',
+    features: ['بدون أي إعلانات إطلاقاً', 'تشغيل المقاطع في الخلفية', 'تنزيل الفيديوهات بدقة 4K', 'ميزة نافذة صورة داخل صورة (PiP)'],
+    downloadUrl: 'https://archive.org/download/YouTubeRebornPlus_19.10.5-4.2.6/yt-uYE-21204-305.ipa',
+  },
+  {
+    id: 'whatsapp-watusi',
+    name: 'WhatsApp Watusi 3 (واتساب بلس)',
+    category: 'social',
+    version: 'v26.44.72',
+    size: '110 MB',
+    icon: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg',
+    badge: 'نسخة بلس رسمية 🔥',
+    description: 'أقوى نسخة واتساب بلس مع إضافة واتوسي الرسمية: تجميد آخر ظهور، منع حذف الرسائل والحالات، قفل المحادثات برمز سري وبصمة FaceID، وإرسال وسائط بحجم غير محدود.',
+    features: ['إخفاء آخر ظهور والصح الأزرق', 'منع حذف الرسائل والحالات', 'قفل المحادثات ببصمة FaceID', 'إرسال وسائط بحجم غير محدود'],
+    downloadUrl: 'https://fouadraheb.com/dl/storage/ipa/1794443507727-4w53k/net.whatsapp.WhatsApp_26.44.72_watusi_1.0_sl.ipa',
+  },
+  {
+    id: 'whatsapp-watusi-dup',
+    name: 'WhatsApp Watusi (نسخة ثانية مكررة)',
+    category: 'social',
+    version: 'v26.44.72',
+    size: '110 MB',
+    icon: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg',
+    badge: 'نسخة مكررة معتمدة',
+    description: 'نسخة واتساب بلس مكررة بمُعرّف حزمة مختلف، تتيح لك تشغيل رقمين واتساب مختلفين تماماً على نفس الآيفون مع كافة مميزات واتوسي 3.',
+    features: ['تشغيل رقمين واتساب على هاتف واحد', 'تثبيت بجانب الواتساب الرسمي تماماً', 'إخفاء الصح الأزرق وقراءة الرسائل', 'منع حذف الحالات والرسائل'],
+    downloadUrl: 'https://fouadraheb.com/dl/storage/ipa/1794443507727-zmckb/com.fouadraheb.watusi_26.44.72_watusi_1.0_sl.ipa',
+  },
+  {
+    id: 'spotify-deluxe',
+    name: 'Spotify++ Deluxe (سبوتيفاي بلس)',
+    category: 'music',
+    version: 'v9.0.36',
+    size: '80 MB',
+    icon: 'https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg',
+    badge: 'الأكثر طلباً 🔥',
+    description: 'نسخة سبوتيفاي المعدلة مع فتح مميزات بريميوم: تخطي لا نهائي، جودة صوت قصوى (Very High)، ومنع الإعلانات الصوتية والمرئية بالكامل بدون اشتراك.',
+    features: ['بدون أي إعلانات صوتية أو بصرية', 'تخطي أغاني غير محدود', 'صوت فائق الجودة 320kbps', 'الاستماع عند الطلب لأي ألبوم'],
+    downloadUrl: 'https://ipa.cypwn.xyz/ipas/EeveeSpotify-5.9.5-9.0.36.ipa',
   },
   {
     id: 'tiktok-lrd',
-    name: 'TikTok LRD Plus',
+    name: 'TikTok LRD Plus (تيك توك بلس)',
     category: 'social',
     version: 'v30.3.0',
     size: '228 MB',
     icon: 'https://upload.wikimedia.org/wikipedia/en/a/a9/TikTok_logo.svg',
     badge: 'تخطي الحظر الجغرافي',
     description: 'تيك توك بلس مع أداة LRD: إزالة الإعلانات، حفظ الفيديوهات بدون العلامة المائية، تغيير المنطقة الجغرافية (Region Spoofing)، وعرض تقدم الفيديو.',
-    features: ['حفظ الفيديو بدون علامة مائية', 'تغيير دولة المحتوى بضغطة زر', 'إخفاء الإعلانات والبثوث المزعجة', 'تشغيل الصوتيات بالخلفية'],
+    features: ['حفظ الفيديوهات بدون علامة مائية', 'تغيير دولة المحتوى بنقرة زر', 'منع الإعلانات والبثوث المزعجة', 'تشغيل الصوتيات بالخلفية'],
     downloadUrl: 'https://github.com/swaggyP36000/TrollStore-IPAs/releases/download/07-14-2023/BHTikTokLRD-30.3.0.ipa',
   },
   {
-    id: 'instagram-elite',
-    name: 'Instagram Elite Plus',
+    id: 'instagram-regram',
+    name: 'Instagram Regram Plus (إنستغرام بلس)',
     category: 'social',
-    version: 'v289.1',
+    version: 'v454.1.0',
     size: '138 MB',
     icon: 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png',
-    badge: 'نسخة VIP',
-    description: 'إنستغرام بلس مع إمكانيات غير محدودة: تنزيل الفيديوهات والستوريات بجودة عالية، إخفاء مؤشرات قراءة الرسائل ومشاهدة القصص.',
-    features: ['تنزيل الفيديوهات والريلز بضغطة زر', 'إخفاء مشاهدة الستوري', 'إخفاء مؤشر قراءة الرسائل (Seen)', 'تكبير صورة البروفايل'],
-    downloadUrl: 'https://github.com/swaggyP36000/TrollStore-IPAs/releases/download/06-28-2023/InstagramElite-289.1.ipa',
+    badge: 'نسخة VIP معتمدة',
+    description: 'النسخة الرسمية لتعديل إنستغرام: تنزيل الفيديوهات والريلز والستوريات بجودة عالية، إخفاء مؤشرات قراءة الرسائل ومشاهدة القصص، وتكبير الصور.',
+    features: ['تنزيل الصور والريلز والستوريات', 'إخفاء مؤشر قراءة الرسائل (Seen)', 'مشاهدة القصص دون علم الطرف الآخر', 'تكبير الصور الشخصية بجودة كاملة'],
+    downloadUrl: 'https://fouadraheb.com/dl/storage/ipa/1794250144993-bnwzh/com.burbn.instagram_454.1.0_regram_7.0.1_sl.ipa',
   },
   {
     id: 'delta-emulator',
-    name: 'Delta All-In-One Emulator',
+    name: 'Delta All-In-One Emulator (محاكي ألعاب)',
     category: 'games',
     version: 'v1.6.2',
     size: '41 MB',
     icon: 'https://deltaemulator.com/assets/images/delta-icon.png',
     badge: 'محاكي ألعاب ريترو 🎮',
     description: 'أقوى محاكي ألعاب كلاسيكية على نظام iOS: يدعم ألعاب Game Boy Advance, Nintendo DS, Nintendo 64, SNES, مع دعم ذراع التحكم الخارجية.',
-    features: ['يدعم أجهزة نينتندو الكلاسيكية', 'دعم أيادي التحكم (PS5 / Xbox)', 'حفظ واستعادة تقدم الألعاب فورياً', 'مزامنة سحابية لحفظ الألعاب'],
+    features: ['محاكاة GBA, GBC, SNES, N64, NDS', 'دعم كامل لأيادي التحكم الخارجية', 'حفظ واستعادة تقدم الألعاب فورياً', 'مزامنة سحابية لحفظ الألعاب'],
     downloadUrl: 'https://github.com/rileytestut/Delta/releases/download/v1.6/Delta_1_6.ipa',
   },
   {
     id: 'ppsspp-emu',
-    name: 'PPSSPP PlayStation Portable',
+    name: 'PPSSPP PlayStation (محاكي PSP)',
     category: 'games',
     version: 'v1.13.2',
     size: '14 MB',
     icon: 'https://www.ppsspp.org/images/logo.svg',
     badge: 'محاكي ألعاب PSP 🎮',
-    description: 'محاكي بلايستيشن بورتابل PSP الشهير بدقة 4K ومعدل 60 إطار بالثانية مع دعم كامل لذراع التحكم والألعاب المحفوظة.',
+    description: 'محاكي بلايستيشن بورتابل PSP الشهير بدقة 4K ومعدل 60 إطار بالثانية مع دعم كامل لذراع التحكم وحفظ مراحل الألعاب.',
     features: ['تشغيل ألعاب PSP بدقة 4K و 60fps', 'دعم ذراع التحكم اللاسلكية', 'حفظ وإعادة اللقطات في أي لحظة', 'تحسين الألوان والرسوميات'],
     downloadUrl: 'https://github.com/QuarkSources/ppsspp-builder/releases/download/v1.13.2/PPSSPP_v1.13.2.ipa',
   },
   {
+    id: 'picsart-gold',
+    name: 'PicsArt Gold (بيكس آرت مفتوح)',
+    category: 'social',
+    version: 'v25.5.1',
+    size: '115 MB',
+    icon: 'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico',
+    badge: 'نسخة برو مفتوحة',
+    description: 'محرر الصور والتصميم الأشهر مع فتح كافة فلاتر ومميزات PicsArt Gold، إزالة الخلفية بالذكاء الاصطناعي، وتصدير الصور بدقة فائقة.',
+    features: ['فتح كافة فلاتر وتأثيرات Gold', 'حفظ الصور بدقة فائقة بدون علامة', 'أدوات الذكاء الاصطناعي مفتوحة', 'تعديل الصور باحترافية'],
+    downloadUrl: 'https://ipa.cypwn.xyz/ipas/Picsart_25.5.1_Cracked.ipa',
+  },
+  {
+    id: 'inshot-pro',
+    name: 'InShot Pro (إن شوت برو)',
+    category: 'social',
+    version: 'v1.70.0',
+    size: '117 MB',
+    icon: 'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico',
+    badge: 'محرر فيديو Pro',
+    description: 'تطبيق مونتاج وتعديل الفيديو مع تفعيل عضوية Pro مجاناً: تصدير بدون علامة مائية، فتح جميع الانتقالات والمؤثرات، وجودة 4K.',
+    features: ['تصدير بدون علامة مائية', 'كافة الانتقالات والمؤثرات مجانية', 'تصدير فيديو بدقة 4K و 60 إطار', 'دعم الخطوط والموسيقى الاحترافية'],
+    downloadUrl: 'https://github.com/swaggyP36000/TrollStore-IPAs/releases/download/07-09-2023/InShotPro-1.70.0.ipa',
+  },
+  {
+    id: 'infuse-pro',
+    name: 'Infuse Pro 4K (مشغل إنفيوز برو)',
+    category: 'social',
+    version: 'v7.5.8',
+    size: '40 MB',
+    icon: 'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico',
+    badge: 'مشغل وسائط 4K',
+    description: 'أقوى مشغل أفلام ومسلسلات على الآيفون والآيباد: يدعم تشغيل كافة الصيغ بدقة 4K HDR، صوت Dolby Atmos، ومزامنة الترجمة التلقائية.',
+    features: ['تشغيل كافة صيغ الفيديو والصوت', 'دعم Dolby Vision و Atmos', 'مزامنة مع Google Drive و OneDrive', 'تحميل الترجمة العربية تلقائياً'],
+    downloadUrl: 'https://github.com/swaggyP36000/TrollStore-IPAs/releases/download/07-11-2023/InfusePro-7.5.8.ipa',
+  },
+  {
     id: 'sidestore-app',
-    name: 'SideStore Community',
+    name: 'SideStore Community (تجديد ذاتي)',
     category: 'utilities',
     version: 'v0.7.0',
     size: '24 MB',
@@ -109,8 +177,6 @@ const INITIAL_TOP_APPS: ModdedApp[] = [
 
 export default function ModdedIpaSection() {
   const [apps, setApps] = useState<ModdedApp[]>(INITIAL_TOP_APPS);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -124,10 +190,9 @@ export default function ModdedIpaSection() {
     { id: 'utilities', name: 'أدوات ونظام', icon: Wrench },
   ];
 
-  // Fetch real IPAs on mount
+  // Silently load full catalog in background on mount
   useEffect(() => {
-    async function loadScrapedIpas() {
-      setIsLoading(true);
+    async function loadCatalog() {
       try {
         const res = await fetch('/api/app/ipas');
         if (res.ok) {
@@ -137,31 +202,12 @@ export default function ModdedIpaSection() {
           }
         }
       } catch (err) {
-        console.error('Failed to load scraped apps:', err);
-      } finally {
-        setIsLoading(false);
+        console.error('Failed to load apps catalog:', err);
       }
     }
 
-    loadScrapedIpas();
+    loadCatalog();
   }, []);
-
-  const handleManualSync = async () => {
-    setIsRefreshing(true);
-    try {
-      const res = await fetch('/api/app/ipas?refresh=true');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.apps && data.apps.length > 0) {
-          setApps(data.apps);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to refresh apps from sources:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   const filteredApps = apps.filter((app) => {
     const matchesCategory = selectedCategory === 'all' || app.category === selectedCategory;
@@ -184,41 +230,25 @@ export default function ModdedIpaSection() {
   };
 
   return (
-    <section id="modded-ipas" className="py-20 px-4 max-w-6xl mx-auto scroll-mt-20 border-t border-slate-800/80">
+    <section id="modded-ipas" className="py-12 px-4 max-w-6xl mx-auto scroll-mt-20">
       {/* Header */}
       <ScrollReveal direction="up" distance={20}>
-        <div className="text-center space-y-4 mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold shadow-sm animate-pulse-glow">
+        <div className="text-center space-y-4 mb-10">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold shadow-sm">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>مكتبة التطبيقات المعدلة الحقيقية (Scraped Community IPAs)</span>
+            <span>مكتبة تطبيقات الآيفون المعدلة والألعاب الحصرية</span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
-            <span className="heading-gradient-blue">أكثر من {apps.length}+ تطبيق بلس</span> بروابط مباشرة
-          </h2>
+          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+            <span className="heading-gradient-blue">تطبيقات بلس ومعدلة</span> بروابط تحميل مباشرة
+          </h1>
 
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
-            يتم سحب وتحديث هذه التطبيقات تلقائياً من كبرى مستودعات مجتمع الـ iOS (SideStore & TrollStore Repos). جميع الروابط مباشرة ومجربة وجاهزة للتثبيت فوراً عبر <span className="text-blue-400 font-semibold">SideLink</span>.
+            حمل أشهر تطبيقات السوشيال ميديا بلس، تطبيقات المشاهدة والاستماع بدون إعلانات، وألعاب المحاكيات جاهزة للتثبيت فوراً عبر برنامج <span className="text-blue-400 font-semibold">SideLink</span>.
           </p>
 
-          {/* Sync status & Actions */}
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-              ✓ تم جلب {apps.length} تطبيق نشط
-            </span>
-            <button
-              onClick={handleManualSync}
-              disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs border border-slate-700 transition"
-              title="سحب وتحديث أحدث الإصدارات من المستودعات الآن"
-            >
-              <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin text-blue-400' : ''}`} />
-              <span>{isRefreshing ? 'جاري السحب...' : 'سحب وتحديث الآن'}</span>
-            </button>
-          </div>
-
-          {/* Search & Filters */}
-          <div className="pt-6 max-w-2xl mx-auto space-y-4">
+          {/* Search & Clean Wrapped Category Filters */}
+          <div className="pt-4 max-w-2xl mx-auto space-y-4">
             <div className="relative">
               <Search className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
@@ -228,13 +258,13 @@ export default function ModdedIpaSection() {
                   setSearchQuery(e.target.value);
                   setVisibleCount(18);
                 }}
-                placeholder="ابحث بين مئات التطبيقات، مثل: Spotify، TikTok، WhatsApp، Delta، Infuse..."
+                placeholder="ابحث عن أي تطبيق، مثل: YouTube، WhatsApp، Spotify، TikTok، Delta..."
                 className="w-full pl-4 pr-12 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/50 text-sm transition shadow-inner"
               />
             </div>
 
-            {/* Category Pills */}
-            <div className="flex items-center justify-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {/* Clean Category Pills without any horizontal scrollbar */}
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
               {categories.map((cat) => {
                 const Icon = cat.icon;
                 const isActive = selectedCategory === cat.id;
@@ -264,7 +294,7 @@ export default function ModdedIpaSection() {
       {/* Apps Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {displayedApps.map((app, idx) => (
-          <ScrollReveal key={app.id + '-' + idx} delayMs={(idx % 3) * 60} direction="up" distance={20}>
+          <ScrollReveal key={app.id + '-' + idx} delayMs={(idx % 3) * 50} direction="up" distance={20}>
             <div
               id={`ipa-${app.id}`}
               className="h-full rounded-3xl bg-slate-900/80 border border-slate-800/90 hover:border-blue-500/40 p-6 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-blue-600/15 group relative"
@@ -280,7 +310,6 @@ export default function ModdedIpaSection() {
                         alt={app.name}
                         className="w-10 h-10 object-contain rounded-xl"
                         onError={(e) => {
-                          // Fallback icon on error
                           (e.target as HTMLImageElement).src =
                             'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico';
                         }}
@@ -352,7 +381,7 @@ export default function ModdedIpaSection() {
             onClick={() => setVisibleCount((prev) => prev + 18)}
             className="px-8 py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-blue-500/30 text-blue-400 hover:text-blue-300 font-bold text-sm shadow-lg shadow-blue-900/10 transition active:scale-95"
           >
-            عرض المزيد من التطبيقات ({filteredApps.length - visibleCount} تطبيق متبقي) ↓
+            عرض المزيد من التطبيقات ({filteredApps.length - visibleCount} تطبيق إضافي) ↓
           </button>
         </div>
       )}
@@ -362,26 +391,6 @@ export default function ModdedIpaSection() {
           <p className="text-slate-400 text-sm">لم يتم العثور على تطبيقات مطابقة لبحثك.</p>
         </div>
       )}
-
-      {/* Community Request Banner */}
-      <ScrollReveal direction="up" distance={20} delayMs={100}>
-        <div className="mt-12 p-6 rounded-3xl bg-gradient-to-r from-blue-950/40 via-slate-900 to-indigo-950/40 border border-blue-500/20 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-right hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1">
-          <div>
-            <h4 className="text-white font-bold text-base mb-1">هل تبحث عن تطبيق معدل أو لعبة معينة؟</h4>
-            <p className="text-xs text-slate-400">
-              يتم تحديث المكتبة تلقائياً بأحدث نسخ الـ IPA المعدلة. يمكنك إرسال روابط ومستودعات جديدة لإضافتها إلى السكرابر.
-            </p>
-          </div>
-          <a
-            href="https://github.com/eltagriby1996/SideLink/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-all duration-200 hover:-translate-y-0.5 shrink-0"
-          >
-            طلب إضافة تطبيق
-          </a>
-        </div>
-      </ScrollReveal>
     </section>
   );
 }
