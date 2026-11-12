@@ -78,8 +78,10 @@ public interface ILinkUnlockService
     event EventHandler<bool>? SessionUnlockStateChanged;
 
     bool IsMachineAlreadyAuthorized();
-    void SavePersistentVipLicense(string vipKey);
+    void SavePersistentVipLicense(string vipKey, string? expiresAtIso = null);
     string? GetSavedVipKey();
+    (string? Key, DateTimeOffset? ExpiresAt) GetSavedVipInfo();
+    bool IsVipExpired();
     void RevokeLocalVipLicense();
     Task<(bool IsValid, string? Reason)> ValidateSavedLicenseOnlineAsync(CancellationToken cancellationToken = default);
     Task<VerificationSession> CreateSessionAsync(CancellationToken cancellationToken = default);

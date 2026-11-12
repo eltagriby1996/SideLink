@@ -73,10 +73,14 @@ public partial class LinkUnlockViewModel : ObservableObject
             IsSuccessAnimation = false;
             return true;
         }
+        IsUnlocked = false;
         return false;
     }
 
     public string? GetSavedVipKey() => _linkUnlockService.GetSavedVipKey();
+    public (string? Key, DateTimeOffset? ExpiresAt) GetSavedVipInfo() => _linkUnlockService.GetSavedVipInfo();
+    public bool IsVipExpired() => _linkUnlockService.IsVipExpired();
+    public void RevokeLocalLicense() => _linkUnlockService.RevokeLocalVipLicense();
 
     public Task<RemoteConfigDto?> FetchRemoteConfigAsync(CancellationToken cancellationToken = default)
         => _linkUnlockService.FetchRemoteConfigAsync(cancellationToken);
@@ -160,8 +164,24 @@ public partial class LinkUnlockViewModel : ObservableObject
                     var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
                     if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
                     {
-                        _linkUnlockService.SavePersistentVipLicense(key);
-                        VipStatusMessage = "✓ تم تفعيل وحفظ ترخيص VIP بنجاح على هذا الجهاز!";
+                        string? expiresAtIso = doc.TryGetProperty("expiresAt", out var exp) && exp.ValueKind == System.Text.Json.JsonValueKind.String ? exp.GetString() : null;
+                        string? serverMsg = doc.TryGetProperty("message", out var m) && m.ValueKind == System.Text.Json.JsonValueKind.String ? m.GetString() : null;
+
+                        _linkUnlockService.SavePersistentVipLicense(key, expiresAtIso);
+
+                        if (!string.IsNullOrEmpty(serverMsg))
+                        {
+                            VipStatusMessage = "✓ " + serverMsg;
+                        }
+                        else if (!string.IsNullOrEmpty(expiresAtIso) && DateTimeOffset.TryParse(expiresAtIso, out var expDate))
+                        {
+                            VipStatusMessage = $"✓ تم تفعيل كود التحقق بنجاح! الصلاحية حتى: {expDate.ToLocalTime():yyyy-MM-dd hh:mm tt}";
+                        }
+                        else
+                        {
+                            VipStatusMessage = "✓ تم تفعيل كود التحقق بنجاح مدى الحياة!";
+                        }
+
                         IsSuccessAnimation = true;
                         await Task.Delay(1000);
                         App.Current?.Dispatcher?.Invoke(() =>

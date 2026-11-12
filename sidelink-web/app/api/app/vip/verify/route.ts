@@ -24,9 +24,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'تم تفعيل ترخيص الـ VIP وفك قفل البرنامج بنجاح!',
+      message: check.expiresAt
+        ? `تم تفعيل كود التحقق بنجاح! ساري حتى: ${new Date(check.expiresAt).toLocaleString('ar-EG')}`
+        : 'تم تفعيل كود التحقق بنجاح مدى الحياة!',
       token,
-      expiresAt: expiresAt.toISOString(),
+      expiresAt: check.expiresAt || null,
       isVip: true,
     });
   } catch (err) {

@@ -113,7 +113,9 @@ export function getVipKeys(): VipKey[] {
 export async function generateVipKey(params: {
   key?: string;
   note: string;
+  expiresInHours?: number | null;
   expiresInDays?: number | null;
+  expiresAt?: string | null;
   maxUses?: number;
 }): Promise<VipKey> {
   const db = dbInstance.getDb();
@@ -125,13 +127,20 @@ export async function generateVipKey(params: {
     key = `SL-VIP-${randomPart}`;
   }
 
+  let computedExpiresAt: string | null = null;
+  if (params.expiresAt) {
+    computedExpiresAt = new Date(params.expiresAt).toISOString();
+  } else if (params.expiresInHours && params.expiresInHours > 0) {
+    computedExpiresAt = new Date(Date.now() + params.expiresInHours * 60 * 60 * 1000).toISOString();
+  } else if (params.expiresInDays && params.expiresInDays > 0) {
+    computedExpiresAt = new Date(Date.now() + params.expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+  }
+
   const vipKey: VipKey = {
     key,
-    note: params.note || 'مفتاح ترخيص مخصص',
+    note: params.note || 'كود تحقق مخصص',
     createdAt: new Date().toISOString(),
-    expiresAt: params.expiresInDays
-      ? new Date(Date.now() + params.expiresInDays * 24 * 60 * 60 * 1000).toISOString()
-      : null,
+    expiresAt: computedExpiresAt,
     usedCount: 0,
     maxUses: params.maxUses ?? 0,
     isActive: true,
@@ -201,7 +210,7 @@ export async function validateVipKey(
   key: string,
   hwid?: string,
   machineName?: string
-): Promise<{ isValid: boolean; reason?: string }> {
+): Promise<{ isValid: boolean; reason?: string; expiresAt?: string | null }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
   const isVipFormat = /^SL-VIP(-[A-Z0-9]{3,8}){2,4}$/i.test(cleanKey) || cleanKey.startsWith('SL-VIP-');
@@ -215,13 +224,13 @@ export async function validateVipKey(
 
   if (found) {
     if (!found.isActive) {
-      return { isValid: false, reason: 'تم تعطيل هذا المفتاح من قبل الإدارة.' };
+      return { isValid: false, reason: 'تم تعطيل هذا الكود من قبل الإدارة.' };
     }
     if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
-      return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
+      return { isValid: false, reason: 'انتهت صلاحية كود التحقق. يرجى الحصول على كود جديد أو تجديد الجلسة.' };
     }
     if (found.maxUses > 0 && found.usedCount >= found.maxUses && (!found.boundHwid || found.boundHwid !== hwid)) {
-      return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا المفتاح.' };
+      return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا الكود.' };
     }
 
     // HWID Machine Binding Check
@@ -230,7 +239,7 @@ export async function validateVipKey(
         const boundName = found.boundMachine || 'جهاز كمبيوتر آخر';
         return {
           isValid: false,
-          reason: `هذا المفتاح مرتبط بجهاز (${boundName}) بالفعل. يرجى التواصل مع الإدارة لفك الارتباط لاستخدامه على هذا الجهاز.`,
+          reason: `هذا الكود مرتبط بجهاز (${boundName}) بالفعل. يرجى التواصل مع الإدارة لفك الارتباط لاستخدامه على هذا الجهاز.`,
         };
       }
     } else if (hwid) {
@@ -241,7 +250,7 @@ export async function validateVipKey(
 
     found.usedCount += 1;
     await dbInstance.saveAsync();
-    return { isValid: true };
+    return { isValid: true, expiresAt: found.expiresAt };
   }
 
   // If key matches SideLink VIP format, auto-register as active lifetime key
@@ -260,16 +269,16 @@ export async function validateVipKey(
     };
     db.vipKeys.unshift(newKey);
     await dbInstance.saveAsync();
-    return { isValid: true };
+    return { isValid: true, expiresAt: null };
   }
 
-  return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو غير صالح.' };
+  return { isValid: false, reason: 'كود التحقق غير موجود أو غير صالح.' };
 }
 
 export async function checkVipKeyStatus(
   key: string,
   hwid?: string
-): Promise<{ isValid: boolean; reason?: string }> {
+): Promise<{ isValid: boolean; reason?: string; expiresAt?: string | null }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
 
@@ -282,18 +291,18 @@ export async function checkVipKeyStatus(
 
   if (found) {
     if (!found.isActive) {
-      return { isValid: false, reason: 'تم تعطيل هذا المفتاح من قبل الإدارة.' };
+      return { isValid: false, reason: 'تم تعطيل هذا الكود من قبل الإدارة.' };
     }
     if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
-      return { isValid: false, reason: 'انتهت صلاحية هذا المفتاح.' };
+      return { isValid: false, reason: 'انتهت صلاحية كود التحقق. يرجى تجديد الترخيص أو إعادة التحقق.' };
     }
     if (found.boundHwid && hwid && found.boundHwid !== hwid) {
-      return { isValid: false, reason: 'هذا المفتاح مرتبط بجهاز كمبيوتر آخر.' };
+      return { isValid: false, reason: 'هذا الكود مرتبط بجهاز كمبيوتر آخر.' };
     }
-    return { isValid: true };
+    return { isValid: true, expiresAt: found.expiresAt };
   }
 
-  return { isValid: false, reason: 'مفتاح الـ VIP غير موجود أو تم حذفه من قبل الإدارة.' };
+  return { isValid: false, reason: 'كود التحقق غير موجود أو تم حذفه من قبل الإدارة.' };
 }
 
 export async function resetVipKeyHwid(key: string): Promise<boolean> {

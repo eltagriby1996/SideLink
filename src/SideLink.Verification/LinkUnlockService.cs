@@ -113,7 +113,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         return Path.Combine(dir, "vip_license.lic");
     }
 
-    public string? GetSavedVipKey()
+    public (string? Key, DateTimeOffset? ExpiresAt) GetSavedVipInfo()
     {
         try
         {
@@ -140,10 +140,20 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
                             if (!string.Equals(parts[3], GetMachineHwid(), StringComparison.OrdinalIgnoreCase))
                             {
                                 _logger.LogWarning("HWID mismatch for saved VIP license. Machine hardware changed or key copied.");
-                                return null;
+                                return (null, null);
                             }
                         }
-                        return key;
+
+                        DateTimeOffset? expiresAt = null;
+                        if (parts.Length >= 5 && !string.IsNullOrWhiteSpace(parts[4]) && !parts[4].Equals("LIFETIME", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (DateTimeOffset.TryParse(parts[4], out var parsedExp))
+                            {
+                                expiresAt = parsedExp;
+                            }
+                        }
+
+                        return (key, expiresAt);
                     }
                 }
             }
@@ -152,7 +162,20 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         {
             _logger.LogWarning("Error reading saved VIP key: {Msg}", ex.Message);
         }
-        return null;
+        return (null, null);
+    }
+
+    public string? GetSavedVipKey() => GetSavedVipInfo().Key;
+
+    public bool IsVipExpired()
+    {
+        var info = GetSavedVipInfo();
+        if (info.Key == null) return false;
+        if (info.ExpiresAt.HasValue)
+        {
+            return DateTimeOffset.UtcNow >= info.ExpiresAt.Value;
+        }
+        return false;
     }
 
     public void RevokeLocalVipLicense()
@@ -185,12 +208,20 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
 
     public async Task<(bool IsValid, string? Reason)> ValidateSavedLicenseOnlineAsync(CancellationToken cancellationToken = default)
     {
-        string? key = GetSavedVipKey();
+        var info = GetSavedVipInfo();
+        string? key = info.Key;
         if (string.IsNullOrWhiteSpace(key))
         {
             _isUnlocked = false;
-            return (false, "لا يوجد ترخيص VIP محفوظ على هذا الجهاز.");
-            return (false, "لا يوجد ترخيص VIP محفوظ أو متوافق مع عتاد هذا الجهاز.");
+            return (false, "لا يوجد كود تحقق محفوظ أو متوافق مع عتاد هذا الجهاز.");
+        }
+
+        // Local instant expiration check
+        if (info.ExpiresAt.HasValue && DateTimeOffset.UtcNow >= info.ExpiresAt.Value)
+        {
+            _logger.LogWarning("Local VIP license ({Key}) expired on {Expires}. Revoking.", key, info.ExpiresAt.Value);
+            RevokeLocalVipLicense();
+            return (false, "انتهت صلاحية كود التحقق. يرجى إدخال كود جديد أو تجديد الجلسة.");
         }
 
         try
@@ -223,17 +254,32 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
                 if (root.TryGetProperty("killSwitch", out var ks) && ks.GetBoolean())
                 {
                     string? ksReason = root.TryGetProperty("reason", out var kr) ? kr.GetString() : null;
+                    RevokeLocalVipLicense();
                     return (false, ksReason ?? "تم إيقاف تشغيل الأداة مؤقتاً من قبل الإدارة لأعمال الصيانة والتطوير الأمني.");
                 }
 
                 bool valid = root.TryGetProperty("valid", out var v) && v.GetBoolean();
                 string? reason = root.TryGetProperty("reason", out var r) ? r.GetString() : null;
+                string? serverExpiresAt = root.TryGetProperty("expiresAt", out var expProp) && expProp.ValueKind == JsonValueKind.String ? expProp.GetString() : null;
 
                 if (!valid)
                 {
-                    _logger.LogWarning("VIP License revoked or inactive on server ({Key}): {Reason}", key, reason);
+                    _logger.LogWarning("VIP License revoked or expired on server ({Key}): {Reason}", key, reason);
                     RevokeLocalVipLicense();
-                    return (false, reason ?? "تم تعطيل أو إلغاء صلاحية هذا المفتاح من قبل الإدارة.");
+                    return (false, reason ?? "انتهت صلاحية كود التحقق أو تم إلغاؤه من قبل الإدارة.");
+                }
+
+                // Check server expiresAt
+                if (!string.IsNullOrEmpty(serverExpiresAt) && DateTimeOffset.TryParse(serverExpiresAt, out var srvExp))
+                {
+                    if (DateTimeOffset.UtcNow >= srvExp)
+                    {
+                        _logger.LogWarning("Server confirms VIP key ({Key}) has expired at {Expires}", key, srvExp);
+                        RevokeLocalVipLicense();
+                        return (false, "انتهت صلاحية كود التحقق. يرجى تجديد الترخيص.");
+                    }
+                    // Update local file with authoritative server expiry
+                    SavePersistentVipLicense(key, serverExpiresAt);
                 }
 
                 _isUnlocked = true;
@@ -249,13 +295,12 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         catch (Exception ex)
         {
             _logger.LogWarning("Unable to contact verification server for license check: {Msg}", ex.Message);
-            // If offline, check if local file signature is intact
-            // If offline, check if local file signature and HWID is intact
+            // If offline, check if local file signature and HWID is intact and not expired
             if (IsMachineAlreadyAuthorized())
             {
                 return (true, null);
             }
-            return (false, "تعذر الاتصال بخادم التحقق.");
+            return (false, "انتهت صلاحية كود التحقق أو تعذر الاتصال بخادم التحقق.");
         }
     }
 
@@ -263,37 +308,23 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
     {
         try
         {
-            string vipPath = GetVipLicenseFilePath();
-            if (File.Exists(vipPath))
+            var info = GetSavedVipInfo();
+            if (string.IsNullOrWhiteSpace(info.Key))
             {
-                byte[] encrypted = File.ReadAllBytes(vipPath);
-                byte[] entropy = Encoding.UTF8.GetBytes("SideLink-VIP-Machine-v1");
-                byte[] plainBytes = ProtectedData.Unprotect(encrypted, entropy, DataProtectionScope.CurrentUser);
-                string plain = Encoding.UTF8.GetString(plainBytes);
-
-                string[] parts = plain.Split('|');
-                if (parts.Length >= 3)
-                {
-                    string machine = parts[0];
-                    string user = parts[1];
-                    string key = parts[2];
-                    if (string.Equals(machine, Environment.MachineName, StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(user, Environment.UserName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (parts.Length >= 4 && !string.IsNullOrWhiteSpace(parts[3]) && !parts[3].Contains("T"))
-                        {
-                            if (!string.Equals(parts[3], GetMachineHwid(), StringComparison.OrdinalIgnoreCase))
-                            {
-                                return false;
-                            }
-                        }
-
-                        _isUnlocked = true;
-                        _logger.LogInformation("Machine permanently authorized via local VIP license ({Key}).", key);
-                        return true;
-                    }
-                }
+                return false;
             }
+
+            // Verify local expiration timestamp
+            if (info.ExpiresAt.HasValue && DateTimeOffset.UtcNow >= info.ExpiresAt.Value)
+            {
+                _logger.LogWarning("Machine authorization revoked because VIP license expired on {Expires}", info.ExpiresAt.Value);
+                RevokeLocalVipLicense();
+                return false;
+            }
+
+            _isUnlocked = true;
+            _logger.LogInformation("Machine authorized via valid VIP license ({Key}), Expiry: {Exp}", info.Key, info.ExpiresAt?.ToString("O") ?? "LIFETIME");
+            return true;
         }
         catch (Exception ex)
         {
@@ -303,20 +334,21 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
         return false;
     }
 
-    public void SavePersistentVipLicense(string vipKey)
+    public void SavePersistentVipLicense(string vipKey, string? expiresAtIso = null)
     {
         try
         {
             string vipPath = GetVipLicenseFilePath();
             string hwid = GetMachineHwid();
-            string machineInfo = $"{Environment.MachineName}|{Environment.UserName}|{vipKey}|{hwid}|{DateTime.UtcNow:O}";
+            string expValue = string.IsNullOrWhiteSpace(expiresAtIso) ? "LIFETIME" : expiresAtIso.Trim();
+            string machineInfo = $"{Environment.MachineName}|{Environment.UserName}|{vipKey.Trim().ToUpperInvariant()}|{hwid}|{expValue}|{DateTime.UtcNow:O}";
             byte[] plainBytes = Encoding.UTF8.GetBytes(machineInfo);
             byte[] entropy = Encoding.UTF8.GetBytes("SideLink-VIP-Machine-v1");
             byte[] encrypted = ProtectedData.Protect(plainBytes, entropy, DataProtectionScope.CurrentUser);
             File.WriteAllBytes(vipPath, encrypted);
 
             _isUnlocked = true;
-            _logger.LogInformation("Persistent VIP license successfully saved on this machine: {Key} (HWID: {Hwid})", vipKey, hwid);
+            _logger.LogInformation("Persistent VIP license successfully saved on this machine: {Key} (HWID: {Hwid}, Expiry: {Exp})", vipKey, hwid, expValue);
         }
         catch (Exception ex)
         {

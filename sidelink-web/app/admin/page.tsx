@@ -161,7 +161,8 @@ export default function AdminPage() {
   });
 
   const [newVipNote, setNewVipNote] = useState<string>('');
-  const [newVipExpiryDays, setNewVipExpiryDays] = useState<string>('0');
+  const [newVipDurationType, setNewVipDurationType] = useState<string>('lifetime');
+  const [newVipCustomValue, setNewVipCustomValue] = useState<string>('24');
   const [newVipMaxUses, setNewVipMaxUses] = useState<string>('0');
 
   const [newBlockIp, setNewBlockIp] = useState<string>('');
@@ -344,25 +345,38 @@ export default function AdminPage() {
   const handleGenerateVipKey = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const days = Number(newVipExpiryDays);
-      const noteToSend = newVipNote.trim() || 'مفتاح ترخيص مخصص';
+      let expiresInHours: number | null = null;
+      let expiresInDays: number | null = null;
+
+      if (newVipDurationType === '1h') expiresInHours = 1;
+      else if (newVipDurationType === '6h') expiresInHours = 6;
+      else if (newVipDurationType === '12h') expiresInHours = 12;
+      else if (newVipDurationType === '24h') expiresInHours = 24;
+      else if (newVipDurationType === '3d') expiresInDays = 3;
+      else if (newVipDurationType === '7d') expiresInDays = 7;
+      else if (newVipDurationType === '30d') expiresInDays = 30;
+      else if (newVipDurationType === 'custom_hours') expiresInHours = Math.max(1, Number(newVipCustomValue) || 1);
+      else if (newVipDurationType === 'custom_days') expiresInDays = Math.max(1, Number(newVipCustomValue) || 1);
+
+      const noteToSend = newVipNote.trim() || 'كود تحقق مخصص';
       const res = await fetch('/api/admin/vip-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           note: noteToSend,
-          expiresInDays: days > 0 ? days : null,
+          expiresInHours,
+          expiresInDays,
           maxUses: Number(newVipMaxUses) || 0,
         }),
       });
       const data = await res.json();
       if (res.ok && data.key) {
-        showToast(`✓ تم إنشاء المفتاح: ${data.key.key}`);
+        showToast(`✓ تم إنشاء الكود بنجاح: ${data.key.key}`);
         setNewVipNote('');
         setVipKeys(prev => [data.key, ...prev]);
         fetchAllData();
       } else {
-        alert(data.error || 'فشل توليد المفتاح');
+        alert(data.error || 'فشل توليد الكود');
       }
     } catch {
       alert('خطأ في الاتصال.');
@@ -1356,30 +1370,65 @@ export default function AdminPage() {
                 <span>توليد مفتاح VIP جديد</span>
               </h3>
 
-              <form onSubmit={handleGenerateVipKey} className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                <div className="md:col-span-2">
+              <form onSubmit={handleGenerateVipKey} className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div className="md:col-span-4">
                   <label className="block text-xs text-slate-400 mb-1">ملاحظة أو اسم المستفيد:</label>
                   <input
                     type="text"
                     value={newVipNote}
                     onChange={(e) => setNewVipNote(e.target.value)}
-                    placeholder="مثل: ترخيص أحمد منجد - مدى الحياة (اختياري)"
+                    placeholder="مثل: ترخيص أحمد - تجربة 6 ساعات"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">المدة (أيام - 0 يعني دائم):</label>
+                <div className={newVipDurationType.startsWith('custom') ? 'md:col-span-3' : 'md:col-span-4'}>
+                  <label className="block text-xs text-slate-400 mb-1">مدة الصلاحية:</label>
+                  <select
+                    value={newVipDurationType}
+                    onChange={(e) => setNewVipDurationType(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                  >
+                    <option value="lifetime">مدى الحياة (دائم - Lifetime)</option>
+                    <option value="1h">ساعة واحدة (1 Hour)</option>
+                    <option value="6h">6 ساعات (6 Hours)</option>
+                    <option value="12h">12 ساعة (12 Hours)</option>
+                    <option value="24h">24 ساعة (يوم كامل)</option>
+                    <option value="3d">3 أيام (72 ساعة)</option>
+                    <option value="7d">7 أيام (أسبوع كامل)</option>
+                    <option value="30d">30 يوم (شهر كامل)</option>
+                    <option value="custom_hours">مدة مخصصة (بالساعات)</option>
+                    <option value="custom_days">مدة مخصصة (بالأيام)</option>
+                  </select>
+                </div>
+
+                {newVipDurationType.startsWith('custom') && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs text-slate-400 mb-1">
+                      {newVipDurationType === 'custom_hours' ? 'العدد بالساعات:' : 'العدد بالأيام:'}
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newVipCustomValue}
+                      onChange={(e) => setNewVipCustomValue(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
+                    />
+                  </div>
+                )}
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs text-slate-400 mb-1">الاستخدامات (0 = غير محدود):</label>
                   <input
                     type="number"
                     min="0"
-                    value={newVipExpiryDays}
-                    onChange={(e) => setNewVipExpiryDays(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white"
+                    value={newVipMaxUses}
+                    onChange={(e) => setNewVipMaxUses(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-mono"
                   />
                 </div>
 
-                <div className="flex items-end">
+                <div className="md:col-span-2 flex items-end">
                   <button
                     type="submit"
                     className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs transition shadow-lg shadow-blue-600/30"
@@ -1406,7 +1455,9 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
-                    {vipKeys.map((k) => (
+                    {vipKeys.map((k) => {
+                      const isExpired = Boolean(k.expiresAt && new Date() > new Date(k.expiresAt));
+                      return (
                       <tr key={k.key} className="hover:bg-slate-800/40 transition">
                         <td className="p-3.5">
                           <div className="flex items-center gap-2">
@@ -1424,8 +1475,29 @@ export default function AdminPage() {
                           </div>
                         </td>
                         <td className="p-3.5 text-slate-300">{k.note}</td>
-                        <td className="p-3.5 font-mono text-slate-400">
-                          {k.expiresAt ? new Date(k.expiresAt).toLocaleDateString('ar-EG') : 'مدى الحياة (Lifetime)'}
+                        <td className="p-3.5 font-mono text-slate-300">
+                          {k.expiresAt ? (
+                            <div>
+                              <div className={`font-semibold ${isExpired ? 'text-rose-400' : 'text-cyan-400'}`}>
+                                {new Date(k.expiresAt).toLocaleString('ar-EG', { 
+                                  year: 'numeric', 
+                                  month: 'numeric', 
+                                  day: 'numeric', 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </div>
+                              <div className="text-[10px] mt-0.5">
+                                {isExpired ? (
+                                  <span className="text-rose-400 font-bold">⚠️ انتهت الصلاحية</span>
+                                ) : (
+                                  <span className="text-slate-400">ساري حتى التاريخ أعلاه</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-emerald-400 font-bold">مدى الحياة (Lifetime)</span>
+                          )}
                         </td>
                         <td className="p-3.5 text-slate-300 font-mono">{k.usedCount} مرة</td>
                         <td className="p-3.5">
@@ -1449,7 +1521,11 @@ export default function AdminPage() {
                           )}
                         </td>
                         <td className="p-3.5">
-                          {k.isActive ? (
+                          {isExpired ? (
+                            <span className="px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
+                              منتهي الصلاحية
+                            </span>
+                          ) : k.isActive ? (
                             <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
                               فعال
                             </span>
@@ -1491,9 +1567,10 @@ export default function AdminPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );
+                  })}
                   </tbody>
-                </table>
+                  </table>
               </div>
             </div>
           </div>

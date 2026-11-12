@@ -125,13 +125,16 @@ public partial class MainViewModel : ObservableObject
             }
             else
             {
-                // Key was revoked/deactivated by admin! Lock app and notify user.
+                // Key was revoked/expired or deactivated by admin! Lock app and notify user.
                 App.Current?.Dispatcher?.Invoke(() =>
                 {
                     IsAppUnlocked = false;
                     LinkUnlock.IsUnlocked = false;
                     LinkUnlock.HasError = true;
-                    LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
+                    if (string.IsNullOrWhiteSpace(LinkUnlock.ErrorMessage))
+                    {
+                        LinkUnlock.ErrorMessage = "انتهت صلاحية كود التحقق أو تم إلغاؤه من قبل الإدارة في لوحة التحكم.";
+                    }
                     LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
                 });
             }
@@ -273,8 +276,23 @@ public partial class MainViewModel : ObservableObject
 
             try
             {
-                // Only if machine is using a VIP key, validate VIP key online
-                // Always check remote governance first
+                // Immediate local expiration check: If VIP key has reached its expiration timestamp
+                if (LinkUnlock.IsVipExpired())
+                {
+                    App.Current?.Dispatcher?.Invoke(() =>
+                    {
+                        IsAppUnlocked = false;
+                        LinkUnlock.IsUnlocked = false;
+                        LinkUnlock.HasError = true;
+                        LinkUnlock.ErrorMessage = "انتهت صلاحية كود التحقق. يرجى تجديد الترخيص أو إعادة التحقق للمتابعة.";
+                        LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
+                        LinkUnlock.RevokeLocalLicense();
+                        _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
+                    });
+                    return;
+                }
+
+                // Check remote governance first
                 bool govOk = await CheckRemoteGovernanceAsync();
                 if (!govOk)
                 {
@@ -295,8 +313,12 @@ public partial class MainViewModel : ObservableObject
                             IsAppUnlocked = false;
                             LinkUnlock.IsUnlocked = false;
                             LinkUnlock.HasError = true;
-                            LinkUnlock.ErrorMessage = "تم إلغاء أو تعطيل كود التحقق من قبل الإدارة في لوحة التحكم.";
+                            if (string.IsNullOrWhiteSpace(LinkUnlock.ErrorMessage))
+                            {
+                                LinkUnlock.ErrorMessage = "انتهت صلاحية كود التحقق أو تم إلغاؤه من قبل الإدارة في لوحة التحكم.";
+                            }
                             LinkUnlock.VipStatusMessage = LinkUnlock.ErrorMessage;
+                            LinkUnlock.RevokeLocalLicense();
                             _ = LinkUnlock.InitializeSessionAsync(preserveError: true);
                         });
                     }
@@ -322,7 +344,7 @@ public partial class MainViewModel : ObservableObject
             {
                 // Ignore transient network errors
             }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4));
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3));
     }
 
     private void OnVerificationCompleted()

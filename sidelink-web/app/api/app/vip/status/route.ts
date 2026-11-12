@@ -37,6 +37,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       valid: status.isValid,
+      expiresAt: status.expiresAt || null,
       reason: status.reason,
     });
   } catch (err) {

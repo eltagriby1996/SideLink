@@ -25,12 +25,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const key = await generateVipKey({
       key: body.key,
-      note: body.note || 'مفتاح ترخيص من لوحة التحكم',
+      note: body.note || 'كود تحقق من لوحة التحكم',
+      expiresInHours: body.expiresInHours !== undefined ? Number(body.expiresInHours) : null,
       expiresInDays: body.expiresInDays !== undefined ? Number(body.expiresInDays) : null,
+      expiresAt: body.expiresAt || null,
       maxUses: body.maxUses !== undefined ? Number(body.maxUses) : 0,
     });
 
-    return NextResponse.json({ success: true, key, message: 'تم إنشاء مفتاح VIP جديد بنجاح.' });
+    return NextResponse.json({ success: true, key, message: 'تم إنشاء كود تحقق VIP جديد بنجاح.' });
   } catch (err) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
