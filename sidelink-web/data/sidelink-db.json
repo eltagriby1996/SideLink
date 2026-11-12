@@ -146,6 +146,15 @@
       "usedCount": 0,
       "maxUses": 0,
       "isActive": true
+    },
+    {
+      "key": "SL-VIP-OW5O-UFX1-ARLM",
+      "note": "Test 1 hour",
+      "createdAt": "2026-11-12T14:36:31.358Z",
+      "expiresAt": "2026-11-12T15:36:31.358Z",
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
     }
   ],
   "blacklist": [],
