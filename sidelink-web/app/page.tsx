@@ -2,8 +2,6 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import TypewriterTitle from '../components/TypewriterTitle';
 import DownloadSection from '../components/DownloadSection';
-import ModdedIpaSection from '../components/ModdedIpaSection';
-import SigningToolsSection from '../components/SigningToolsSection';
 import ScrollReveal from '../components/ScrollReveal';
 import {
   Smartphone,
@@ -197,11 +195,54 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Modded IPAs Library Section */}
-      <ModdedIpaSection />
+      {/* Quick Services Portal Cards */}
+      <section className="py-12 px-4 max-w-5xl mx-auto border-t border-slate-800/80">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Card 1: Modded IPAs */}
+          <a
+            href="/modded-ipas"
+            className="p-6 rounded-3xl bg-gradient-to-br from-slate-900/90 to-amber-950/20 border border-slate-800 hover:border-amber-500/40 transition-all duration-300 hover:-translate-y-1 group flex items-start gap-4 shadow-lg text-right"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-bold text-white text-base">
+                <span>مكتبة التطبيقات المعدلة (VIP)</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30">جديد</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                تصفح وحمّل أشهر تطبيقات بلس المعدلة (Spotify++, uYouPlus, WhatsApp Watusi) بروابط IPA مباشرة.
+              </p>
+              <div className="text-xs font-semibold text-amber-400 pt-1 flex items-center gap-1 group-hover:gap-2 transition-all">
+                <span>فتح صفحة التطبيقات المعدلة ➔</span>
+              </div>
+            </div>
+          </a>
 
-      {/* On-Device Signing (ESign / KSign) & Enterprise Certificates Section */}
-      <SigningToolsSection />
+          {/* Card 2: Certificates & DNS */}
+          <a
+            href="/certificates"
+            className="p-6 rounded-3xl bg-gradient-to-br from-slate-900/90 to-blue-950/20 border border-slate-800 hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1 group flex items-start gap-4 shadow-lg text-right"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 group-hover:scale-105 transition-transform">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-bold text-white text-base">
+                <span>شهادات المؤسسات و ESign و DNS</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30">OTA</span>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                تثبيت مباشر لتطبيقات ESign و KSign على الآيفون مع ملفات DNS لمنع توقف الشهادات بدون كمبيوتر.
+              </p>
+              <div className="text-xs font-semibold text-blue-400 pt-1 flex items-center gap-1 group-hover:gap-2 transition-all">
+                <span>فتح صفحة الشهادات والـ DNS ➔</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </section>
 
       {/* Step-by-Step Guide */}
       <section id="guide" className="py-16 px-4 max-w-5xl mx-auto border-t border-slate-800/80 scroll-mt-20">
