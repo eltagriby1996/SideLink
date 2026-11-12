@@ -112,15 +112,6 @@
   ],
   "vipKeys": [
     {
-      "key": "SL-VIP-3TDZ-WRYK-M8G2",
-      "note": "لالا",
-      "createdAt": "2026-11-06T15:30:00.000Z",
-      "expiresAt": "2026-11-09T23:59:59.000Z",
-      "usedCount": 0,
-      "maxUses": 0,
-      "isActive": true
-    },
-    {
       "key": "SL-VIP-JUKY-AISL-OISL",
       "note": "ترخيص تجريبي للمستخدم",
       "createdAt": "2026-11-06T15:20:00.000Z",
