@@ -32,22 +32,6 @@ const KNOWN_APPS: Record<string, AppMeta> = {
     bundleId: 'com.SideStore.SideStore',
     ipaUrl: '/downloads/SideStore.ipa',
   },
-  spotify: {
-    name: 'Spotify++ Deluxe',
-    bundleId: 'com.spotify.client.plus',
-  },
-  youtube: {
-    name: 'YouTube uYouEnhanced',
-    bundleId: 'com.google.ios.youtube.uyou',
-  },
-  delta: {
-    name: 'Delta Emulator',
-    bundleId: 'com.rileytestut.Delta',
-  },
-  whatsapp: {
-    name: 'WhatsApp Watusi 3',
-    bundleId: 'net.whatsapp.WhatsApp.watusi',
-  },
 };
 
 export async function POST(request: NextRequest) {
@@ -68,7 +52,7 @@ export async function POST(request: NextRequest) {
       }
       if (!password || typeof password !== 'string') {
         return NextResponse.json(
-          { error: 'يرجى إدخال كلمة المرور أو كلمة مرور التطبيق الخاصة بـ Apple ID.' },
+          { error: 'يرجى إدخال كلمة المرور الخاصة بحساب Apple ID.' },
           { status: 400 }
         );
       }
@@ -81,7 +65,8 @@ export async function POST(request: NextRequest) {
     const normalizedAppId = (appId || '').toLowerCase();
     const knownApp = KNOWN_APPS[normalizedAppId];
 
-    const cleanAppName = (appName || knownApp?.name || 'SideLink App').trim();
+    const rawName = (appName || knownApp?.name || 'SideLink App').replace(/\.ipa$/i, '').trim();
+    const cleanAppName = rawName || 'SideLink App';
     const cleanBundleId = (bundleId || knownApp?.bundleId || 'com.sidelink.app.' + Math.random().toString(36).substring(7)).trim();
 
     // Check Anisette connectivity
@@ -101,7 +86,7 @@ export async function POST(request: NextRequest) {
       ipaTarget = `${origin}${ipaTarget.startsWith('/') ? '' : '/'}${ipaTarget}`;
     }
 
-    // Determine direct plist URL if available (e.g. for ESign / KSign)
+    // Determine direct plist URL if available
     const directPlistUrl = knownApp?.plistUrl;
 
     // Build manifest URL on our custom domain

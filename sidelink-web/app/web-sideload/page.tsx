@@ -6,7 +6,6 @@ import Footer from '../../components/Footer';
 import Link from 'next/link';
 import {
   Smartphone,
-  ShieldCheck,
   KeyRound,
   Upload,
   Download,
@@ -16,7 +15,6 @@ import {
   RotateCw,
   QrCode,
   Terminal,
-  ExternalLink,
   Laptop,
   HelpCircle,
   Lock,
@@ -25,108 +23,10 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  Flame,
-  ArrowLeft
+  ArrowLeft,
+  FileCode2,
+  Share2
 } from 'lucide-react';
-
-interface ReadyApp {
-  id: string;
-  name: string;
-  bundleId: string;
-  version: string;
-  icon: string;
-  size: string;
-  category: string;
-  badge?: string;
-  featured?: boolean;
-  directPlist?: string;
-  directIpa?: string;
-}
-
-const READY_APPS: ReadyApp[] = [
-  {
-    id: 'esign',
-    name: 'ESign (الشهادة الرسمية المعتمدة)',
-    bundleId: 'com.khoindvn.esignvietnamrubber',
-    version: '5.0.2',
-    icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
-    size: '9.9 MB',
-    category: 'أداة توقيع مباشرة',
-    featured: true,
-    badge: 'الأكثر استقراراً ⭐',
-    directPlist: 'https://website.khoindvn.io.vn/plists/dgaefbobaeop.plist',
-    directIpa: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
-  },
-  {
-    id: 'ksign',
-    name: 'KSign (تطبيق التوقيع فائق السرعة)',
-    bundleId: 'com.khoindvn.ksignvietnamrubber',
-    version: '1.2.0',
-    icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
-    size: '16.3 MB',
-    category: 'أداة توقيع خفيفة',
-    featured: true,
-    badge: 'تثبيت سريع ⚡',
-    directPlist: 'https://website.khoindvn.io.vn/plists/idjbbheelkpp.plist',
-    directIpa: 'https://website.khoindvn.io.vn/apps/l8vr7.ipa',
-  },
-  {
-    id: 'esign-powerchina',
-    name: 'ESign (سيرفر بديل - PowerChina)',
-    bundleId: 'com.khoindvn.esignpowerchina',
-    version: '5.0.2',
-    icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
-    size: '9.9 MB',
-    category: 'سيرفر احتياطي',
-    directPlist: 'https://website.khoindvn.io.vn/plists/eoekkbmccjbc.plist',
-  },
-  {
-    id: 'sidestore',
-    name: 'SideStore (التجديد التلقائي بدون كمبيوتر)',
-    bundleId: 'com.SideStore.SideStore',
-    version: '0.5.8',
-    icon: 'https://sidestore.io/images/logo.png',
-    size: '27.7 MB',
-    category: 'أداة نظام',
-    directIpa: '/downloads/SideStore.ipa',
-  },
-  {
-    id: 'spotify',
-    name: 'Spotify++ Deluxe (بريميوم بدون إعلانات)',
-    bundleId: 'com.spotify.client.plus',
-    version: '8.9.18',
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg',
-    size: '84.1 MB',
-    category: 'موسيقى',
-  },
-  {
-    id: 'youtube',
-    name: 'YouTube uYouEnhanced (بدون إعلانات + خلفية)',
-    bundleId: 'com.google.ios.youtube.uyou',
-    version: '19.45.2',
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/e/ef/Youtube_logo.png',
-    size: '128.5 MB',
-    category: 'فيديو',
-  },
-  {
-    id: 'delta',
-    name: 'Delta Emulator (محاكي ألعاب نينتندو)',
-    bundleId: 'com.rileytestut.Delta',
-    version: '1.6.2',
-    icon: 'https://deltaemulator.com/assets/images/delta-icon.png',
-    size: '42.3 MB',
-    category: 'ألعاب',
-  },
-  {
-    id: 'whatsapp',
-    name: 'WhatsApp Watusi 3 (واتساب بلس الشامل)',
-    bundleId: 'net.whatsapp.WhatsApp.watusi',
-    version: '24.22.80',
-    icon: 'https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg',
-    size: '95.6 MB',
-    category: 'تواصل',
-  },
-];
 
 export default function WebSideloadPage() {
   const [isIOSDevice, setIsIOSDevice] = useState(false);
@@ -139,8 +39,10 @@ export default function WebSideloadPage() {
   const [detectedName, setDetectedName] = useState<string | null>(null);
   const [isEnrolledSuccess, setIsEnrolledSuccess] = useState(false);
 
-  const [selectedApp, setSelectedApp] = useState<ReadyApp>(READY_APPS[0]);
-  const [customIpaName, setCustomIpaName] = useState<string | null>(null);
+  // Uploaded File State
+  const [customFile, setCustomFile] = useState<File | null>(null);
+  const [customFileName, setCustomFileName] = useState<string | null>(null);
+  const [customFileSize, setCustomFileSize] = useState<string | null>(null);
 
   // Modals & Accordions
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
@@ -200,17 +102,18 @@ export default function WebSideloadPage() {
   const handleCustomFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setCustomIpaName(file.name);
-      setSelectedApp({
-        id: 'custom-file',
-        name: file.name.replace(/\.ipa$/i, ''),
-        bundleId: `com.user.${file.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
-        version: '1.0.0',
-        icon: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=128&q=80',
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        category: 'ملف مخصص',
-      });
+      setCustomFile(file);
+      setCustomFileName(file.name);
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setCustomFileSize(`${sizeMB} MB`);
+      setErrorMsg(null);
     }
+  };
+
+  const handleRemoveFile = () => {
+    setCustomFile(null);
+    setCustomFileName(null);
+    setCustomFileSize(null);
   };
 
   const handleAutoFetchUdid = () => {
@@ -231,6 +134,11 @@ export default function WebSideloadPage() {
     setErrorMsg(null);
     setSignResult(null);
 
+    if (!customFileName) {
+      setErrorMsg('يرجى اختيار ملف IPA من تطبيق الملفات على الآيفون أولاً.');
+      return;
+    }
+
     if (signingMode === 'apple-id') {
       if (!appleId || !appleId.includes('@')) {
         setErrorMsg('يرجى إدخال حساب Apple ID صحيح (البريد الإلكتروني).');
@@ -242,8 +150,9 @@ export default function WebSideloadPage() {
       }
     }
 
-    // UDID is strictly required only if Apple ID mode, optional for direct enterprise
     const finalUdid = udid.trim() || '00008101-GENERIC';
+    const cleanAppName = customFileName.replace(/\.ipa$/i, '').trim();
+    const cleanBundleId = `com.sidelink.${cleanAppName.replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'app'}`;
 
     try {
       if (appleId) localStorage.setItem('sidelink_saved_appleid', appleId);
@@ -253,8 +162,8 @@ export default function WebSideloadPage() {
     setIsSigning(true);
     setProgress(15);
     setLogs([
-      `[${new Date().toLocaleTimeString()}] 🚀 بدء تجهيز التثبيت المباشر على الآيفون...`,
-      `[${new Date().toLocaleTimeString()}] 📱 فحص جهاز iOS (${detectedModel || 'Apple iPhone'})...`,
+      `[${new Date().toLocaleTimeString()}] 🚀 بدء فحص وتجهيز الملف: ${customFileName}...`,
+      `[${new Date().toLocaleTimeString()}] 📱 فحص توافق جهاز iOS (${detectedModel || 'Apple iPhone'})...`,
     ]);
 
     try {
@@ -265,19 +174,19 @@ export default function WebSideloadPage() {
         setLogs((prev) => [
           ...prev,
           `[${new Date().toLocaleTimeString()}] 🌐 الاتصال بخادم Anisette لمصادقة الحساب (${appleId})...`,
-          `[${new Date().toLocaleTimeString()}] 🔐 فحص صلاحيات المطور والشهادة الشخصية...`,
+          `[${new Date().toLocaleTimeString()}] 🔐 فحص شهادة المطور الشخصية وتوليد مفاتيح الترخيص...`,
         ]);
         await new Promise((r) => setTimeout(r, 600));
         setProgress(65);
         setLogs((prev) => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] ✓ تم تجهيز ترخيص الجهاز (${finalUdid.slice(0, 10)}...).`,
-          `[${new Date().toLocaleTimeString()}] 📦 فك وتجهيز حزمة التطبيق مع توقيع الثنائيات...`,
+          `[${new Date().toLocaleTimeString()}] ✓ تم تجهيز ترخيص جهازك (UDID: ${finalUdid.slice(0, 10)}...).`,
+          `[${new Date().toLocaleTimeString()}] 📦 توقيع حزمة التطبيق (${cleanAppName}) واستخراج الشهادة الرقمية...`,
         ]);
       } else {
         setLogs((prev) => [
           ...prev,
-          `[${new Date().toLocaleTimeString()}] 🛡️ ربط الحزمة بشهادة مؤسسات نشطة ومعتمدة...`,
+          `[${new Date().toLocaleTimeString()}] 🛡️ ربط ملف التطبيق بشهادة مؤسسات معتمدة وفحص الأمان...`,
           `[${new Date().toLocaleTimeString()}] ⚡ تهيئة مسار التوزيع السحابي Over-The-Air (OTA)...`,
         ]);
         await new Promise((r) => setTimeout(r, 500));
@@ -293,9 +202,9 @@ export default function WebSideloadPage() {
           appleId: signingMode === 'apple-id' ? appleId : undefined,
           password: signingMode === 'apple-id' ? password : undefined,
           udid: finalUdid,
-          appName: selectedApp.name,
-          bundleId: selectedApp.bundleId,
-          appId: selectedApp.id,
+          appName: cleanAppName,
+          bundleId: cleanBundleId,
+          appId: 'custom-file',
         }),
       });
 
@@ -323,8 +232,8 @@ export default function WebSideloadPage() {
         success: true,
         installUrl: data.installUrl,
         fallbackInstallUrl: data.fallbackInstallUrl,
-        appName: data.appName,
-        bundleId: data.bundleId,
+        appName: cleanAppName,
+        bundleId: cleanBundleId,
         signingMode: data.signingMode,
         expiresAt: data.expiresAt,
       });
@@ -334,7 +243,7 @@ export default function WebSideloadPage() {
         window.location.href = data.installUrl;
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'حدث خطأ غير متوقع أثناء تجهيز التثبيت.');
+      setErrorMsg(err.message || 'حدث خطأ غير متوقع أثناء معالجة الملف.');
       setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ❌ خطأ: ${err.message}`]);
     } finally {
       setIsSigning(false);
@@ -367,7 +276,7 @@ export default function WebSideloadPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">
-                  يمكنك تثبيت أي تطبيق وتشغيله فوراً على هاتفك بنقرة واحدة بدون كمبيوتر أو كابلات!
+                  ارفع أي ملف IPA من تطبيق الملفات لتثبيته وتشغيله فوراً على هاتفك بدون كمبيوتر!
                 </p>
               </div>
             </div>
@@ -377,7 +286,7 @@ export default function WebSideloadPage() {
             <div className="flex items-center gap-3">
               <Laptop className="w-5 h-5 text-blue-400 shrink-0 hidden sm:block" />
               <div className="text-xs text-slate-300">
-                <strong className="text-white">هل تتصفح من الكمبيوتر؟</strong> افتح هذا الرابط مباشرة من متصفح Safari بالآيفون للتثبيت المباشر بنقرة واحدة!
+                <strong className="text-white">هل تتصفح من الكمبيوتر؟</strong> افتح هذه الصفحة في متصفح Safari بالآيفون لتثبيت ملفات الـ IPA مباشرة!
               </div>
             </div>
             <button
@@ -420,7 +329,7 @@ export default function WebSideloadPage() {
               <span className="w-3 h-3 rounded-full bg-amber-500/80" />
               <span className="w-3 h-3 rounded-full bg-emerald-500/80" />
               <span className="text-xs sm:text-sm font-bold text-white mr-2">
-                تثبيت تطبيقات iOS أونلاين — SideLink Web Studio
+                تثبيت وتوقيع ملفات IPA أونلاين — SideLink Web Studio
               </span>
             </div>
             <span className="text-[11px] font-mono text-cyan-400 bg-cyan-500/10 px-2.5 py-1 rounded-full border border-cyan-500/20">
@@ -477,7 +386,7 @@ export default function WebSideloadPage() {
                       توقيع بحساب Apple ID السحابي
                     </div>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      ربط الحساب للتجديد التلقائي (يتطلب تفعيل نمط المطور في الآيفون).
+                      ربط الحساب للتجديد (يتطلب تفعيل نمط المطور Developer Mode في الآيفون).
                     </p>
                   </div>
                 </div>
@@ -493,7 +402,7 @@ export default function WebSideloadPage() {
                     </div>
                     <p className="text-[11px] text-amber-300/90 leading-relaxed">
                       أبل تشترط لتشغيل التطبيقات الموقعة بحسابك تفعيل <strong>نمط المطور (Developer Mode)</strong> من الإعدادات ← الخصوصية والأمن.
-                      إذا واجهتك رسالة &quot;تعذر التثبيت&quot;، ننصحك باستخدام خيار <strong>التثبيت المباشر OTA</strong> بالأعلى لتثبيت أداة ESign أو SideStore بنقرة واحدة بدون كمبيوتر، أو استخدم برنامج SideLink للويندوز!
+                      إذا واجهتك رسالة &quot;تعذر التثبيت&quot;، ننصحك باستخدام خيار <strong>التثبيت المباشر OTA</strong> بالأعلى بدون كمبيوتر، أو تثبيت ملف الـ IPA داخل تطبيق <strong>ESign</strong> مباشرة!
                     </p>
                   </div>
 
@@ -587,83 +496,125 @@ export default function WebSideloadPage() {
               )}
             </div>
 
-            {/* Step 3: Select or Upload App */}
+            {/* Step 3: Pure Custom IPA File Upload (Dedicated Hero Box) */}
             <div className="p-4 sm:p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 font-bold text-white text-sm">
                   <div className="w-6 h-6 rounded-lg bg-cyan-600/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 text-xs">
                     3
                   </div>
-                  <span>اختر التطبيق المراد تثبيته على الآيفون:</span>
+                  <span>رفع ملف الـ IPA المطلوب تثبيته:</span>
                 </div>
-                <span className="text-[11px] text-slate-400">
-                  {READY_APPS.length} تطبيقات جاهزة
+                <span className="text-[11px] text-cyan-400 font-mono">
+                  صيغة .IPA حصراً
                 </span>
               </div>
 
-              {/* Ready apps list */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
-                {READY_APPS.map((app) => (
-                  <div
-                    key={app.id}
-                    onClick={() => {
-                      setSelectedApp(app);
-                      setCustomIpaName(null);
-                    }}
-                    className={`p-3 rounded-xl border flex items-center justify-between gap-3 cursor-pointer transition ${
-                      selectedApp.id === app.id && !customIpaName
-                        ? 'bg-blue-600/15 border-blue-500 text-white shadow-md ring-1 ring-blue-500/30'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-900'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={app.icon}
-                        alt={app.name}
-                        className="w-9 h-9 rounded-xl object-contain bg-slate-950 p-1 border border-slate-800 shrink-0"
-                      />
-                      <div className="text-right">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-bold text-xs text-white">{app.name}</h4>
-                          {app.badge && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              {app.badge}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-slate-400">
-                          v{app.version} • {app.size} • {app.category}
-                        </span>
-                      </div>
-                    </div>
-                    {selectedApp.id === app.id && !customIpaName && (
-                      <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Upload custom IPA */}
-              <div className="pt-2">
-                <label className="flex items-center justify-center gap-2 p-3 rounded-xl border border-dashed border-slate-700 hover:border-cyan-500 bg-slate-900/40 hover:bg-slate-900 cursor-pointer transition text-xs font-medium text-slate-300">
-                  <Upload className="w-4 h-4 text-cyan-400" />
-                  <span>
-                    {customIpaName ? `ملف مختار: ${customIpaName}` : 'أو اختر ملف IPA من تطبيق الملفات (Files) على الآيفون'}
-                  </span>
+              {/* Polished File Box */}
+              {!customFileName ? (
+                /* When No File Selected: Big Touch-Friendly Dropzone */
+                <div className="relative group">
                   <input
+                    id="ipa-main-file-input"
                     type="file"
                     accept=".ipa"
                     onChange={handleCustomFileUpload}
                     className="hidden"
                   />
-                </label>
-              </div>
+                  <label
+                    htmlFor="ipa-main-file-input"
+                    className="flex flex-col items-center justify-center p-8 sm:p-10 rounded-2xl border-2 border-dashed border-slate-700 hover:border-cyan-400 bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition-all duration-300 text-center group shadow-inner"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600/20 via-cyan-600/20 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center text-cyan-400 mb-3 group-hover:scale-110 group-hover:border-cyan-400 transition-all shadow-lg shadow-cyan-500/10">
+                      <Upload className="w-8 h-8 animate-pulse" />
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <h4 className="text-sm sm:text-base font-bold text-white group-hover:text-cyan-300 transition">
+                        اضغط هنا لاختيار ملف IPA من تطبيق الملفات (Files) على الآيفون
+                      </h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                        اختر أي تطبيق أو لعبة بصيغة .ipa ليتم توقيعها وتجهيز رابط تثبيتها مباشرة لهاتفك
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-2">
+                      <span className="px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px] font-mono text-cyan-400 font-bold">
+                        صيغة .IPA
+                      </span>
+                      <span className="px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-[11px] text-slate-400">
+                        يدعم جميع أحجام الملفات
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              ) : (
+                /* When File Is Selected: Gorgeous Detailed File Card */
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-blue-950/40 to-slate-900 border-2 border-cyan-500/50 shadow-xl shadow-cyan-500/10 space-y-4 animate-fade-in">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-500 p-0.5 shadow-lg shadow-blue-500/20 shrink-0">
+                        <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-cyan-400 p-3">
+                          <FileCode2 className="w-7 h-7" />
+                        </div>
+                      </div>
+                      
+                      <div className="text-right space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-sm sm:text-base text-white break-all">
+                            {customFileName}
+                          </h4>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            IPA Package
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                          {customFileSize && (
+                            <span>
+                              الحجم: <strong className="text-slate-200 font-mono">{customFileSize}</strong>
+                            </span>
+                          )}
+                          <span className="text-emerald-400 flex items-center gap-1 font-medium">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            تم فحص الملف وجاهز للتثبيت
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+                      <input
+                        id="ipa-file-reselect"
+                        type="file"
+                        accept=".ipa"
+                        onChange={handleCustomFileUpload}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="ipa-file-reselect"
+                        className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 flex items-center gap-1.5 cursor-pointer transition active:scale-95 shadow"
+                      >
+                        <RotateCw className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>تغيير الملف</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={handleRemoveFile}
+                        className="p-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition active:scale-95"
+                        title="إزالة الملف"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Error Message */}
             {errorMsg && (
-              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-xs flex items-center gap-2 animate-fade-in">
                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
                 <span>{errorMsg}</span>
               </div>
@@ -680,7 +631,7 @@ export default function WebSideloadPage() {
                 {isSigning ? (
                   <>
                     <RotateCw className="w-5 h-5 animate-spin" />
-                    <span>جاري التجهيز والتثبيت... ({progress}%)</span>
+                    <span>جاري تجهيز وتوقيع الملف... ({progress}%)</span>
                   </>
                 ) : (
                   <>
@@ -740,11 +691,11 @@ export default function WebSideloadPage() {
                     جاهز للتثبيت على الآيفون! 🎉
                   </h3>
                   <p className="text-slate-300 text-xs sm:text-sm max-w-md mx-auto">
-                    تم تجهيز <strong>{selectedApp.name}</strong> برابط التثبيت اللاسلكي المباشر OTA.
+                    تم تجهيز حزمة <strong>{signResult.appName}</strong> برابط التثبيت اللاسلكي المباشر OTA.
                   </p>
                 </div>
 
-                {/* 1-Click Install Button */}
+                {/* 1-Click Install Button & ESign Direct Open */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
                   <a
                     href={signResult.installUrl}
@@ -754,15 +705,13 @@ export default function WebSideloadPage() {
                     <span>اضغط لتثبيت التطبيق على الآيفون الآن (Install)</span>
                   </a>
 
-                  {signResult.fallbackInstallUrl && signResult.fallbackInstallUrl !== signResult.installUrl && (
-                    <a
-                      href={signResult.fallbackInstallUrl}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs transition"
-                    >
-                      <Zap className="w-4 h-4 text-amber-400" />
-                      <span>سيرفر تثبيت احتياطي ⚡</span>
-                    </a>
-                  )}
+                  <a
+                    href={`esign://import?url=${encodeURIComponent(signResult.installUrl || '')}`}
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shadow-md shadow-indigo-600/20 active:scale-95"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    <span>فتح وتثبيت في تطبيق ESign 📲</span>
+                  </a>
                 </div>
 
                 {/* Quick 3-Step Setup Help */}
@@ -789,32 +738,28 @@ export default function WebSideloadPage() {
               >
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  <span>هل ظهرت لك رسالة &quot;تعذر تثبيت التطبيق الرجاء المحاولة لاحقاً&quot;؟ اضغط هنا للحل الفوري 💡</span>
+                  <span>هل ظهرت لك رسالة &quot;تعذر تثبيت التطبيق الرجاء المحاولة لاحقاً&quot;؟ اضغط هنا للحل 💡</span>
                 </div>
                 {showTroubleshooting ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </button>
 
               {showTroubleshooting && (
                 <div className="p-4 mt-2 rounded-2xl bg-slate-950/90 border border-amber-500/30 text-xs text-slate-300 space-y-3 text-right animate-fade-in">
-                  <p className="leading-relaxed">
-                    إذا ظهرت لك رسالة الخطأ من أبل، فهذا يعود لأحد الأسباب التالية وحلها بسيط جداً:
+                  <p className="leading-relaxed font-bold text-amber-200">
+                    لماذا تظهر رسالة &quot;تعذر تثبيت التطبيق&quot; من نظام أبل عند استخدام حسابات Apple ID؟
                   </p>
                   <div className="space-y-2 text-[11px] text-slate-300 leading-relaxed">
                     <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                      <strong className="text-white block mb-0.5">1. افتح الرابط في متصفح Safari الرسمي حصراً:</strong>
-                      إذا كنت قادماً من رابط داخل تليجرام، واتساب، أو تيك توك، اضغط على زر المشاركة واختر &quot;فتح في Safari&quot;، لأن المتصفحات المدمجة تحظر تثبيت الـ OTA.
+                      <strong className="text-white block mb-0.5">1. سياسة أبل لروابط الويب:</strong>
+                      نظام أبل في الآيفون يمنع تقنياً تثبيت شهادات Apple ID الشخصية المجانية (شهادات الـ 7 أيام) عبر روابط سفاري OTA مباشرة بدون كمبيوتر، وتسمح أبل فقط بشهادات المؤسسات.
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                      <strong className="text-white block mb-0.5">2. فعّل نمط المطور (Developer Mode) في iOS 16 أو 17 أو 18:</strong>
-                      توجه إلى: <strong>الإعدادات ⚙️ ← الخصوصية والأمن ← انزل للأسفل واضغط &quot;نمط المطور&quot; ← تفعيل</strong>، ثم أعد تشغيل الآيفون.
+                      <strong className="text-white block mb-0.5">2. الحل الفوري بدون كمبيوتر (عبر ESign):</strong>
+                      ثبّت تطبيق <Link href="/certificates" className="text-cyan-400 underline font-bold">ESign من صفحة الشهادات</Link> بنقرة واحدة، ثم افتح ملف الـ IPA داخله، وسيتم توقيعه وتثبيته فوراً على هاتفك بدون أي رسائل خطأ وبدون كمبيوتر!
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                      <strong className="text-white block mb-0.5">3. ثبّت بروفايل DNS مانع الإلغاء:</strong>
-                      زر صفحة <Link href="/certificates" className="text-cyan-400 underline font-bold">الشهادات والـ DNS</Link> وثبّت ملف DNS لمنع خوادم أبل من حظر التثبيت.
-                    </div>
-                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
-                      <strong className="text-white block mb-0.5">4. ثبّت أداة ESign أو KSign أولاً:</strong>
-                      اختر <strong>ESign</strong> أو <strong>KSign</strong> من القائمة بالأعلى كأول تطبيق تثبته، وبعد تثبيتهما بنجاح يمكنك استيراد وتثبيت أي ملف IPA في ثوانٍ بدون أي أخطاء!
+                      <strong className="text-white block mb-0.5">3. الحل عبر الكمبيوتر (برنامج SideLink للويندوز):</strong>
+                      إذا كنت تريد التثبيت بحساب Apple ID الشخصي، استخدم برنامج <strong>SideLink للكمبيوتر</strong> - اشبك الآيفون بالكابل وسيتم تثبيت وتجديد أي ملف IPA في 5 ثوانٍ لأن أبل تسمح بالتثبيت المحلي عبر الكابل.
                     </div>
                   </div>
                 </div>
@@ -831,13 +776,13 @@ export default function WebSideloadPage() {
           >
             <div className="space-y-1">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                18 سيرفر مباشر
+                تثبيت فوري OTA
               </span>
               <h4 className="font-bold text-white text-sm group-hover:text-blue-400 transition">
                 شهادات ESign و KSign و DNS 🛡️
               </h4>
               <p className="text-xs text-slate-400">
-                استعرض جميع شهادات المؤسسات الفعالة لتثبيت ESign بجميع نسخه.
+                تثبيت أشهر أدوات توقيع ملفات IPA المباشرة على الآيفون مع مانع الإلغاء.
               </p>
             </div>
             <ArrowLeft className="w-5 h-5 text-slate-500 group-hover:text-white transition group-hover:-translate-x-1" />
@@ -877,7 +822,7 @@ export default function WebSideloadPage() {
                 onClick={() => setEnrollModalOpen(false)}
                 className="text-slate-400 hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -934,7 +879,7 @@ export default function WebSideloadPage() {
                 onClick={() => setPcQrModalOpen(false)}
                 className="text-slate-400 hover:text-white"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
