@@ -115,6 +115,21 @@ public class RefreshService : IRefreshService
                 {
                     _logger.LogWarning(ex, "Could not auto-configure fresh identity from Apple server: {Msg}", ex.Message);
                 }
+
+                // If fresh profile couldn't be fetched online, check if we have a locally stored profile
+                if (string.IsNullOrWhiteSpace(profilePathToUse))
+                {
+                    try
+                    {
+                        var localIdentity = await _identityService.GetIdentityForAccountAsync(appleId, device.DeviceId, app.BundleIdentifier);
+                        if (localIdentity != null && !string.IsNullOrWhiteSpace(localIdentity.MobileProvisionPath) && File.Exists(localIdentity.MobileProvisionPath))
+                        {
+                            profilePathToUse = localIdentity.MobileProvisionPath;
+                            _logger.LogInformation("Using locally cached profile for {Bundle}: {Path}", app.BundleIdentifier, profilePathToUse);
+                        }
+                    }
+                    catch { }
+                }
             }
             else if (config.Method == SigningMethodType.CustomP12 && !string.IsNullOrWhiteSpace(config.MobileProvisionPath) && File.Exists(config.MobileProvisionPath))
             {

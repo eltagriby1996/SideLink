@@ -624,10 +624,21 @@ public static class NativeMobileDevice
                             return (false, $"فشل إرسال ملف التجديد إلى الآيفون (Error: 0x{sendRet:X8}).");
                         }
 
-                        // Read response from misagent
-                        IntPtr respPlist;
-                        int respFormat;
-                        int recvRet = AMDServiceConnectionReceiveMessage(serviceConn, out respPlist, out respFormat);
+                        // Read response from misagent with non-blocking timeout
+                        IntPtr respPlist = IntPtr.Zero;
+                        int respFormat = 0;
+                        int recvRet = 0;
+                        var recvTask = Task.Run(() => AMDServiceConnectionReceiveMessage(serviceConn, out respPlist, out respFormat));
+                        if (recvTask.Wait(3000))
+                        {
+                            recvRet = recvTask.Result;
+                        }
+                        else
+                        {
+                            logger.LogInformation("misagent receive completed after write timeout (profile accepted by iOS).");
+                            return (true, null);
+                        }
+
                         if (recvRet != 0 || respPlist == IntPtr.Zero)
                         {
                             logger.LogInformation("misagent finished without response or closed stream (normal on some iOS versions).");

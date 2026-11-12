@@ -247,12 +247,12 @@ public class AppleIdentityService : IAppleIdentityService
         // Search candidate locations for an active profile provisioned for this UDID
         var candidatePaths = new List<string>();
 
-        string tempPath = Path.GetTempPath();
-        if (Directory.Exists(tempPath))
+        string tempSideLink = Path.Combine(Path.GetTempPath(), "SideLink");
+        if (Directory.Exists(tempSideLink))
         {
             try
             {
-                candidatePaths.AddRange(Directory.GetFiles(tempPath, "*.mobileprovision", SearchOption.AllDirectories));
+                candidatePaths.AddRange(Directory.GetFiles(tempSideLink, "*.mobileprovision", SearchOption.TopDirectoryOnly));
             }
             catch { }
         }
@@ -638,9 +638,19 @@ public class AppleIdentityService : IAppleIdentityService
             using var proc = System.Diagnostics.Process.Start(psi);
             if (proc == null) return false;
 
-            string stdout = await proc.StandardOutput.ReadToEndAsync();
-            string stderr = await proc.StandardError.ReadToEndAsync();
-            await proc.WaitForExitAsync();
+            var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+            var stderrTask = proc.StandardError.ReadToEndAsync();
+
+            var waitTask = proc.WaitForExitAsync();
+            if (await Task.WhenAny(waitTask, Task.Delay(15000)) != waitTask)
+            {
+                try { proc.Kill(); } catch { }
+                _logger.LogWarning("sidelink-provisioner process timed out after 15 seconds.");
+                return false;
+            }
+
+            string stdout = await stdoutTask;
+            string stderr = await stderrTask;
 
             _logger.LogInformation("Native provisioner exit code: {Code}, output: {Out}", proc.ExitCode, stdout);
             return proc.ExitCode == 0;
