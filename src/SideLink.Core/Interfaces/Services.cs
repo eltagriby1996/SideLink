@@ -42,6 +42,11 @@ public interface IInstallationService
         IProgress<AppOperationProgress>? progress = null,
         CancellationToken cancellationToken = default);
 
+    Task<bool> InstallProvisioningProfileAsync(
+        byte[] profileData,
+        IosDevice targetDevice,
+        CancellationToken cancellationToken = default);
+
     Task<bool> UninstallAppAsync(
         string bundleIdentifier,
         IosDevice targetDevice,
@@ -140,7 +145,7 @@ public interface IAppleIdentityService
 {
     Task<IReadOnlyList<string>> DiscoverSystemAppleAccountsAsync();
     Task<AppleIdentityInfo?> GetIdentityForAccountAsync(string appleId, string? deviceUdid = null, string? bundleId = null);
-    Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null);
+    Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null, bool forceRefresh = false);
     Task<string?> GetSystemSavedPasswordAsync(string appleId);
 }
 

@@ -192,7 +192,7 @@ public class AppleIdentityService : IAppleIdentityService
         return generalMatch;
     }
 
-    public async Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null)
+    public async Task<AppleIdentityInfo> AutoConfigureIdentityForAccountAsync(string appleId, string deviceUdid, string? bundleId = null, bool forceRefresh = false)
     {
         string cleanId = SanitizeAccountName(appleId);
         string accountDir = Path.Combine(_baseIdentitiesPath, cleanId);
@@ -203,12 +203,15 @@ public class AppleIdentityService : IAppleIdentityService
         string defaultProfilePath = Path.Combine(accountDir, "embedded.mobileprovision");
         string targetP12Path = Path.Combine(accountDir, "identity.p12");
 
-        // If profile already exists, is valid, and matches device and bundleId, return it
-        var existing = await GetIdentityForAccountAsync(appleId, deviceUdid, bundleId);
-        if (existing != null && existing.IsMatchingCurrentDevice && !existing.IsExpired && existing.IsReadyToSign)
+        // If profile already exists, is valid, and matches device and bundleId, return it (unless forceRefresh is requested)
+        if (!forceRefresh)
         {
-            _logger.LogInformation("Found existing valid profile for {Account} and bundle {Bundle}", appleId, bundleId ?? "*");
-            return existing;
+            var existing = await GetIdentityForAccountAsync(appleId, deviceUdid, bundleId);
+            if (existing != null && existing.IsMatchingCurrentDevice && !existing.IsExpired && existing.IsReadyToSign)
+            {
+                _logger.LogInformation("Found existing valid profile for {Account} and bundle {Bundle}", appleId, bundleId ?? "*");
+                return existing;
+            }
         }
 
         // 1. Attempt autonomous native provisioning directly from Apple Developer Services

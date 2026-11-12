@@ -124,6 +124,39 @@ public class InstallationService : IInstallationService
         }
     }
 
+    public async Task<bool> InstallProvisioningProfileAsync(
+        byte[] profileData,
+        IosDevice targetDevice,
+        CancellationToken cancellationToken = default)
+    {
+        if (profileData == null || profileData.Length == 0)
+        {
+            _logger.LogWarning("InstallProvisioningProfileAsync: profileData is empty.");
+            return false;
+        }
+
+        if (targetDevice == null || !targetDevice.IsConnected)
+        {
+            _logger.LogWarning("InstallProvisioningProfileAsync: No device connected.");
+            return false;
+        }
+
+        var (success, errorMessage) = await NativeMobileDevice.InstallProvisioningProfileAsync(
+            profileData,
+            targetDevice.DeviceId,
+            _logger,
+            cancellationToken);
+
+        if (!success)
+        {
+            _logger.LogWarning("Failed to install provisioning profile via misagent: {Error}", errorMessage);
+            return false;
+        }
+
+        _logger.LogInformation("Successfully installed provisioning profile ({Bytes} bytes) directly via com.apple.misagent.", profileData.Length);
+        return true;
+    }
+
     public async Task<bool> UninstallAppAsync(string bundleIdentifier, IosDevice targetDevice, CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Requesting uninstallation of {BundleId} from {UDID}", bundleIdentifier, targetDevice.DeviceId);

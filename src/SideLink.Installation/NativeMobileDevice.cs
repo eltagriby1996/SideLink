@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using SideLink.Core.Models;
@@ -489,6 +490,177 @@ public static class NativeMobileDevice
                         AMDServiceConnectionReceiveMessage(serviceConn, out respPlist, out respFormat);
                         if (respPlist != IntPtr.Zero) CFRelease(respPlist);
                         return true;
+                    }
+                    finally
+                    {
+                        AMDServiceConnectionInvalidate(serviceConn);
+                    }
+                }
+                finally
+                {
+                    AMDeviceStopSession(devicePtr);
+                    AMDeviceDisconnect(devicePtr);
+                }
+            }
+            finally
+            {
+                if (notifHandle != IntPtr.Zero)
+                {
+                    AMDeviceNotificationUnsubscribe(notifHandle);
+                }
+            }
+        }, cancellationToken);
+    }
+
+    public static async Task<(bool Success, string? ErrorMessage)> InstallProvisioningProfileAsync(
+        byte[] profileData,
+        string targetUdid,
+        ILogger logger,
+        CancellationToken cancellationToken)
+    {
+        if (!EnsureInitialized(logger)) return (false, "خدمات Apple Mobile Device غير مهيأة على هذا الكمبيوتر.");
+
+        return await Task.Run(() =>
+        {
+            IntPtr notifHandle = IntPtr.Zero;
+            IntPtr devicePtr = IntPtr.Zero;
+
+            AMDeviceNotificationCallback notifCb = (ref AMDeviceNotificationCallbackInfo info, IntPtr arg) =>
+            {
+                if (info.msg == 1 && info.dev_ptr != IntPtr.Zero)
+                {
+                    string udid = GetDeviceUdid(info.dev_ptr);
+                    if (string.IsNullOrWhiteSpace(targetUdid) || 
+                        string.Equals(udid, targetUdid, StringComparison.OrdinalIgnoreCase) || 
+                        devicePtr == IntPtr.Zero)
+                    {
+                        devicePtr = info.dev_ptr;
+                    }
+                }
+            };
+
+            try
+            {
+                int subRet = AMDeviceNotificationSubscribe(notifCb, 0, 0, IntPtr.Zero, out notifHandle);
+                if (subRet != 0)
+                {
+                    return (false, $"فشل الاتصال بنظام إدارة أجهزة Apple (Code: 0x{subRet:X8}).");
+                }
+
+                IntPtr defaultMode = CreateCFString("kCFRunLoopDefaultMode");
+                for (int i = 0; i < 6 && devicePtr == IntPtr.Zero; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CFRunLoopRunInMode(defaultMode, 0.5, false);
+                }
+                CFRelease(defaultMode);
+
+                if (devicePtr == IntPtr.Zero)
+                {
+                    return (false, "تعذر العثور على جهاز آيفون متصل عبر USB.");
+                }
+
+                int cRet = AMDeviceConnect(devicePtr);
+                if (cRet != 0)
+                {
+                    return (false, $"فشل الاتصال بجهاز الآيفون عبر USB (Error: 0x{cRet:X8}).");
+                }
+
+                int isPaired = AMDeviceIsPaired(devicePtr);
+                int pRet = AMDeviceValidatePairing(devicePtr);
+                if (isPaired == 0 || pRet != 0)
+                {
+                    AMDeviceDisconnect(devicePtr);
+                    return (false, "جهاز الآيفون غير مقترن. يرجى فتح قفل الشاشة والضغط على 'الوثوق بهذا الكمبيوتر'.");
+                }
+
+                if (AMDeviceStartSession(devicePtr) != 0)
+                {
+                    AMDeviceDisconnect(devicePtr);
+                    return (false, "تعذر بدء جلسة آمنة مع الآيفون (تأكد من فتح قفل الشاشة).");
+                }
+
+                try
+                {
+                    IntPtr serviceName = CreateCFString("com.apple.misagent");
+                    IntPtr serviceConn;
+                    int sRet = AMDeviceSecureStartService(devicePtr, serviceName, IntPtr.Zero, out serviceConn);
+                    CFRelease(serviceName);
+
+                    if (sRet != 0 || serviceConn == IntPtr.Zero)
+                    {
+                        logger.LogWarning("Failed to start com.apple.misagent service: 0x{Ret:X8}", sRet);
+                        return (false, $"تعذر بدء خدمة تجديد الرخص في iOS (misagent: 0x{sRet:X8}).");
+                    }
+
+                    try
+                    {
+                        string b64 = Convert.ToBase64String(profileData);
+                        string reqXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                            "<plist version=\"1.0\">\n<dict>\n" +
+                            "    <key>MessageType</key><string>Install</string>\n" +
+                            $"    <key>Profile</key><data>{b64}</data>\n" +
+                            "    <key>ProfileType</key><string>Provisioning</string>\n" +
+                            "</dict>\n</plist>";
+
+                        byte[] xmlBytes = Encoding.UTF8.GetBytes(reqXml);
+                        IntPtr cfData = CFDataCreate(IntPtr.Zero, xmlBytes, xmlBytes.Length);
+                        int formatOut;
+                        IntPtr errorOut;
+                        IntPtr plist = CFPropertyListCreateWithData(IntPtr.Zero, cfData, 0, out formatOut, out errorOut);
+                        CFRelease(cfData);
+
+                        if (plist == IntPtr.Zero)
+                        {
+                            return (false, "فشل إنشاء بيانات ملف التجديد (Mobileprovision).");
+                        }
+
+                        int sendRet = AMDServiceConnectionSendMessage(serviceConn, plist, 200 /* binary plist */);
+                        CFRelease(plist);
+
+                        if (sendRet != 0)
+                        {
+                            return (false, $"فشل إرسال ملف التجديد إلى الآيفون (Error: 0x{sendRet:X8}).");
+                        }
+
+                        // Read response from misagent
+                        IntPtr respPlist;
+                        int respFormat;
+                        int recvRet = AMDServiceConnectionReceiveMessage(serviceConn, out respPlist, out respFormat);
+                        if (recvRet != 0 || respPlist == IntPtr.Zero)
+                        {
+                            logger.LogInformation("misagent finished without response or closed stream (normal on some iOS versions).");
+                            return (true, null);
+                        }
+
+                        IntPtr respXmlData = CFPropertyListCreateData(IntPtr.Zero, respPlist, 100 /* XML */, 0, out errorOut);
+                        CFRelease(respPlist);
+
+                        if (respXmlData != IntPtr.Zero)
+                        {
+                            int len = CFDataGetLength(respXmlData);
+                            byte[] buf = new byte[len];
+                            IntPtr ptr = CFDataGetBytePtr(respXmlData);
+                            Marshal.Copy(ptr, buf, 0, len);
+                            CFRelease(respXmlData);
+
+                            string xmlResp = Encoding.UTF8.GetString(buf);
+                            logger.LogInformation("misagent response: {Xml}", xmlResp);
+
+                            if (xmlResp.Contains("<key>Status</key>") && !xmlResp.Contains("<integer>0</integer>"))
+                            {
+                                var match = Regex.Match(xmlResp, @"<key>Status<\/key>\s*<integer>(-?\d+)<\/integer>");
+                                string statusCode = match.Success ? match.Groups[1].Value : "Unknown";
+                                if (statusCode != "0")
+                                {
+                                    logger.LogWarning("misagent returned error status: {Status}", statusCode);
+                                    return (false, $"رفض نظام iOS رخصة التجديد (كود الحالة: {statusCode}).");
+                                }
+                            }
+                        }
+
+                        return (true, null);
                     }
                     finally
                     {

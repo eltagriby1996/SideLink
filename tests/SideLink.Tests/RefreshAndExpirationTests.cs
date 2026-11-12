@@ -73,6 +73,11 @@ public class RefreshAndExpirationTests
             return Task.FromResult(true);
         }
 
+        public Task<bool> InstallProvisioningProfileAsync(byte[] profileData, IosDevice targetDevice, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
+
         public Task<bool> UninstallAppAsync(string bundleIdentifier, IosDevice targetDevice, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(true);
