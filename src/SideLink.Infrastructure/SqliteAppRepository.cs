@@ -49,7 +49,16 @@ public class SqliteAppRepository : IAppRepository
                 DeviceUdid TEXT NOT NULL,
                 LastErrorMessage TEXT
             );
-            CREATE INDEX IF NOT EXISTS IX_ManagedApps_BundleDevice ON ManagedApps (BundleIdentifier, DeviceUdid);
+
+            -- Automatically purge duplicate records keeping the latest active record
+            DELETE FROM ManagedApps 
+            WHERE rowid NOT IN (
+                SELECT MAX(rowid) 
+                FROM ManagedApps 
+                GROUP BY BundleIdentifier, DeviceUdid
+            );
+
+            CREATE UNIQUE INDEX IF NOT EXISTS UQ_ManagedApps_BundleDevice ON ManagedApps (BundleIdentifier, DeviceUdid);
         ";
         command.ExecuteNonQuery();
     }
@@ -61,7 +70,7 @@ public class SqliteAppRepository : IAppRepository
         await connection.OpenAsync();
 
         using var command = connection.CreateCommand();
-        command.CommandText = "SELECT Id, BundleIdentifier, AppName, Version, OriginalIpaPath, IconBase64, InstalledAt, LastRefreshedAt, SigningMethod, ExpirationDate, Status, DeviceUdid, LastErrorMessage FROM ManagedApps ORDER BY InstalledAt DESC";
+        command.CommandText = "SELECT Id, BundleIdentifier, AppName, Version, OriginalIpaPath, IconBase64, InstalledAt, LastRefreshedAt, SigningMethod, ExpirationDate, Status, DeviceUdid, LastErrorMessage FROM ManagedApps GROUP BY BundleIdentifier, DeviceUdid ORDER BY InstalledAt DESC";
 
         using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
@@ -121,17 +130,15 @@ public class SqliteAppRepository : IAppRepository
                 @Id, @BundleIdentifier, @AppName, @Version, @OriginalIpaPath, @IconBase64, @InstalledAt, 
                 @LastRefreshedAt, @SigningMethod, @ExpirationDate, @Status, @DeviceUdid, @LastErrorMessage
             )
-            ON CONFLICT(Id) DO UPDATE SET
-                BundleIdentifier = excluded.BundleIdentifier,
+            ON CONFLICT(BundleIdentifier, DeviceUdid) DO UPDATE SET
                 AppName = excluded.AppName,
                 Version = excluded.Version,
-                OriginalIpaPath = excluded.OriginalIpaPath,
-                IconBase64 = excluded.IconBase64,
+                OriginalIpaPath = COALESCE(excluded.OriginalIpaPath, ManagedApps.OriginalIpaPath),
+                IconBase64 = COALESCE(excluded.IconBase64, ManagedApps.IconBase64),
                 LastRefreshedAt = excluded.LastRefreshedAt,
                 SigningMethod = excluded.SigningMethod,
                 ExpirationDate = excluded.ExpirationDate,
                 Status = excluded.Status,
-                DeviceUdid = excluded.DeviceUdid,
                 LastErrorMessage = excluded.LastErrorMessage;
         ";
 

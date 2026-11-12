@@ -61,8 +61,13 @@ public partial class InstalledAppsViewModel : ObservableObject
         try
         {
             var apps = await _refreshService.CheckAppExpirationsAsync();
+            var distinctApps = apps
+                .GroupBy(a => a.BundleIdentifier)
+                .Select(g => g.OrderByDescending(a => a.ExpirationDate ?? a.InstalledAt).First())
+                .ToList();
+
             Apps.Clear();
-            foreach (var a in apps)
+            foreach (var a in distinctApps)
             {
                 if (string.IsNullOrWhiteSpace(FilterQuery) || 
                     a.AppName.Contains(FilterQuery, StringComparison.OrdinalIgnoreCase) || 
