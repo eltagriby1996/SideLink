@@ -121,15 +121,6 @@
       "isActive": true
     },
     {
-      "key": "SL-VIP-Q4FO-ECPP-7A18",
-      "note": "Test Expired",
-      "createdAt": "2026-11-12T14:36:35.001Z",
-      "expiresAt": "2026-11-12T14:36:25.001Z",
-      "usedCount": 0,
-      "maxUses": 0,
-      "isActive": true
-    },
-    {
       "key": "SL-VIP-E9UT-QF1D-B5RZ",
       "note": "Test Lifetime",
       "createdAt": "2026-11-12T14:36:36.324Z",
