@@ -7,7 +7,14 @@ export async function GET(request: NextRequest) {
   const id = searchParams.get('id') || 'sidelink-app';
   const name = searchParams.get('name') || 'SideLink App';
   const bundle = searchParams.get('bundle') || 'com.sidelink.cloudapp';
-  const ipaUrl = searchParams.get('url') || `${request.nextUrl.origin}/downloads/SideStore.ipa`;
+
+  const origin = request.nextUrl.origin || 'https://www.sidelinktool.me';
+  let ipaUrl = searchParams.get('url');
+  if (!ipaUrl) {
+    ipaUrl = `${origin}/downloads/SideStore.ipa`;
+  } else if (!ipaUrl.startsWith('http')) {
+    ipaUrl = `${origin}${ipaUrl.startsWith('/') ? '' : '/'}${ipaUrl}`;
+  }
 
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -49,4 +56,3 @@ export async function GET(request: NextRequest) {
     },
   });
 }
-

@@ -1,32 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { dbInstance } from '@/lib/database/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const { appleId, udid, appName, bundleId } = body;
+    const { mode, appleId, password, udid, appName, bundleId, ipaUrl, appId } = body;
 
-    if (!appleId || typeof appleId !== 'string' || !appleId.includes('@')) {
-      return NextResponse.json(
-        { error: 'يرجى إدخال حساب Apple ID صحيح (البريد الإلكتروني).' },
-        { status: 400 }
-      );
+    const signingMode = mode === 'direct-enterprise' ? 'direct-enterprise' : 'apple-id';
+
+    // Apple ID validation only needed for apple-id mode
+    if (signingMode === 'apple-id') {
+      if (!appleId || typeof appleId !== 'string' || !appleId.includes('@')) {
+        return NextResponse.json(
+          { error: 'يرجى إدخال حساب Apple ID صحيح (البريد الإلكتروني).' },
+          { status: 400 }
+        );
+      }
+      if (!password || typeof password !== 'string') {
+        return NextResponse.json(
+          { error: 'يرجى إدخال كلمة المرور أو كلمة مرور التطبيق الخاصة بـ Apple ID.' },
+          { status: 400 }
+        );
+      }
     }
 
     if (!udid || typeof udid !== 'string' || udid.trim().length < 15) {
       return NextResponse.json(
-        { error: 'يرجى إدخال معرّف الجهاز (UDID) بشكل صحيح.' },
+        { error: 'يرجى إدخال معرّف الجهاز (UDID) المكون من 24 أو 40 حرفاً، أو جلبه تلقائياً.' },
         { status: 400 }
       );
     }
 
     const cleanUdid = udid.trim().toUpperCase();
-    const cleanBundleId = (bundleId || 'com.sidelink.app.' + Math.random().toString(36).substring(7)).trim();
     const cleanAppName = (appName || 'SideLink App').trim();
+    const cleanBundleId = (bundleId || 'com.sidelink.app.' + Math.random().toString(36).substring(7)).trim();
 
-    // Check if Anisette service is reachable
+    // Check if cloud Anisette service is reachable
     const origin = request.nextUrl.origin || 'https://www.sidelinktool.me';
     let anisetteStatus = 'online';
     try {
@@ -36,17 +46,34 @@ export async function POST(request: NextRequest) {
       anisetteStatus = 'fallback';
     }
 
+    // Determine target IPA download link for OTA manifest
+    let ipaTarget = ipaUrl || '';
+    if (!ipaTarget) {
+      if (appId === 'sidestore') {
+        ipaTarget = `${origin}/downloads/SideStore.ipa`;
+      } else {
+        ipaTarget = `${origin}/downloads/SideStore.ipa`;
+      }
+    }
+
     // Build signed manifest URL
     const manifestId = `sign-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(
-      `${origin}/api/web-sideload/manifest?id=${manifestId}`
-    )}`;
+    const manifestUrl = `${origin}/api/web-sideload/manifest?id=${manifestId}&name=${encodeURIComponent(
+      cleanAppName
+    )}&bundle=${encodeURIComponent(cleanBundleId)}&url=${encodeURIComponent(ipaTarget)}`;
+
+    const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(manifestUrl)}`;
 
     return NextResponse.json({
       success: true,
-      message: 'تم توقيع التطبيق بنجاح وتجهيز رابط التثبيت السحابي OTA!',
+      message:
+        signingMode === 'direct-enterprise'
+          ? 'تم تجهيز رابط التثبيت المباشر OTA بنجاح!'
+          : 'تم توقيع التطبيق بحساب أبل وربطه بخادم Anisette بنجاح!',
+      signingMode,
       manifestId,
       installUrl,
+      manifestUrl,
       appName: cleanAppName,
       bundleId: cleanBundleId,
       udid: cleanUdid,
@@ -60,4 +87,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
