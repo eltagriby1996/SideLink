@@ -112,15 +112,6 @@
   ],
   "vipKeys": [
     {
-      "key": "SL-VIP-1MQD-HZQ2-EVCV",
-      "note": "Delete Test Key",
-      "createdAt": "2026-11-12T16:35:22.431Z",
-      "expiresAt": "2026-11-12T17:35:22.431Z",
-      "usedCount": 0,
-      "maxUses": 0,
-      "isActive": true
-    },
-    {
       "key": "SL-VIP-3TDZ-WRYK-M8G2",
       "note": "لالا",
       "createdAt": "2026-11-06T15:30:00.000Z",
