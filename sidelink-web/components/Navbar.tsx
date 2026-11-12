@@ -13,13 +13,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    id: 'web-sideload',
-    label: 'تثبيت أونلاين',
-    badge: 'سحابي',
-    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-    href: '/web-sideload',
-  },
-  {
     id: 'esign-ksign',
     label: 'شهادات و DNS',
     badge: 'OTA',
@@ -40,8 +33,8 @@ const NAV_ITEMS: NavItem[] = [
     badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
     href: '/mobile',
   },
-  { id: 'prerequisites', label: 'المتطلبات', href: '/#prerequisites' },
-  { id: 'guide', label: 'الشرح', href: '/#guide' },
+  { id: 'prerequisites', label: 'المتطلبات الأساسية', href: '/#prerequisites' },
+  { id: 'guide', label: 'دليل الاستخدام', href: '/#guide' },
   { id: 'features', label: 'المميزات', href: '/#features' },
 ];
 
