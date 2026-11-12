@@ -260,16 +260,10 @@ class PersistentDatabase {
 
   private mergeWithDefaults(parsed: any): DatabaseSchema {
     const def = getDefaultDatabase();
-    const currentKeys = this.data?.vipKeys || [];
     const incomingKeys = Array.isArray(parsed?.vipKeys) ? parsed.vipKeys : def.vipKeys;
     const keyMap = new Map<string, VipKey>();
     for (const k of incomingKeys) {
       if (k && k.key) keyMap.set(k.key.toUpperCase(), k);
-    }
-    for (const k of currentKeys) {
-      if (k && k.key && !keyMap.has(k.key.toUpperCase())) {
-        keyMap.set(k.key.toUpperCase(), k);
-      }
     }
 
     return {
@@ -317,23 +311,6 @@ class PersistentDatabase {
       if (!res.ok) return false;
       const ghData = await res.json();
       if (!ghData || !ghData.sha) return false;
-
-      // Extract existing remote VIP keys to ensure cross-lambda persistence
-      if (ghData.content) {
-        try {
-          const remoteJson = JSON.parse(Buffer.from(ghData.content, 'base64').toString('utf8'));
-          if (Array.isArray(remoteJson.vipKeys)) {
-            const keyMap = new Map<string, VipKey>();
-            for (const rk of remoteJson.vipKeys) {
-              if (rk && rk.key) keyMap.set(rk.key.toUpperCase(), rk);
-            }
-            for (const lk of this.data.vipKeys) {
-              if (lk && lk.key) keyMap.set(lk.key.toUpperCase(), lk);
-            }
-            this.data.vipKeys = Array.from(keyMap.values());
-          }
-        } catch { }
-      }
 
       const payload = JSON.stringify(this.data, null, 2);
       const content = Buffer.from(payload, 'utf8').toString('base64');

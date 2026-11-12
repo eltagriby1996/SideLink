@@ -197,12 +197,13 @@ export async function activateVipKey(key: string): Promise<boolean> {
 }
 
 export async function deleteVipKey(key: string): Promise<boolean> {
+  await dbInstance.refreshFromCloud();
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
   const initLen = db.vipKeys.length;
   db.vipKeys = db.vipKeys.filter((k) => k.key.toUpperCase() !== cleanKey);
   const deleted = db.vipKeys.length < initLen;
-  if (deleted) await dbInstance.saveAsync();
+  await dbInstance.saveAsync();
   return deleted;
 }
 

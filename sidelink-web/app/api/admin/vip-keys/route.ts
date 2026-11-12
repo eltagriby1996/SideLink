@@ -44,6 +44,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  await dbInstance.refreshFromCloud();
+
   const { searchParams } = new URL(request.url);
   const key = searchParams.get('key');
   const action = searchParams.get('action') || 'delete';
