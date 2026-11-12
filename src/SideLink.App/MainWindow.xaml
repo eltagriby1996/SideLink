@@ -79,17 +79,6 @@
             </Style.Triggers>
         </Style>
 
-        <Style x:Key="NavBtnMobile" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding CurrentPage}" Value="MobileCompanion">
-                    <Setter Property="Background" Value="{StaticResource ActiveNavGradient}" />
-                    <Setter Property="Foreground" Value="#38BDF8" />
-                    <Setter Property="FontWeight" Value="Bold" />
-                    <Setter Property="BorderThickness" Value="3,0,0,0" />
-                    <Setter Property="BorderBrush" Value="#38BDF8" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
 
         <Style x:Key="NavBtnDiagnostics" TargetType="Button" BasedOn="{StaticResource NavButtonStyle}">
             <Style.Triggers>
@@ -210,7 +199,6 @@
                                 <TextBlock Text="الأجهزة والشهادات" FontSize="10" FontWeight="Bold" Foreground="#475569" Margin="18,14,0,6" />
                                 <Button Style="{StaticResource NavBtnDevices}" Content="📲  الأجهزة المتصلة" Command="{Binding NavigateCommand}" CommandParameter="Devices" />
                                 <Button Style="{StaticResource NavBtnSigning}" Content="🔑  التوقيع والحسابات" Command="{Binding NavigateCommand}" CommandParameter="SigningRefresh" />
-                                <Button Style="{StaticResource NavBtnMobile}" Content="⚡  التجديد بالآيفون (Mobile)" Command="{Binding NavigateCommand}" CommandParameter="MobileCompanion" />
 
                                 <!-- Group 3: System -->
                                 <TextBlock Text="النظام والإعدادات" FontSize="10" FontWeight="Bold" Foreground="#475569" Margin="18,14,0,6" />
@@ -643,20 +631,9 @@
                                                 <TextBlock Text="{Binding DeviceId, StringFormat='UDID: {0}'}" FontSize="11" Foreground="#64748B" FontFamily="Consolas" Margin="0,2,0,0" />
                                             </StackPanel>
 
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Style="{StaticResource PrimaryButtonStyle}" 
-                                                        Content="📶 تفعيل مزامنة الـ Wi-Fi" 
-                                                        Command="{Binding DataContext.Devices.EnableWiFiSyncCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                        CommandParameter="{Binding}" 
-                                                        Margin="0,0,10,0" 
-                                                        Padding="12,6" 
-                                                        FontSize="12" 
-                                                        FontWeight="Bold" 
-                                                        ToolTip="تفعيل اتصال ومزامنة الـ Wi-Fi بهذا الهاتف ليتم تجديد التطبيقات تلقائياً بدون كابل" />
-                                                <Border Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="12,6" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding ConnectionMedium, StringFormat='✓ متصل ({0})'}" FontWeight="Bold" FontSize="12" Foreground="#34D399" />
-                                                </Border>
-                                            </StackPanel>
+                                            <Border Grid.Column="2" Background="#064E3B" BorderBrush="#059669" BorderThickness="1" CornerRadius="8" Padding="12,6" VerticalAlignment="Center">
+                                                <TextBlock Text="✓ متصل" FontWeight="Bold" FontSize="12" Foreground="#34D399" />
+                                            </Border>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -1019,149 +996,6 @@
                         </Border>
                     </StackPanel>
 
-                    <!-- ======================================================== -->
-                    <!-- PAGE 9: SIDELINK MOBILE (ON-DEVICE RENEWAL COMPANION) -->
-                    <!-- ======================================================== -->
-                    <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ScrollViewer.Style>
-                            <Style TargetType="ScrollViewer">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CurrentPage}" Value="MobileCompanion">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ScrollViewer.Style>
-
-                        <StackPanel Margin="0,0,16,24">
-                            <!-- Header -->
-                            <Grid Margin="0,0,0,20">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Grid.Column="0">
-                                    <TextBlock Text="SideLink Mobile — التجديد المباشر من الآيفون" FontSize="22" FontWeight="Black" Foreground="White" />
-                                    <TextBlock Text="تثبيت وتجديد شهادات تطبيقاتك من هاتفك مباشرة بدون الحاجة للكمبيوتر نهائياً" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
-                                </StackPanel>
-                                <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🌐 فتح البوابة السحابية" Command="{Binding MobileCompanion.OpenCloudPortalCommand}" Padding="14,8" />
-                            </Grid>
-
-                            <!-- Connected Device Status Card -->
-                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    
-                                    <Border Grid.Column="0" Width="48" Height="48" CornerRadius="12" Background="#1E293B" Margin="0,0,14,0" VerticalAlignment="Center">
-                                        <TextBlock Text="📱" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                    </Border>
-
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                                            <TextBlock Text="{Binding MobileCompanion.DeviceName}" FontSize="15" FontWeight="Bold" Foreground="White" Margin="0,0,8,0" />
-                                            <TextBlock Text="{Binding MobileCompanion.DeviceModel}" FontSize="13" Foreground="#94A3B8" Margin="0,0,8,0" />
-                                        </StackPanel>
-                                        <TextBlock Text="{Binding MobileCompanion.PairingFileStatus}" FontSize="12" Foreground="#38BDF8" FontWeight="SemiBold" />
-                                    </StackPanel>
-
-                                    <Button Grid.Column="2" Style="{StaticResource SecondaryButtonStyle}" Content="☁️ مزامنة سحابية" Command="{Binding MobileCompanion.SyncPairingCloudCommand}" VerticalAlignment="Center" Padding="12,6" />
-                                </Grid>
-                            </Border>
-
-                            <!-- 1-Click Installation Card (Hero Box) -->
-                            <Border CornerRadius="12" Background="#0F172A" BorderBrush="#3B82F6" BorderThickness="1.5" Padding="20" Margin="0,0,0,16">
-                                <StackPanel>
-                                    <TextBlock Text="🚀 تثبيت SideLink Companion على الآيفون بنقرة واحدة (One-Click Setup)" FontSize="16" FontWeight="Bold" Foreground="White" Margin="0,0,0,6" />
-                                    <TextBlock Text="يقوم البرنامج بدمج ملف اقتران هاتفك وتوقيع التطبيق بحساب Apple المعتمد وتثبيته فورياً على الآيفون مع مزامنة السحابة لتتمكن من التجديد في أي وقت بدون كمبيوتر." FontSize="12.5" Foreground="#94A3B8" TextWrapping="Wrap" LineHeight="19" Margin="0,0,0,16" />
-
-                                    <!-- Progress & Status Indicator -->
-                                    <StackPanel Margin="0,0,0,16">
-                                        <StackPanel.Style>
-                                            <Style TargetType="StackPanel">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding MobileCompanion.IsInstalling}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </StackPanel.Style>
-                                        <ProgressBar Value="{Binding MobileCompanion.ProgressPercentage}" Maximum="100" Height="8" Margin="0,0,0,8" />
-                                        <TextBlock Text="{Binding MobileCompanion.ProgressMessage}" FontSize="12" Foreground="#38BDF8" FontWeight="SemiBold" />
-                                    </StackPanel>
-
-                                    <!-- Error Card -->
-                                    <Border BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding MobileCompanion.HasError}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Setter Property="Background" Value="#450A0A" />
-                                                        <Setter Property="BorderBrush" Value="#EF4444" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="{Binding MobileCompanion.ErrorMessage}" FontSize="12" Foreground="#FCA5A5" TextWrapping="Wrap" />
-                                    </Border>
-
-                                    <!-- Success Card -->
-                                    <Border BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Visibility" Value="Collapsed" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding MobileCompanion.IsSuccess}" Value="True">
-                                                        <Setter Property="Visibility" Value="Visible" />
-                                                        <Setter Property="Background" Value="#064E3B" />
-                                                        <Setter Property="BorderBrush" Value="#10B981" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <TextBlock Text="{Binding MobileCompanion.ProgressMessage}" FontSize="12" Foreground="#6EE7B7" FontWeight="Bold" TextWrapping="Wrap" />
-                                    </Border>
-
-                                    <Button Style="{StaticResource PrimaryButtonStyle}" 
-                                            Content="تثبيت SideLink Mobile على الآيفون الآن 📲" 
-                                            Command="{Binding MobileCompanion.InstallCompanionCommand}" 
-                                            HorizontalAlignment="Left" Padding="20,10" FontSize="13" FontWeight="Bold" />
-                                </StackPanel>
-                            </Border>
-
-                            <!-- WireGuard Loopback Configuration Card -->
-                            <Border Style="{StaticResource CardStyle}">
-                                <StackPanel>
-                                    <TextBlock Text="🛡️ إعدادات WireGuard VPN (المطلوبة للتجديد بدون كمبيوتر)" FontSize="15" FontWeight="Bold" Foreground="White" Margin="0,0,0,4" />
-                                    <TextBlock Text="لكي يتمكن الآيفون من تثبيت وتجديد الشهادات محلياً بدون جهاز كمبيوتر، يجب تثبيت تطبيق WireGuard المجاني من App Store واستيراد إعدادات الـ Loopback أدناه:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" TextWrapping="Wrap" LineHeight="18" Margin="0,0,0,12" />
-
-                                    <TextBox Text="{Binding MobileCompanion.WireGuardConfigText, Mode=OneWay}" 
-                                             IsReadOnly="True" 
-                                             Height="110" 
-                                             FontFamily="Consolas" 
-                                             FontSize="11" 
-                                             Background="#090D16" 
-                                             Foreground="#34D399" 
-                                             BorderBrush="#1E293B" 
-                                             Padding="10" 
-                                             VerticalScrollBarVisibility="Auto" 
-                                             Margin="0,0,0,12" />
-
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Style="{StaticResource SecondaryButtonStyle}" Content="📋 نسخ كود الإعدادات" Command="{Binding MobileCompanion.CopyWireGuardConfigCommand}" Margin="0,0,10,0" Padding="14,7" />
-                                        <Button Style="{StaticResource SecondaryButtonStyle}" Content="💾 حفظ ملف SideLink-Loopback.conf على سطح المكتب" Command="{Binding MobileCompanion.SaveWireGuardConfigFileCommand}" Padding="14,7" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-                    </ScrollViewer>
                 </Grid>
             </Grid>
 

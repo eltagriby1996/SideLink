@@ -16,7 +16,7 @@ public record IosDevice
 
     public string ConnectionMedium => IsWiFiConnection ? "📶 Wi-Fi" : "🔌 USB";
     public string FriendlyModelName => ModelLookup.GetFriendlyName(ProductType);
-    public string DisplayTitle => string.IsNullOrWhiteSpace(DeviceName) ? $"{FriendlyModelName} ({ConnectionMedium})" : $"{DeviceName} ({FriendlyModelName}) — {ConnectionMedium}";
+    public string DisplayTitle => string.IsNullOrWhiteSpace(DeviceName) ? FriendlyModelName : $"{DeviceName} ({FriendlyModelName})";
 }
 
 public static class ModelLookup

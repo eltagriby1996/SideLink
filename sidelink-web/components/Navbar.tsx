@@ -26,13 +26,6 @@ const NAV_ITEMS: NavItem[] = [
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
     href: '/modded-ipas',
   },
-  {
-    id: 'mobile',
-    label: 'التجديد بالآيفون',
-    badge: 'جديد',
-    badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    href: '/mobile',
-  },
   { id: 'prerequisites', label: 'المتطلبات الأساسية', href: '/#prerequisites' },
   { id: 'guide', label: 'دليل الاستخدام', href: '/#guide' },
   { id: 'features', label: 'المميزات', href: '/#features' },

@@ -81,35 +81,4 @@ public partial class DevicesViewModel : ObservableObject
             IsScanning = false;
         }
     }
-
-    [RelayCommand]
-    public async Task EnableWiFiSyncAsync(IosDevice? device)
-    {
-        device ??= SelectedDevice ?? _deviceService.CurrentDevice;
-        if (device == null)
-        {
-            StatusMessage = "تنبيه: يرجى توصيل هاتف الآيفون بالكمبيوتر لتفعيل ميزة التجديد والمزامنة عبر الواي فاي.";
-            return;
-        }
-
-        try
-        {
-            StatusMessage = $"جاري تفعيل ميزة التجديد والمزامنة عبر الـ Wi-Fi لهاتف {device.DisplayTitle}...";
-            bool success = await _deviceService.EnableWiFiSyncAsync(device);
-            if (success)
-            {
-                StatusMessage = $"✓ تم تفعيل مزامنة وتجديد الـ Wi-Fi بنجاح لهاتف {device.DisplayTitle}! يمكنك الآن فصل الكابل وسيقوم SideLink بالتجديد التلقائي عبر الشبكة.";
-                LogsViewModel.AddLog($"📶 تم تفعيل مزامنة وتجديد الـ Wi-Fi بنجاح لهاتف {device.DisplayTitle}");
-            }
-            else
-            {
-                StatusMessage = "تعذر تفعيل مزامنة الواي فاي. يرجى فتح قفل شاشة الآيفون والتأكد من الوثوق بالكمبيوتر.";
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to enable WiFi sync");
-            StatusMessage = "خطأ أثناء تفعيل الواي فاي: " + ex.Message;
-        }
-    }
 }

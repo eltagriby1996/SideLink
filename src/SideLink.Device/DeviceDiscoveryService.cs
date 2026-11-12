@@ -372,64 +372,6 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         DeviceStateChanged?.Invoke(this, device);
     }
 
-    public async Task<bool> EnableWiFiSyncAsync(IosDevice device, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            using var client = new TcpClient();
-            await client.ConnectAsync("127.0.0.1", UsbmuxdProtocol.UsbmuxdPort, cancellationToken);
-            using var stream = client.GetStream();
-
-            string listXml = UsbmuxdProtocol.CreateListDevicesRequest();
-            byte[] listPkt = UsbmuxdProtocol.CreateUsbmuxPacket(listXml);
-            await stream.WriteAsync(listPkt, cancellationToken);
-            await stream.FlushAsync(cancellationToken);
-
-            string? listResp = await UsbmuxdProtocol.ReadUsbmuxMessageAsync(stream, cancellationToken);
-            int devId = 0;
-            if (!string.IsNullOrWhiteSpace(listResp))
-            {
-                var doc = XDocument.Parse(listResp);
-                foreach (var dDict in doc.Descendants("dict"))
-                {
-                    var elems = dDict.Elements().ToList();
-                    for (int i = 0; i < elems.Count - 1; i += 2)
-                    {
-                        if (elems[i].Value == "SerialNumber" && string.Equals(elems[i + 1].Value, device.DeviceId, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var idElem = elems.FirstOrDefault(e => e.PreviousNode is XElement prev && prev.Value == "DeviceID");
-                            if (idElem != null) int.TryParse(idElem.Value, out devId);
-                        }
-                    }
-                }
-            }
-
-            using var lockClient = new TcpClient();
-            await lockClient.ConnectAsync("127.0.0.1", UsbmuxdProtocol.UsbmuxdPort, cancellationToken);
-            using var lockStream = lockClient.GetStream();
-
-            string connectXml = UsbmuxdProtocol.CreateConnectRequest(devId, UsbmuxdProtocol.LockdownPort);
-            byte[] packet = UsbmuxdProtocol.CreateUsbmuxPacket(connectXml);
-            await lockStream.WriteAsync(packet, cancellationToken);
-            await lockStream.FlushAsync(cancellationToken);
-
-            string? connectResp = await UsbmuxdProtocol.ReadUsbmuxMessageAsync(lockStream, cancellationToken);
-            if (!string.IsNullOrWhiteSpace(connectResp) && connectResp.Contains("<integer>0</integer>"))
-            {
-                bool ok = await LockdownClient.EnableWiFiSyncAsync(lockStream, cancellationToken);
-                _logger.LogInformation("EnableWiFiSync result for {Device}: {Result}", device.DeviceId, ok);
-                return ok;
-            }
-
-            return false;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to enable WiFi sync for device {UDID}", device.DeviceId);
-            return false;
-        }
-    }
-
     private void HandleDeviceDetached(int deviceId)
     {
         IosDevice? removed = null;
