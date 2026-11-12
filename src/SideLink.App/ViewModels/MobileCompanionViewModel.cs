@@ -62,10 +62,10 @@ public partial class MobileCompanionViewModel : ObservableObject
     private string _wireGuardConfigText = string.Empty;
 
     [ObservableProperty]
-    private string _cloudPortalUrl = "https://sidelink-web.vercel.app/mobile";
+    private string _cloudPortalUrl = "https://www.sidelinktool.me/mobile";
 
     [ObservableProperty]
-    private string _anisetteServerUrl = "https://sidelink-web.vercel.app/api/mobile/anisette";
+    private string _anisetteServerUrl = "https://www.sidelinktool.me/api/mobile/anisette";
 
     public MobileCompanionViewModel(
         IMobileCompanionService companionService,

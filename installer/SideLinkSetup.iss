@@ -4,7 +4,7 @@
 #define MyAppName "SideLink"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "SideLink Open Source Project"
-#define MyAppURL "https://sidelink-web.vercel.app"
+#define MyAppURL "https://www.sidelinktool.me"
 #define MyAppExeName "SideLink.App.exe"
 
 [Setup]

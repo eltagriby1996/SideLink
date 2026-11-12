@@ -42,7 +42,7 @@ In your Vercel Project Settings (or via Vercel CLI), configure the following env
 
 | Variable Name | Example Value | Description |
 |---|---|---|
-| `VERIFICATION_BASE_URL` | `https://sidelink-web.vercel.app` | Public URL of your deployed verification website |
+| `VERIFICATION_BASE_URL` | `https://www.sidelinktool.me` | Public URL of your deployed verification website |
 | `DATABASE_URL` | `postgres://...` | Connection URI for Supabase or Neon |
 | `TOKEN_ISSUER` | `sidelink-verification` | JWT token issuer |
 | `TOKEN_AUDIENCE` | `sidelink-client` | JWT token audience |

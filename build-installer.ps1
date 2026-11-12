@@ -1,4 +1,4 @@
-﻿# SideLink Automated Release Packager
+# SideLink Automated Release Packager
 param(
     [string]$Configuration = "Release"
 )
@@ -56,13 +56,13 @@ Write-Host "Synchronizing release artifacts to Desktop folders..." -ForegroundCo
 $DesktopLinkDir = "C:\Users\HD\Desktop\SideLink1"
 if (Test-Path $DesktopLinkDir) {
     Copy-Item "$DistDir\*" -Destination $DesktopLinkDir -Recurse -Force
-    Write-Host "✓ Updated $DesktopLinkDir (Active Desktop shortcut target)" -ForegroundColor Green
+    Write-Host "[OK] Updated $($DesktopLinkDir) - Active Desktop shortcut target" -ForegroundColor Green
 }
 
 $DesktopDistDir = "C:\Users\HD\Desktop\SideLink-v1.0.0-win-x64"
 if (Test-Path $DesktopDistDir) {
     Copy-Item "$DistDir\*" -Destination $DesktopDistDir -Recurse -Force
-    Write-Host "✓ Updated $DesktopDistDir" -ForegroundColor Green
+    Write-Host "[OK] Updated $($DesktopDistDir)" -ForegroundColor Green
 }
 
 $InstallerExe = "$ScriptDir\dist\Installer\SideLink-v1.0.0-Setup.exe"
@@ -71,14 +71,14 @@ if (Test-Path $InstallerExe) {
     $WebDownloads = "$ScriptDir\sidelink-web\public\downloads"
     if (-not (Test-Path $WebDownloads)) { New-Item -ItemType Directory -Path $WebDownloads -Force | Out-Null }
     Copy-Item $InstallerExe -Destination "$WebDownloads\SideLink-v1.0.0-Setup.exe" -Force
-    Write-Host "✓ Copied Installer to Desktop and Web public downloads" -ForegroundColor Green
+    Write-Host "[OK] Copied Installer to Desktop and Web public downloads" -ForegroundColor Green
 }
 
 if (Test-Path $ZipPath) {
     Copy-Item $ZipPath -Destination "C:\Users\HD\Desktop\SideLink-v1.0.0-win-x64.zip" -Force
     $WebDownloads = "$ScriptDir\sidelink-web\public\downloads"
     Copy-Item $ZipPath -Destination "$WebDownloads\SideLink-v1.0.0-win-x64.zip" -Force
-    Write-Host "✓ Copied ZIP to Desktop and Web public downloads" -ForegroundColor Green
+    Write-Host "[OK] Copied ZIP to Desktop and Web public downloads" -ForegroundColor Green
 }
 
 Write-Host "=== Packaging Complete! ===" -ForegroundColor Green

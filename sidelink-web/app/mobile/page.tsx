@@ -136,7 +136,7 @@ export default function MobileCompanionPage() {
                   التطبيق مضبوط تلقائياً على خادمنا السحابي السريع. يمكنك التحقق من الرابط في إعدادات التطبيق على الآيفون:
                 </p>
                 <code className="text-xs bg-slate-900 text-blue-400 px-2.5 py-1 rounded border border-slate-800 font-mono select-all">
-                  https://sidelink-web.vercel.app/api/mobile/anisette
+                  https://www.sidelinktool.me/api/mobile/anisette
                 </code>
               </div>
             </div>
@@ -222,3 +222,4 @@ export default function MobileCompanionPage() {
     </div>
   );
 }
+

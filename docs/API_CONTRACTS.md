@@ -38,7 +38,7 @@ Invoked by the SideLink Windows desktop client on fresh launch.
 ```json
 {
   "sessionId": "4f553f14-2bd8-490b-ba62-ec72f7797746",
-  "verificationUrl": "https://sidelink-web.vercel.app/verify?session=4f553f14-2bd8-490b-ba62-ec72f7797746&nonce=9a7c3f...",
+  "verificationUrl": "https://www.sidelinktool.me/verify?session=4f553f14-2bd8-490b-ba62-ec72f7797746&nonce=9a7c3f...",
   "expiresAt": "2026-11-02T08:10:00.000Z"
 }
 ```

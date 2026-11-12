@@ -14,7 +14,7 @@ public class TelemetryClient : ITelemetryClient
     {
         _httpClient = httpClient;
         _logger = logger;
-        string baseUrl = Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app";
+        string baseUrl = Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://www.sidelinktool.me";
         _telemetryUrl = $"{baseUrl.TrimEnd('/')}/api/app/telemetry";
     }
 

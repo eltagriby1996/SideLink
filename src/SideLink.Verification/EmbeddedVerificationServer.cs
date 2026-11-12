@@ -112,7 +112,7 @@ public class EmbeddedVerificationServer : IDisposable
             {
                 string sessionId = req.QueryString["session"] ?? "";
                 string nonce = req.QueryString["nonce"] ?? "";
-                string remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app").TrimEnd('/');
+                string remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://www.sidelinktool.me").TrimEnd('/');
                 string redirectTarget = $"{remoteWebUrl}/verify?session={sessionId}&nonce={nonce}";
                 res.Redirect(redirectTarget);
                 res.Close();
@@ -140,7 +140,7 @@ public class EmbeddedVerificationServer : IDisposable
                     };
                 }
 
-                string remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app").TrimEnd('/');
+                string remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://www.sidelinktool.me").TrimEnd('/');
                 string verificationUrl = $"{remoteWebUrl}/verify?session={sessionId}&nonce={nonce}";
                 await SendJsonAsync(res, new
                 {

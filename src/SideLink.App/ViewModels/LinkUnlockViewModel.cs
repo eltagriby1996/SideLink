@@ -86,7 +86,7 @@ public partial class LinkUnlockViewModel : ObservableObject
         try
         {
             using var http = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(5) };
-            var resp = await http.GetAsync("https://sidelink-web.vercel.app/api/app/config");
+            var resp = await http.GetAsync("https://www.sidelinktool.me/api/app/config");
             if (resp.IsSuccessStatusCode)
             {
                 var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
@@ -154,7 +154,7 @@ public partial class LinkUnlockViewModel : ObservableObject
                     hwid,
                     machineName = Environment.MachineName
                 };
-                var resp = await http.PostAsJsonAsync("https://sidelink-web.vercel.app/api/app/vip/verify", payload);
+                var resp = await http.PostAsJsonAsync("https://www.sidelinktool.me/api/app/vip/verify", payload);
                 if (resp.IsSuccessStatusCode)
                 {
                     var doc = await resp.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();

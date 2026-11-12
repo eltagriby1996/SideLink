@@ -35,7 +35,7 @@ public partial class MainViewModel : ObservableObject
     private string _forceUpdateNotes = string.Empty;
 
     [ObservableProperty]
-    private string _forceUpdateUrl = "https://sidelink-app.vercel.app";
+    private string _forceUpdateUrl = "https://www.sidelinktool.me";
 
     [ObservableProperty]
     private IosDevice? _currentDevice;
@@ -196,7 +196,7 @@ public partial class MainViewModel : ObservableObject
                         : "يتضمن هذا التحديث تحسينات أمنية وإصلاحات ضرورية لا غنى عنها لعمل الأداة بكفاءة.";
                     ForceUpdateUrl = !string.IsNullOrWhiteSpace(config.DownloadUrl)
                         ? config.DownloadUrl
-                        : "https://sidelink-app.vercel.app";
+                        : "https://www.sidelinktool.me";
                     IsAppUnlocked = false;
                 }
                 else
@@ -238,7 +238,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            string url = !string.IsNullOrWhiteSpace(ForceUpdateUrl) ? ForceUpdateUrl : "https://sidelink-app.vercel.app";
+            string url = !string.IsNullOrWhiteSpace(ForceUpdateUrl) ? ForceUpdateUrl : "https://www.sidelinktool.me";
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
         }
         catch { }

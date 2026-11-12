@@ -1,4 +1,4 @@
-import { dbInstance, VerificationSessionRecord } from './db';
+import { dbInstance, type VerificationSessionRecord } from './db.ts';
 
 export type { VerificationSessionRecord };
 
@@ -78,19 +78,28 @@ export async function markSessionVerified(
   let raw = db.sessions[sessionId];
 
   if (!raw) {
-    raw = {
-      sessionId,
-      status: 'verified',
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      verifiedAt: new Date().toISOString(),
-      challengeNonce: providedNonce,
-    };
-    db.sessions[sessionId] = raw;
-  } else {
-    raw.status = 'verified';
-    raw.verifiedAt = new Date().toISOString();
-    raw.challengeNonce = providedNonce || raw.challengeNonce;
+    return { success: false, error: 'Session not found' };
+  }
+
+  const expDate = new Date(raw.expiresAt);
+  if (raw.status === 'expired' || new Date() >= expDate) {
+    raw.status = 'expired';
+    dbInstance.save();
+    return { success: false, error: 'Session has expired' };
+  }
+
+  if (raw.status === 'verified') {
+    return { success: true };
+  }
+
+  if (raw.challengeNonce && providedNonce && raw.challengeNonce !== providedNonce) {
+    return { success: false, error: 'Invalid verification proof' };
+  }
+
+  raw.status = 'verified';
+  raw.verifiedAt = new Date().toISOString();
+  if (providedNonce) {
+    raw.challengeNonce = providedNonce;
   }
 
   dbInstance.save();

@@ -69,7 +69,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
     {
         _httpClient = httpClient;
         _baseUrl = baseUrl.TrimEnd('/');
-        _remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://sidelink-web.vercel.app").TrimEnd('/');
+        _remoteWebUrl = (Environment.GetEnvironmentVariable("SIDELINK_WEB_URL") ?? "https://www.sidelinktool.me").TrimEnd('/');
         _verificationKey = verificationKey;
         _logger = logger;
         _issuer = issuer;
@@ -442,7 +442,7 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
             }
             catch { }
 
-            // 2. Remote check on sidelink-web.vercel.app (in case browser blocked localhost ping)
+            // 2. Remote check on www.sidelinktool.me (in case browser blocked localhost ping)
             try
             {
                 var remoteResp = await _httpClient.GetAsync($"{_remoteWebUrl}/api/verification/sessions/{sessionId}/status", cancellationToken);

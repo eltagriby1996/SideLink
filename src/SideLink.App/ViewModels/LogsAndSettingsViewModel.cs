@@ -73,7 +73,7 @@ public partial class SettingsViewModel : ObservableObject
     private bool _isDarkTheme = true;
 
     [ObservableProperty]
-    private string _verificationBackendUrl = "https://SideLink-web.vercel.app";
+    private string _verificationBackendUrl = "https://www.sidelinktool.me";
 
     [ObservableProperty]
     private bool _autoRefreshOnConnect = true;

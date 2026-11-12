@@ -35,7 +35,7 @@ public class MobileCompanionService : IMobileCompanionService
         _httpClient = httpClient;
         _logger = logger;
         _cloudApiBaseUrl = string.IsNullOrWhiteSpace(cloudApiBaseUrl)
-            ? (Environment.GetEnvironmentVariable("SIDELINK_CLOUD_URL") ?? "https://sidelink-web.vercel.app")
+            ? (Environment.GetEnvironmentVariable("SIDELINK_CLOUD_URL") ?? "https://www.sidelinktool.me")
             : cloudApiBaseUrl;
     }
 
