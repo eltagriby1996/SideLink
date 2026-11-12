@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from '../components/Navbar';
 import TypewriterTitle from '../components/TypewriterTitle';
+import DownloadSection from '../components/DownloadSection';
 import ModdedIpaSection from '../components/ModdedIpaSection';
 import SigningToolsSection from '../components/SigningToolsSection';
 import ScrollReveal from '../components/ScrollReveal';
@@ -49,42 +50,8 @@ export default function HomePage() {
           أداة ويندوز سريعة ومستقرة تمكّنك من تثبيت أي ملف IPA وتوقيعه رقمياً بشهادتك وحسابك الشخصي، مع نظام ذكي لتفادي تعارض أسماء الحزم والتجديد التلقائي لشهادات الـ 7 أيام بدون حاجة للجيلبريك.
         </p>
 
-        {/* CTA Buttons */}
-        <div id="download" className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4 scroll-mt-28">
-          <a
-            href="/downloads/SideLink-v1.0.0-Setup.exe"
-            download="SideLink-v1.0.0-Setup.exe"
-            className="w-full sm:w-auto flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 active:scale-95 border border-blue-400/30 group"
-          >
-            <Download className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
-            <div className="text-right">
-              <div>تحميل برنامج التثبيت (Setup Wizard)</div>
-              <div className="text-xs font-normal text-blue-200">النسخة الرسمية المعتمدة v1.0.0 (ملف تنفيذي EXE • 34 MB)</div>
-            </div>
-          </a>
-
-          <a
-            href="/downloads/SideLink-v1.0.0-win-x64.zip"
-            download="SideLink-v1.0.0-win-x64.zip"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-slate-900/90 hover:bg-slate-800/90 text-slate-200 hover:text-white font-semibold text-sm transition-all duration-300 hover:-translate-y-1 border border-slate-800 hover:border-slate-700"
-          >
-            <Download className="w-4 h-4 text-slate-400" />
-            <span>تحميل نسخة محمولة (Portable ZIP)</span>
-          </a>
-        </div>
-
-        {/* Quick Specs Badges */}
-        <div className="pt-2 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-400">
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:-translate-y-0.5 hover:border-slate-700 transition-all">
-            <Cpu className="w-3.5 h-3.5 text-blue-400" /> Windows 10 &amp; 11 (64-bit)
-          </span>
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:-translate-y-0.5 hover:border-slate-700 transition-all">
-            <Smartphone className="w-3.5 h-3.5 text-indigo-400" /> يدعم جميع إصدارات iOS حتى iOS 18+
-          </span>
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:-translate-y-0.5 hover:border-slate-700 transition-all">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> توقيع رقمي محلي وآمن 100%
-          </span>
-        </div>
+        {/* Download Section with Pre-requisites Notice & Confirmation Modal */}
+        <DownloadSection />
       </section>
 
       {/* Prerequisites Section (CRITICAL) */}

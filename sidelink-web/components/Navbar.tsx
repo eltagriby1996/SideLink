@@ -13,6 +13,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
+    id: 'web-sideload',
+    label: 'تثبيت أونلاين',
+    badge: 'سحابي',
+    badgeColor: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
+    href: '/web-sideload',
+  },
+  {
     id: 'mobile',
     label: 'التجديد بالآيفون',
     badge: 'جديد',
@@ -24,16 +31,18 @@ const NAV_ITEMS: NavItem[] = [
     label: 'تطبيقات معدلة',
     badge: 'VIP',
     badgeColor: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    href: '/modded-ipas',
   },
   {
     id: 'esign-ksign',
     label: 'شهادات و DNS',
     badge: 'OTA',
     badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    href: '/certificates',
   },
-  { id: 'prerequisites', label: 'المتطلبات' },
-  { id: 'guide', label: 'دليل الاستخدام' },
-  { id: 'features', label: 'المميزات' },
+  { id: 'prerequisites', label: 'المتطلبات', href: '/#prerequisites' },
+  { id: 'guide', label: 'دليل الاستخدام', href: '/#guide' },
+  { id: 'features', label: 'المميزات', href: '/#features' },
 ];
 
 export default function Navbar() {
@@ -41,9 +50,14 @@ export default function Navbar() {
 
   // Smooth scroll handler with proper navbar offset
   const scrollToSection = (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
     setMobileMenuOpen(false);
 
+    // If on another page, let the natural link /#id navigate to home section
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      return;
+    }
+
+    e.preventDefault();
     const element = document.getElementById(id);
     if (!element) return;
 
@@ -62,8 +76,11 @@ export default function Navbar() {
   };
 
   const scrollToTop = (e: React.MouseEvent) => {
-    e.preventDefault();
     setMobileMenuOpen(false);
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      return;
+    }
+    e.preventDefault();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (window.history && window.history.pushState) {
       window.history.pushState(null, '', window.location.pathname);
@@ -75,7 +92,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Logo */}
         <a
-          href="#"
+          href="/"
           onClick={scrollToTop}
           className="flex items-center gap-2.5 group cursor-pointer shrink-0 select-none"
         >
