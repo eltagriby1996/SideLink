@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const config = getRemoteConfig();
+    const config = await getRemoteConfig();
     if (config.emergencyKillSwitch) {
       return NextResponse.json({
         success: true,

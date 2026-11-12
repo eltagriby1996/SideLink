@@ -653,14 +653,34 @@ public class LinkUnlockService : ILinkUnlockService, IDisposable
                 using var doc = JsonDocument.Parse(body);
                 var root = doc.RootElement;
 
+                bool isVerificationEnabled = true;
+                if (root.TryGetProperty("isVerificationEnabled", out var ive))
+                {
+                    isVerificationEnabled = ive.GetBoolean();
+                }
+
+                bool bannerEnabled = false;
+                string bannerMsg = string.Empty;
+                string bannerType = "info";
+                if (root.TryGetProperty("broadcastBanner", out var bb) && bb.ValueKind == JsonValueKind.Object)
+                {
+                    bannerEnabled = bb.TryGetProperty("enabled", out var bbe) && bbe.GetBoolean();
+                    bannerMsg = bb.TryGetProperty("message", out var bbm) ? bbm.GetString() ?? string.Empty : string.Empty;
+                    bannerType = bb.TryGetProperty("type", out var bbt) ? bbt.GetString() ?? "info" : "info";
+                }
+
                 return new RemoteConfigDto
                 {
+                    IsVerificationEnabled = isVerificationEnabled,
                     EmergencyKillSwitch = root.TryGetProperty("emergencyKillSwitch", out var eks) && eks.GetBoolean(),
                     KillSwitchMessage = root.TryGetProperty("killSwitchMessage", out var ksm) ? ksm.GetString() ?? string.Empty : string.Empty,
                     LatestVersion = root.TryGetProperty("latestVersion", out var lv) ? lv.GetString() ?? "1.0.0" : "1.0.0",
                     DownloadUrl = root.TryGetProperty("downloadUrl", out var du) ? du.GetString() ?? string.Empty : string.Empty,
                     ForceUpdate = root.TryGetProperty("forceUpdate", out var fu) && fu.GetBoolean(),
-                    ReleaseNotes = root.TryGetProperty("releaseNotes", out var rn) ? rn.GetString() ?? string.Empty : string.Empty
+                    ReleaseNotes = root.TryGetProperty("releaseNotes", out var rn) ? rn.GetString() ?? string.Empty : string.Empty,
+                    BroadcastBannerEnabled = bannerEnabled,
+                    BroadcastBannerMessage = bannerMsg,
+                    BroadcastBannerType = bannerType
                 };
             }
         }

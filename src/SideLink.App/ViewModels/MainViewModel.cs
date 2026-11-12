@@ -16,6 +16,38 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private string _currentPage = "Dashboard";
 
+    private bool _isVerificationEnabled = true;
+
+    [ObservableProperty]
+    private bool _isBroadcastBannerVisible;
+
+    [ObservableProperty]
+    private string _broadcastBannerMessage = string.Empty;
+
+    [ObservableProperty]
+    private string _broadcastBannerType = "info";
+
+    [ObservableProperty]
+    private string _broadcastBannerBg = "#0C4A6E";
+
+    [ObservableProperty]
+    private string _broadcastBannerBorder = "#0284C7";
+
+    [ObservableProperty]
+    private string _broadcastBannerIcon = "ℹ";
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
+
+    [ObservableProperty]
+    private string _availableUpdateVersion = "1.0.0";
+
+    [ObservableProperty]
+    private string _availableUpdateNotes = string.Empty;
+
+    [ObservableProperty]
+    private string _availableUpdateUrl = "https://www.sidelinktool.me";
+
     [ObservableProperty]
     private bool _isAppUnlocked;
 
@@ -107,6 +139,24 @@ public partial class MainViewModel : ObservableObject
             return;
         }
 
+        // Check if verification is disabled by admin in Remote Config
+        if (!_isVerificationEnabled)
+        {
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                IsAppUnlocked = true;
+                LinkUnlock.IsUnlocked = true;
+                LinkUnlock.StatusText = "نظام التحقق معطّل من قِبل الإدارة - التطبيق متاح ومفتوح مباشرة لكافة المستخدمين.";
+            });
+            await _deviceService.StartMonitoringAsync();
+            App.Current?.Dispatcher?.Invoke(() => CurrentDevice = _deviceService.CurrentDevice);
+            _ = Dashboard.InitializeAsync();
+            _ = InstalledApps.InitializeAsync();
+            _ = SigningRefresh.InitializeAsync();
+            StartAuthWatchdog();
+            return;
+        }
+
         // 2. Check if this machine has a saved license
         if (LinkUnlock.CheckMachineAuthorized())
         {
@@ -163,22 +213,33 @@ public partial class MainViewModel : ObservableObject
             var config = await LinkUnlock.FetchRemoteConfigAsync();
             if (config == null) return true;
 
+            _isVerificationEnabled = config.IsVerificationEnabled;
+
             bool isKillActive = config.EmergencyKillSwitch;
             string killMsg = string.IsNullOrWhiteSpace(config.KillSwitchMessage)
                 ? "تم إيقاف تشغيل الأداة مؤقتاً من قبل الإدارة لأعمال الصيانة والتطوير الأمني."
                 : config.KillSwitchMessage;
 
             bool isForced = false;
-            if (config.ForceUpdate && !string.IsNullOrWhiteSpace(config.LatestVersion))
+            bool isUpdateAvailable = false;
+            if (!string.IsNullOrWhiteSpace(config.LatestVersion))
             {
                 if (IsVersionNewer(config.LatestVersion, CurrentAppVersion))
                 {
-                    isForced = true;
+                    if (config.ForceUpdate)
+                    {
+                        isForced = true;
+                    }
+                    else
+                    {
+                        isUpdateAvailable = true;
+                    }
                 }
             }
 
             App.Current?.Dispatcher?.Invoke(() =>
             {
+                // 1. Emergency Kill Switch
                 if (isKillActive)
                 {
                     IsEmergencyLocked = true;
@@ -190,6 +251,7 @@ public partial class MainViewModel : ObservableObject
                     IsEmergencyLocked = false;
                 }
 
+                // 2. Force Update
                 if (isForced)
                 {
                     IsForceUpdateRequired = true;
@@ -205,6 +267,68 @@ public partial class MainViewModel : ObservableObject
                 else
                 {
                     IsForceUpdateRequired = false;
+                }
+
+                // 3. Available Update (Non-forced notification)
+                if (isUpdateAvailable && !isForced)
+                {
+                    IsUpdateAvailable = true;
+                    AvailableUpdateVersion = config.LatestVersion;
+                    AvailableUpdateNotes = !string.IsNullOrWhiteSpace(config.ReleaseNotes)
+                        ? config.ReleaseNotes
+                        : "يتوفر إصدار جديد يتضمن تحسينات ومميزات إضافية.";
+                    AvailableUpdateUrl = !string.IsNullOrWhiteSpace(config.DownloadUrl)
+                        ? config.DownloadUrl
+                        : "https://www.sidelinktool.me";
+                }
+                else
+                {
+                    IsUpdateAvailable = false;
+                }
+
+                // 4. Remote Broadcast Banner
+                if (config.BroadcastBannerEnabled && !string.IsNullOrWhiteSpace(config.BroadcastBannerMessage))
+                {
+                    IsBroadcastBannerVisible = true;
+                    BroadcastBannerMessage = config.BroadcastBannerMessage;
+                    BroadcastBannerType = config.BroadcastBannerType?.ToLowerInvariant() ?? "info";
+
+                    switch (BroadcastBannerType)
+                    {
+                        case "warning":
+                            BroadcastBannerBg = "#78350F";
+                            BroadcastBannerBorder = "#F59E0B";
+                            BroadcastBannerIcon = "⚠";
+                            break;
+                        case "success":
+                            BroadcastBannerBg = "#064E3B";
+                            BroadcastBannerBorder = "#10B981";
+                            BroadcastBannerIcon = "✓";
+                            break;
+                        case "danger":
+                            BroadcastBannerBg = "#450A0A";
+                            BroadcastBannerBorder = "#EF4444";
+                            BroadcastBannerIcon = "⛔";
+                            break;
+                        case "info":
+                        default:
+                            BroadcastBannerBg = "#0C4A6E";
+                            BroadcastBannerBorder = "#0284C7";
+                            BroadcastBannerIcon = "ℹ";
+                            break;
+                    }
+                }
+                else
+                {
+                    IsBroadcastBannerVisible = false;
+                }
+
+                // 5. Link Unlock Bypass (Verification disabled by admin)
+                if (!_isVerificationEnabled && !isKillActive && !isForced)
+                {
+                    IsAppUnlocked = true;
+                    LinkUnlock.IsUnlocked = true;
+                    LinkUnlock.StatusText = "نظام التحقق معطّل من قِبل الإدارة - التطبيق متاح ومفتوح مباشرة لكافة المستخدمين.";
                 }
             });
 
@@ -248,6 +372,23 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void DismissBroadcastBanner()
+    {
+        IsBroadcastBannerVisible = false;
+    }
+
+    [RelayCommand]
+    public void OpenAvailableUpdateUrl()
+    {
+        try
+        {
+            string url = !string.IsNullOrWhiteSpace(AvailableUpdateUrl) ? AvailableUpdateUrl : "https://www.sidelinktool.me";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
     public void ExitApplication()
     {
         System.Windows.Application.Current?.Shutdown();
@@ -257,12 +398,19 @@ public partial class MainViewModel : ObservableObject
     public async Task RetryGovernanceCheckAsync()
     {
         bool ok = await CheckRemoteGovernanceAsync();
-        if (ok && LinkUnlock.CheckMachineAuthorized())
+        if (ok)
         {
-            bool onlineValid = await LinkUnlock.ValidateAuthorizationOnlineAsync();
-            if (onlineValid)
+            if (!_isVerificationEnabled)
             {
                 App.Current?.Dispatcher?.Invoke(() => IsAppUnlocked = true);
+            }
+            else if (LinkUnlock.CheckMachineAuthorized())
+            {
+                bool onlineValid = await LinkUnlock.ValidateAuthorizationOnlineAsync();
+                if (onlineValid)
+                {
+                    App.Current?.Dispatcher?.Invoke(() => IsAppUnlocked = true);
+                }
             }
         }
     }
@@ -272,10 +420,31 @@ public partial class MainViewModel : ObservableObject
         _authWatchdogTimer?.Dispose();
         _authWatchdogTimer = new System.Threading.Timer(async _ =>
         {
-            if (!IsAppUnlocked) return;
-
             try
             {
+                // Check remote governance first
+                bool govOk = await CheckRemoteGovernanceAsync();
+                if (!govOk)
+                {
+                    return;
+                }
+
+                // If verification is disabled by admin, keep app unlocked without requiring VIP or sessions
+                if (!_isVerificationEnabled)
+                {
+                    if (!IsAppUnlocked && !IsEmergencyLocked && !IsForceUpdateRequired)
+                    {
+                        App.Current?.Dispatcher?.Invoke(() =>
+                        {
+                            IsAppUnlocked = true;
+                            LinkUnlock.IsUnlocked = true;
+                        });
+                    }
+                    return;
+                }
+
+                if (!IsAppUnlocked) return;
+
                 // Immediate local expiration check: If VIP key has reached its expiration timestamp
                 if (LinkUnlock.IsVipExpired())
                 {
@@ -291,15 +460,6 @@ public partial class MainViewModel : ObservableObject
                     });
                     return;
                 }
-
-                // Check remote governance first
-                bool govOk = await CheckRemoteGovernanceAsync();
-                if (!govOk)
-                {
-                    return;
-                }
-
-                if (!IsAppUnlocked) return;
 
                 // Validate VIP key if machine is authorized via VIP
                 string? vipKey = LinkUnlock.GetSavedVipKey();

@@ -96,6 +96,11 @@ function VerifyContent() {
         const res = await fetch(`/api/verification/sessions/${sessionId}/status`);
         if (res.ok) {
           const data = await res.json();
+          if (data.killSwitch) {
+            setStatus('error');
+            setErrorMessage(data.reason || 'تطبيق SideLink متوقف مؤقتاً لأعمال الصيانة والتطوير الأمني.');
+            return;
+          }
           if (data.status === 'verified') {
             setStatus('verified');
           } else if (data.status === 'expired') {

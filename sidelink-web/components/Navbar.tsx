@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Download, Menu, X, Sparkles, Smartphone, ShieldCheck, HelpCircle, Layers, FileCode2 } from 'lucide-react';
 
 interface NavItem {
@@ -33,6 +33,26 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [remoteConfig, setRemoteConfig] = useState<{
+    emergencyKillSwitch?: boolean;
+    killSwitchMessage?: string;
+    broadcastBanner?: {
+      enabled: boolean;
+      message: string;
+      type: 'info' | 'warning' | 'success' | 'danger';
+      link?: string;
+      linkText?: string;
+    };
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/app/config')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setRemoteConfig(d);
+      })
+      .catch(() => {});
+  }, []);
 
   // Smooth scroll handler with proper navbar offset
   const scrollToSection = (e: React.MouseEvent, id: string) => {
@@ -75,6 +95,30 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-950/85 backdrop-blur-md transition-all duration-300">
+      {/* Remote Governance Broadcast / Killswitch Banner */}
+      {remoteConfig?.emergencyKillSwitch && (
+        <div className="bg-red-600 text-white text-xs font-bold py-2 px-4 text-center border-b border-red-500 flex items-center justify-center gap-2">
+          <span>⚠️ {remoteConfig.killSwitchMessage || 'تطبيق SideLink متوقف مؤقتاً لأعمال الصيانة والتطوير الأمني.'}</span>
+        </div>
+      )}
+      {!remoteConfig?.emergencyKillSwitch && remoteConfig?.broadcastBanner?.enabled && remoteConfig?.broadcastBanner?.message && (
+        <div className={`text-xs font-semibold py-2 px-4 text-center border-b flex items-center justify-center gap-2 ${
+          remoteConfig.broadcastBanner.type === 'danger'
+            ? 'bg-red-950 text-red-200 border-red-800'
+            : remoteConfig.broadcastBanner.type === 'warning'
+            ? 'bg-amber-950 text-amber-200 border-amber-800'
+            : remoteConfig.broadcastBanner.type === 'success'
+            ? 'bg-emerald-950 text-emerald-200 border-emerald-800'
+            : 'bg-blue-950 text-blue-200 border-blue-800'
+        }`}>
+          <span>{remoteConfig.broadcastBanner.message}</span>
+          {remoteConfig.broadcastBanner.link && (
+            <a href={remoteConfig.broadcastBanner.link} target="_blank" rel="noopener noreferrer" className="underline font-bold text-white ml-2">
+              {remoteConfig.broadcastBanner.linkText || 'المزيد'} &larr;
+            </a>
+          )}
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
         {/* Logo */}
         <a

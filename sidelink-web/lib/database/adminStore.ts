@@ -12,11 +12,13 @@ import {
 export type { RemoteConfig, AdsConfig, CuratedIpa, VipKey, BlacklistedIp, TelemetryEvent };
 
 // Config Methods
-export function getRemoteConfig(): RemoteConfig {
+export async function getRemoteConfig(): Promise<RemoteConfig> {
+  await dbInstance.refreshFromCloud();
   return { ...dbInstance.getDb().config };
 }
 
-export function updateRemoteConfig(partial: Partial<RemoteConfig>): RemoteConfig {
+export async function updateRemoteConfig(partial: Partial<RemoteConfig>): Promise<RemoteConfig> {
+  await dbInstance.refreshFromCloud();
   const db = dbInstance.getDb();
   db.config = {
     ...db.config,
@@ -26,7 +28,7 @@ export function updateRemoteConfig(partial: Partial<RemoteConfig>): RemoteConfig
       ...(partial.broadcastBanner || {}),
     },
   };
-  dbInstance.save();
+  await dbInstance.saveAsync();
   return db.config;
 }
 

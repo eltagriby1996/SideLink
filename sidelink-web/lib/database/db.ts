@@ -267,7 +267,14 @@ class PersistentDatabase {
     }
 
     return {
-      config: { ...def.config, ...(parsed?.config || {}) },
+      config: {
+        ...def.config,
+        ...(parsed?.config || {}),
+        broadcastBanner: {
+          ...def.config.broadcastBanner,
+          ...(parsed?.config?.broadcastBanner || {}),
+        },
+      },
       ads: { ...def.ads, ...(parsed?.ads || {}) },
       sessions: parsed?.sessions || {},
       ipas: Array.isArray(parsed?.ipas) ? parsed.ipas : def.ipas,

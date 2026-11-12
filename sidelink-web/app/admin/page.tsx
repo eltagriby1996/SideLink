@@ -145,6 +145,7 @@ export default function AdminPage() {
   const [blacklist, setBlacklist] = useState<BlacklistedIp[]>([]);
   const [toastMessage, setToastMessage] = useState<string>('');
   const [copiedKey, setCopiedKey] = useState<string>('');
+  const [isSavingConfig, setIsSavingConfig] = useState<boolean>(false);
 
   // Modals & form states
   const [isNewIpaModalOpen, setIsNewIpaModalOpen] = useState<boolean>(false);
@@ -231,7 +232,8 @@ export default function AdminPage() {
 
   // Save Remote Config
   const handleSaveConfig = async () => {
-    if (!config) return;
+    if (!config || isSavingConfig) return;
+    setIsSavingConfig(true);
     try {
       const res = await fetch('/api/admin/config', {
         method: 'POST',
@@ -240,13 +242,15 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('✓ تم حفظ الإعدادات والتحديثات بنجاح!');
+        showToast('✓ تم حفظ الإعدادات والتحديثات ومزامنتها سحابياً بنجاح!');
         fetchAllData();
       } else {
         alert(data.error || 'فشل حفظ الإعدادات.');
       }
     } catch {
-      alert('خطأ في الاتصال.');
+      alert('خطأ في الاتصال بالسيرفر.');
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -834,11 +838,21 @@ export default function AdminPage() {
               </div>
               <button
                 type="button"
+                disabled={isSavingConfig}
                 onClick={handleSaveConfig}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs transition shadow-lg shadow-blue-600/30"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-xs transition shadow-lg shadow-blue-600/30"
               >
-                <Check className="w-4 h-4" />
-                <span>حفظ التعديلات الآن</span>
+                {isSavingConfig ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>جاري الحفظ والمزامنة السحابية...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>حفظ التعديلات الآن</span>
+                  </>
+                )}
               </button>
             </div>
 
