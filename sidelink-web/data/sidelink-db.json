@@ -11,7 +11,7 @@
     "broadcastBanner": {
       "enabled": true,
       "message": "مرحباً بكم في SideLink v1.0.0! تم تفعيل دعم التوقيع الفوري لكافة أجهزة iOS 15 - 18.2. الووووووووو",
-      "type": "info",
+      "type": "success",
       "link": "https://github.com/eltagriby1996/SideLink",
       "linkText": "عرض التحديثات"
     }
