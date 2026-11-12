@@ -121,15 +121,6 @@
       "isActive": true
     },
     {
-      "key": "SL-VIP-VERIFIED-REAL-KEY",
-      "note": "مفتاح التحقق الفعلي المباشر",
-      "createdAt": "2026-11-06T14:48:00.000Z",
-      "expiresAt": null,
-      "usedCount": 0,
-      "maxUses": 0,
-      "isActive": true
-    },
-    {
       "key": "SL-VIP-OW5O-UFX1-ARLM",
       "note": "Test 1 hour",
       "createdAt": "2026-11-12T14:36:31.358Z",
