@@ -116,9 +116,12 @@
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
       "expiresAt": null,
-      "usedCount": 0,
+      "usedCount": 1,
       "maxUses": 0,
-      "isActive": true
+      "isActive": true,
+      "boundHwid": "727AE365BAFEFB801E4AAFF185139DDA311C4606078BA0638DD75DA19E713A4F",
+      "boundMachine": "DESKTOP-KCR0OLA",
+      "boundAt": "2026-11-12T17:56:30.270Z"
     }
   ],
   "blacklist": [],
