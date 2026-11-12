@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Target verified package URL
     const verifiedIpaUrl = 'https://website.khoindvn.io.vn/apps/5jv3w.ipa';
-    const verifiedBundleId = 'com.khoindvn.esignvietnamrubber';
+    const verifiedBundleId = 'com.egoz.mdt.vrggr.04';
     const directIpaDownload = `${origin}/downloads/SideStore.ipa`;
 
     // Build manifest URL on our custom domain

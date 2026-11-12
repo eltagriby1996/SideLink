@@ -27,7 +27,8 @@ import {
   FileCode2,
   Share2,
   Clock,
-  CalendarCheck2
+  CalendarCheck2,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function WebSideloadPage() {
@@ -252,8 +253,10 @@ export default function WebSideloadPage() {
         expiresAt: data.expiresAt,
       });
 
-      // On iOS Safari, automatically trigger the native prompt
-      if (isIOSDevice && data.installUrl) {
+      // On iOS Safari: Only auto-trigger OTA prompt for direct enterprise mode.
+      // For Apple ID 7-day mode, DO NOT auto-redirect to OTA because iOS blocks 7-day development profiles on OTA (stopping at 20%).
+      // Instead, let the user tap SideStore 1-click install or download IPA cleanly.
+      if (isIOSDevice && signingMode === 'direct-enterprise' && data.installUrl) {
         window.location.href = data.installUrl;
       }
     } catch (err: any) {
@@ -749,10 +752,21 @@ export default function WebSideloadPage() {
                       className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold text-xs transition active:scale-95"
                     >
                       <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      <span>تثبيت Safari OTA المباشر</span>
+                      <span>تثبيت Safari OTA (يتطلب DNS)</span>
                     </a>
 
-                    {/* Action 5: ESign */}
+                    {/* Action 5: Anti-Revoke DNS */}
+                    <a
+                      href="https://github.com/dns-khoindvn/oci-auto-vm/releases/download/DNS/khoindvn.mobileconfig"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 font-bold text-xs transition active:scale-95"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>تثبيت مانع الحظر DNS 🛡️</span>
+                    </a>
+
+                    {/* Action 6: ESign */}
                     <a
                       href="esign://"
                       className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shadow-md shadow-indigo-600/20 active:scale-95"
@@ -760,6 +774,28 @@ export default function WebSideloadPage() {
                       <Share2 className="w-3.5 h-3.5" />
                       <span>فتح في ESign 📲</span>
                     </a>
+                  </div>
+                </div>
+
+                {/* 20% Issue Clarification & DNS Notice */}
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-right space-y-2 text-xs max-w-xl mx-auto">
+                  <div className="font-bold text-amber-300 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>هل التحميل بيتوقف عند ربع الدائرة (20%) وبيقول &quot;تعذر التثبيت&quot;؟</span>
+                  </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    السبب الهندسي: نظام iOS يمنع أمنياً تثبيت شهادات المطور المجانية الـ 7 أيام عبر متصفح سفاري (OTA)، كما تفحص أبل الشهادة عند 20% وتوقفها ما لم يكن مانع الحظر نشطاً.<br />
+                    <strong>الحلول المعتمدة لتشغيلها فوراً:</strong>
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-2 pt-1 text-[11px]">
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-right">
+                      <strong className="text-cyan-400 block mb-0.5">1. للآيفون مباشرة (شهادة 7 أيام):</strong>
+                      اضغط على زر <strong className="text-white">&quot;تثبيت فوري في SideStore&quot;</strong> بالأعلى لتثبيت محلي بدون وسيط المتصفح.
+                    </div>
+                    <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-right">
+                      <strong className="text-emerald-400 block mb-0.5">2. عبر كابل الكمبيوتر:</strong>
+                      استخدم <strong className="text-white">برنامج SideLink للويندوز</strong> لتثبيت التطبيق بشهادة 7 أيام في 5 ثوانٍ بنجاح 100%.
+                    </div>
                   </div>
                 </div>
 

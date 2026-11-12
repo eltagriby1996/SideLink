@@ -10,12 +10,12 @@ interface PackageDef {
 
 const VERIFIED_PACKAGES: Record<string, PackageDef> = {
   esign: {
-    bundle: 'com.khoindvn.esignvietnamrubber',
+    bundle: 'com.egoz.mdt.vrggr.04',
     name: 'ESign SideLink Edition',
     url: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
   },
   'esign-vietnam': {
-    bundle: 'com.khoindvn.esignvietnamrubber',
+    bundle: 'com.egoz.mdt.vrggr.04',
     name: 'ESign Viet Nam Rubber',
     url: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
   },
@@ -25,7 +25,7 @@ const VERIFIED_PACKAGES: Record<string, PackageDef> = {
     url: 'https://website.khoindvn.io.vn/apps/ycmpo.ipa',
   },
   ksign: {
-    bundle: 'com.khoindvn.ksignvietnamrubber',
+    bundle: 'com.egoz.mdt.vrggr.04',
     name: 'KSign SideLink Edition',
     url: 'https://website.khoindvn.io.vn/apps/l8vr7.ipa',
   },
@@ -44,10 +44,10 @@ export async function GET(request: NextRequest) {
   let targetUrl = searchParams.get('url') || known.url;
   let targetBundle = known.bundle;
 
-  if (targetUrl.includes('5jv3w.ipa') || targetUrl.includes('esign')) {
-    targetBundle = 'com.khoindvn.esignvietnamrubber';
-  } else if (targetUrl.includes('l8vr7.ipa') || targetUrl.includes('ksign')) {
-    targetBundle = 'com.khoindvn.ksignvietnamrubber';
+  if (targetUrl.includes('5jv3w.ipa')) {
+    targetBundle = 'com.egoz.mdt.vrggr.04';
+  } else if (targetUrl.includes('l8vr7.ipa')) {
+    targetBundle = 'com.egoz.mdt.vrggr.04';
   } else if (targetUrl.includes('ycmpo.ipa') || targetUrl.includes('powerchina')) {
     targetBundle = 'com.SVwaR1.4ujc50';
   } else if (searchParams.get('bundle')) {

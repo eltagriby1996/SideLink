@@ -20,11 +20,11 @@ const NAV_ITEMS: NavItem[] = [
     href: '/web-sideload',
   },
   {
-    id: 'mobile',
-    label: 'التجديد بالآيفون',
-    badge: 'جديد',
-    badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    href: '/mobile',
+    id: 'esign-ksign',
+    label: 'شهادات و DNS',
+    badge: 'OTA',
+    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+    href: '/certificates',
   },
   {
     id: 'modded-ipas',
@@ -34,14 +34,14 @@ const NAV_ITEMS: NavItem[] = [
     href: '/modded-ipas',
   },
   {
-    id: 'esign-ksign',
-    label: 'شهادات و DNS',
-    badge: 'OTA',
-    badgeColor: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    href: '/certificates',
+    id: 'mobile',
+    label: 'التجديد بالآيفون',
+    badge: 'جديد',
+    badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    href: '/mobile',
   },
   { id: 'prerequisites', label: 'المتطلبات', href: '/#prerequisites' },
-  { id: 'guide', label: 'دليل الاستخدام', href: '/#guide' },
+  { id: 'guide', label: 'الشرح', href: '/#guide' },
   { id: 'features', label: 'المميزات', href: '/#features' },
 ];
 
@@ -113,7 +113,7 @@ export default function Navbar() {
         </a>
 
         {/* Clean Desktop Navigation (lg and xl screens) */}
-        <nav className="hidden lg:flex items-center gap-2 xl:gap-5 text-xs xl:text-sm font-medium text-slate-300">
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-3.5 text-xs xl:text-sm font-medium text-slate-300">
           {NAV_ITEMS.map((item) => (
             <a
               key={item.id}
@@ -121,7 +121,7 @@ export default function Navbar() {
               onClick={(e) => {
                 if (!item.href) scrollToSection(e, item.id);
               }}
-              className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-900/70 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 group/item"
+              className="px-2 xl:px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-900/70 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap shrink-0 group/item"
             >
               <span>{item.label}</span>
               {item.badge && (
