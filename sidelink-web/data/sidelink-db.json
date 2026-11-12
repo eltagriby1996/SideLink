@@ -167,6 +167,15 @@
       "usedCount": 0,
       "maxUses": 0,
       "isActive": true
+    },
+    {
+      "key": "SL-VIP-E9UT-QF1D-B5RZ",
+      "note": "Test Lifetime",
+      "createdAt": "2026-11-12T14:36:36.324Z",
+      "expiresAt": null,
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
     }
   ],
   "blacklist": [],
