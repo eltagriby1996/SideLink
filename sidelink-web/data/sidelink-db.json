@@ -58,6 +58,14 @@
       "expiresAt": "2026-11-12T16:38:08.037Z",
       "verifiedAt": null,
       "challengeNonce": ""
+    },
+    "f4e56ebc52bf4a28884976ae67c089c3": {
+      "sessionId": "f4e56ebc52bf4a28884976ae67c089c3",
+      "status": "pending",
+      "createdAt": "2026-11-12T16:26:21.941Z",
+      "expiresAt": "2026-11-12T16:41:21.941Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
     }
   },
   "ipas": [
@@ -195,7 +203,7 @@
       "expiresAt": "2026-11-12T17:24:46.547Z",
       "usedCount": 1,
       "maxUses": 1,
-      "isActive": false,
+      "isActive": true,
       "boundHwid": "727AE365BAFEFB801E4AAFF185139DDA311C4606078BA0638DD75DA19E713A4F",
       "boundMachine": "DESKTOP-KCR0OLA",
       "boundAt": "2026-11-12T16:25:05.625Z"
