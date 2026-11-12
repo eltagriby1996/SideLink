@@ -121,18 +121,6 @@
       "isActive": true
     },
     {
-      "key": "SL-VIP-OW5O-UFX1-ARLM",
-      "note": "Test 1 hour",
-      "createdAt": "2026-11-12T14:36:31.358Z",
-      "expiresAt": "2026-11-12T15:36:31.358Z",
-      "usedCount": 1,
-      "maxUses": 0,
-      "isActive": true,
-      "boundHwid": "HWID-TEST-001",
-      "boundMachine": "MACHINE-A",
-      "boundAt": "2026-11-12T14:36:33.751Z"
-    },
-    {
       "key": "SL-VIP-Q4FO-ECPP-7A18",
       "note": "Test Expired",
       "createdAt": "2026-11-12T14:36:35.001Z",
