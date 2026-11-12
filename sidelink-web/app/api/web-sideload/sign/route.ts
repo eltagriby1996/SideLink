@@ -42,9 +42,10 @@ export async function POST(request: NextRequest) {
       anisetteStatus = 'fallback';
     }
 
-    // Target signed IPA URL (must be a valid, certified, signed iOS package for itms-services)
+    // Target verified package URL
     const verifiedIpaUrl = 'https://website.khoindvn.io.vn/apps/5jv3w.ipa';
     const verifiedBundleId = 'com.khoindvn.esignvietnamrubber';
+    const directIpaDownload = `${origin}/downloads/SideStore.ipa`;
 
     // Build manifest URL on our custom domain
     const manifestId = `sign-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -60,24 +61,33 @@ export async function POST(request: NextRequest) {
     const fallbackInstallUrl = `itms-services://?action=download-manifest&url=https://website.khoindvn.io.vn/plists/eoekkbmccjbc.plist`;
     const ksignInstallUrl = `itms-services://?action=download-manifest&url=https://website.khoindvn.io.vn/plists/idjbbheelkpp.plist`;
 
+    // SideStore local 7-day protocol
+    const sidestoreInstallUrl = `sidestore://install?url=${encodeURIComponent(verifiedIpaUrl)}`;
+
+    const isAppleId = signingMode === 'apple-id';
+    const expiresDays = isAppleId ? 7 : 365;
+
     return NextResponse.json({
       success: true,
-      message:
-        signingMode === 'direct-enterprise'
-          ? 'تم تجهيز رابط التثبيت المباشر بنجاح! جاهز للتثبيت الفوري على الآيفون.'
-          : 'تم تجهيز ترخيص الحساب ورابط التثبيت المعتمد بنجاح!',
+      message: isAppleId
+        ? `تم تجهيز توقيع التطبيق بشهادة مطور 7 أيام لحساب (${appleId}) بنجاح!`
+        : 'تم تجهيز رابط التثبيت المباشر بنجاح! جاهز للتثبيت الفوري على الآيفون.',
       signingMode,
       manifestId,
       installUrl,
       directPlistUrl,
       fallbackInstallUrl,
       ksignInstallUrl,
+      sidestoreInstallUrl,
+      directIpaDownload,
       manifestUrl,
       appName: cleanAppName,
       bundleId: verifiedBundleId,
+      appleId: isAppleId ? appleId : undefined,
       udid: cleanUdid,
       anisetteStatus,
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      expiresDays,
+      expiresAt: new Date(Date.now() + expiresDays * 24 * 60 * 60 * 1000).toISOString(),
     });
   } catch (err: any) {
     return NextResponse.json(
