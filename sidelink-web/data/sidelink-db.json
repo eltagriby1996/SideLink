@@ -119,18 +119,6 @@
       "usedCount": 0,
       "maxUses": 0,
       "isActive": true
-    },
-    {
-      "key": "SL-VIP-E9UT-QF1D-B5RZ",
-      "note": "Test Lifetime",
-      "createdAt": "2026-11-12T14:36:36.324Z",
-      "expiresAt": null,
-      "usedCount": 1,
-      "maxUses": 0,
-      "isActive": true,
-      "boundHwid": "HWID-TEST-003",
-      "boundMachine": "MACHINE-C",
-      "boundAt": "2026-11-12T14:36:38.151Z"
     }
   ],
   "blacklist": [],
