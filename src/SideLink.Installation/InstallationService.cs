@@ -73,14 +73,34 @@ public class InstallationService : IInstallationService
                 return false;
             }
 
-            // 3. Record to repository on verified success
+            // 3. Cache the IPA permanently for instant 1-click in-place renewals
+            string persistentIpaPath = signedIpaPath;
+            try
+            {
+                string cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SideLink",
+                    "AppCache");
+                Directory.CreateDirectory(cacheDir);
+
+                string cachePath = Path.Combine(cacheDir, $"{metadata.BundleIdentifier}.ipa");
+                File.Copy(signedIpaPath, cachePath, overwrite: true);
+                persistentIpaPath = cachePath;
+                _logger.LogInformation("Cached IPA package for {BundleId} at {Path}", metadata.BundleIdentifier, cachePath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Could not cache IPA package locally for {BundleId}", metadata.BundleIdentifier);
+            }
+
+            // 4. Record to repository on verified success
             DateTimeOffset? expiration = metadata.ProvisioningProfile?.ExpirationDate;
             var managedApp = new ManagedApp
             {
                 BundleIdentifier = metadata.BundleIdentifier,
                 AppName = metadata.EffectiveTitle,
                 Version = metadata.Version,
-                OriginalIpaPath = signedIpaPath,
+                OriginalIpaPath = persistentIpaPath,
                 IconBase64 = metadata.IconBase64,
                 InstalledAt = DateTimeOffset.UtcNow,
                 LastRefreshedAt = DateTimeOffset.UtcNow,

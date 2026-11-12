@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const deviceName = nameMatch ? nameMatch[1].trim() : 'iPhone';
 
     // According to Apple Profile Service specification, response MUST be 301 Moved Permanently
-    const redirectUrl = new URL(`${origin}/`);
+    const redirectUrl = new URL(`${origin}/web-sideload`);
     if (udid) {
       redirectUrl.searchParams.set('udid', udid);
       redirectUrl.searchParams.set('model', product);
@@ -32,13 +32,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.redirect(redirectUrl.toString(), 301);
   } catch (error) {
-    return NextResponse.redirect(`${origin}/?error=enroll_failed`, 301);
+    return NextResponse.redirect(`${origin}/web-sideload?error=enroll_failed`, 301);
   }
 }
 
 // Fallback GET route in case user visits directly
 export async function GET(request: NextRequest) {
   const origin = request.nextUrl.origin || 'https://www.sidelinktool.me';
-  return NextResponse.redirect(`${origin}/`, 302);
+  return NextResponse.redirect(`${origin}/web-sideload`, 302);
 }
 

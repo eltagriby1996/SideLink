@@ -536,9 +536,23 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel>
                                 <TextBlock Text="التطبيقات المثبتة على الهاتف" FontSize="22" FontWeight="Black" Foreground="White" />
-                                <TextBlock Text="{Binding InstalledApps.StatusMessage}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" />
+                                <TextBlock Text="{Binding InstalledApps.StatusMessage}" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,2,0,0" TextWrapping="Wrap" />
                             </StackPanel>
-                            <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 تحديث القائمة" Command="{Binding InstalledApps.LoadAppsCommand}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                        Content="⚡ تجديد كل التطبيقات (تجديد فوري)" 
+                                        Command="{Binding InstalledApps.RefreshAllAppsCommand}" 
+                                        Margin="0,0,8,0" 
+                                        Padding="14,8" 
+                                        FontSize="13" 
+                                        FontWeight="Bold"
+                                        ToolTip="تجديد شهادات جميع التطبيقات المثبتة لـ 7 أيام إضافية دون إعادة التثبيت" />
+                                <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                        Content="🔄 تحديث القائمة" 
+                                        Command="{Binding InstalledApps.LoadAppsCommand}" 
+                                        Padding="12,8" 
+                                        FontSize="13" />
+                            </StackPanel>
                         </Grid>
 
                         <ItemsControl ItemsSource="{Binding InstalledApps.Apps}">
@@ -566,12 +580,12 @@
 
                                             <!-- Expiration Badge -->
                                             <Border Grid.Column="2" Background="#141E33" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,10,0" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding ExpirationDate, StringFormat='Expires: {0:yyyy-MM-dd}'}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource WarningAmberBrush}" />
+                                                <TextBlock Text="{Binding ExpirationStatusBadge}" FontSize="11" FontWeight="Bold" Foreground="{Binding ExpirationBadgeColor}" />
                                             </Border>
 
                                             <!-- Action Buttons -->
                                             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="🔄 تجديد" Command="{Binding DataContext.InstalledApps.RefreshSingleAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,8,0" Padding="12,6" FontSize="12" />
+                                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="⚡ تجديد الشهادة" Command="{Binding DataContext.InstalledApps.RefreshSingleAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,8,0" Padding="14,6" FontSize="12" FontWeight="Bold" ToolTip="تجديد شهادة المطور لـ 7 أيام جديدة دون حذف بيانات أو محادثات التطبيق" />
                                                 <Button Style="{StaticResource SecondaryButtonStyle}" Content="✕ إزالة" Command="{Binding DataContext.InstalledApps.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,6" FontSize="12" />
                                             </StackPanel>
                                         </Grid>

@@ -33,13 +33,72 @@ public record ManagedApp
     public string DeviceUdid { get; init; } = string.Empty;
     public string? LastErrorMessage { get; init; }
 
+    public string? ResolvedIpaPath
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(OriginalIpaPath) && File.Exists(OriginalIpaPath))
+            {
+                return OriginalIpaPath;
+            }
+
+            try
+            {
+                string cacheDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "SideLink",
+                    "AppCache");
+
+                if (Directory.Exists(cacheDir))
+                {
+                    string byBundle = Path.Combine(cacheDir, $"{BundleIdentifier}.ipa");
+                    if (File.Exists(byBundle)) return byBundle;
+
+                    string byName = Path.Combine(cacheDir, $"{AppName}.ipa");
+                    if (File.Exists(byName)) return byName;
+                }
+            }
+            catch { }
+
+            return null;
+        }
+    }
+
     public bool IsEligibleForRefresh =>
-        !string.IsNullOrWhiteSpace(OriginalIpaPath) &&
-        File.Exists(OriginalIpaPath) &&
+        ResolvedIpaPath != null &&
         (Status == AppLifecycleStatus.Expired || Status == AppLifecycleStatus.ExpiringSoon || Status == AppLifecycleStatus.PendingRefresh);
 
     public double DaysUntilExpiration =>
         ExpirationDate.HasValue ? Math.Max(0, (ExpirationDate.Value - DateTimeOffset.UtcNow).TotalDays) : 999.0;
+
+    public string ExpirationStatusBadge
+    {
+        get
+        {
+            if (!ExpirationDate.HasValue) return "شهادة غير محددة";
+            var remaining = ExpirationDate.Value - DateTimeOffset.UtcNow;
+            if (remaining.TotalSeconds <= 0)
+                return "منتهي الصلاحية ⚠️ (بحاجة لتجديد)";
+            if (remaining.TotalHours <= 24)
+                return $"باقي {Math.Max(1, (int)remaining.TotalHours)} ساعة ⚠️ (جدد الآن)";
+            var days = (int)Math.Ceiling(remaining.TotalDays);
+            if (days <= 3)
+                return $"باقي {days} أيام ⏳ (يُفضل التجديد)";
+            return $"باقي {days} أيام ✓ (نشط)";
+        }
+    }
+
+    public string ExpirationBadgeColor
+    {
+        get
+        {
+            if (!ExpirationDate.HasValue) return "#64748B";
+            var remaining = ExpirationDate.Value - DateTimeOffset.UtcNow;
+            if (remaining.TotalSeconds <= 0) return "#EF4444"; // Red
+            if (remaining.TotalDays <= 3) return "#F59E0B";    // Amber
+            return "#10B981";                                  // Emerald
+        }
+    }
 }
 
 public record SigningConfiguration

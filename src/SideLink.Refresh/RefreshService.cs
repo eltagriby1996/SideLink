@@ -70,43 +70,46 @@ public class RefreshService : IRefreshService
         IProgress<AppOperationProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(app.OriginalIpaPath) || !File.Exists(app.OriginalIpaPath))
+        string? ipaPath = app.ResolvedIpaPath;
+
+        if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
         {
-            string err = $"Original IPA file '{app.OriginalIpaPath}' is not accessible on disk. An IPA file is required to re-sign and refresh.";
+            string err = $"لم يتم العثور على حزمة التطبيق (IPA) لـ ({app.AppName}) في الذاكرة المؤقتة. يرجى تثبيت التطبيق أولاً ليتم حفظه تلقائياً للتجديد الفوري.";
             _logger.LogWarning("{Error}", err);
             await _appRepository.UpdateStatusAsync(app.Id, AppLifecycleStatus.Failed, err);
             throw new FileNotFoundException(err);
         }
 
         _logger.LogInformation("Refreshing application {AppName} ({BundleId}) for device {UDID}", app.AppName, app.BundleIdentifier, device.DeviceId);
-        ReportProgress(progress, $"Re-signing {app.AppName}...", 20);
+        ReportProgress(progress, $"جاري تجديد شهادة {app.AppName} بدون حذف البيانات...", 25);
 
         try
         {
             // 1. Re-sign IPA with the app's specific registered bundle identifier
-            var appConfig = config with { CustomBundleId = app.BundleIdentifier };
-            string signedIpa = await _signingService.SignIpaAsync(app.OriginalIpaPath, appConfig, device, progress, cancellationToken);
+            var appConfig = config with { CustomBundleId = app.BundleIdentifier, ModifyBundleId = false };
+            string signedIpa = await _signingService.SignIpaAsync(ipaPath, appConfig, device, progress, cancellationToken);
 
-            // 2. Re-install IPA
-            ReportProgress(progress, $"Re-installing {app.AppName} to {device.FriendlyModelName}...", 60);
+            // 2. Perform in-place upgrade installation (preserves all app data & documents)
+            ReportProgress(progress, $"تحديث الشهادة على الآيفون والحفاظ على البيانات ({app.AppName})...", 65);
             bool installed = await _installationService.InstallIpaAsync(signedIpa, device, progress, cancellationToken);
             if (!installed)
             {
-                throw new InvalidOperationException($"Re-installation of {app.AppName} failed.");
+                throw new InvalidOperationException($"فشل تحديث شهادة {app.AppName} على جهاز الآيفون.");
             }
 
-            // 3. Update records
+            // 3. Update records with 7 new days
             var newExpiration = DateTimeOffset.UtcNow.AddDays(7);
             var updatedApp = app with
             {
                 LastRefreshedAt = DateTimeOffset.UtcNow,
                 ExpirationDate = newExpiration,
                 Status = AppLifecycleStatus.Active,
+                OriginalIpaPath = ipaPath,
                 LastErrorMessage = null
             };
 
             await _appRepository.SaveAppAsync(updatedApp);
-            ReportProgress(progress, $"{app.AppName} refreshed successfully!", 100, isCompleted: true);
+            ReportProgress(progress, $"✓ تم تجديد {app.AppName} بنجاح! الصلاحية: 7 أيام جديدة.", 100, isCompleted: true);
             _logger.LogInformation("Successfully refreshed {AppName}. Next expiration: {Exp:g}", app.AppName, newExpiration);
 
             return updatedApp;
@@ -115,7 +118,7 @@ public class RefreshService : IRefreshService
         {
             _logger.LogError(ex, "Failed to refresh application {AppName}", app.AppName);
             await _appRepository.UpdateStatusAsync(app.Id, AppLifecycleStatus.Failed, ex.Message);
-            ReportProgress(progress, $"Failed to refresh: {ex.Message}", 0, hasError: true, errorMessage: ex.Message);
+            ReportProgress(progress, $"فشل التجديد: {ex.Message}", 0, hasError: true, errorMessage: ex.Message);
             throw;
         }
     }
@@ -127,7 +130,10 @@ public class RefreshService : IRefreshService
         CancellationToken cancellationToken = default)
     {
         var allApps = await CheckAppExpirationsAsync(cancellationToken);
-        var eligible = allApps.Where(a => a.IsEligibleForRefresh && a.DeviceUdid == device.DeviceId).ToList();
+        var eligible = allApps.Where(a => 
+            a.ResolvedIpaPath != null && 
+            (string.IsNullOrWhiteSpace(a.DeviceUdid) || a.DeviceUdid == device.DeviceId)
+        ).ToList();
 
         _logger.LogInformation("Found {Count} eligible apps to refresh for device {UDID}", eligible.Count, device.DeviceId);
         var refreshedApps = new List<ManagedApp>();
@@ -138,6 +144,7 @@ public class RefreshService : IRefreshService
             var app = eligible[i];
             try
             {
+                ReportProgress(progress, $"جاري تجديد ({i + 1}/{eligible.Count}): {app.AppName}...", (int)((i / (double)eligible.Count) * 100));
                 var refreshed = await RefreshAppAsync(app, device, config, progress, cancellationToken);
                 refreshedApps.Add(refreshed);
             }
@@ -147,6 +154,7 @@ public class RefreshService : IRefreshService
             }
         }
 
+        ReportProgress(progress, $"✓ تم الانتهاء من تجديد {refreshedApps.Count} من أصل {eligible.Count} تطبيق بنجاح!", 100, isCompleted: true);
         return refreshedApps;
     }
 
