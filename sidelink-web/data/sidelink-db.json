@@ -38,16 +38,16 @@
     "session-cycle-abc": {
       "sessionId": "session-cycle-abc",
       "status": "verified",
-      "createdAt": "2026-11-12T09:50:39.053Z",
-      "expiresAt": "2026-11-12T09:51:39.052Z",
-      "verifiedAt": "2026-11-12T09:50:39.056Z",
+      "createdAt": "2026-11-12T10:02:20.956Z",
+      "expiresAt": "2026-11-12T10:03:20.956Z",
+      "verifiedAt": "2026-11-12T10:02:20.960Z",
       "challengeNonce": "valid-challenge-nonce-789"
     },
     "session-expired-xyz": {
       "sessionId": "session-expired-xyz",
       "status": "expired",
-      "createdAt": "2026-11-12T09:50:39.058Z",
-      "expiresAt": "2026-11-12T09:50:38.058Z",
+      "createdAt": "2026-11-12T10:02:20.963Z",
+      "expiresAt": "2026-11-12T10:02:19.963Z",
       "verifiedAt": null,
       "challengeNonce": "nonce-xyz"
     }

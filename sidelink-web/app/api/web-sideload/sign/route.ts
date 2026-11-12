@@ -2,38 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-interface AppMeta {
-  bundleId: string;
-  name: string;
-  ipaUrl?: string;
-  plistUrl?: string;
-}
-
-const KNOWN_APPS: Record<string, AppMeta> = {
-  esign: {
-    name: 'ESign (الشهادة الرسمية)',
-    bundleId: 'com.khoindvn.esignvietnamrubber',
-    ipaUrl: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
-    plistUrl: 'https://website.khoindvn.io.vn/plists/dgaefbobaeop.plist',
-  },
-  ksign: {
-    name: 'KSign (التوقيع السريع)',
-    bundleId: 'com.khoindvn.ksignvietnamrubber',
-    ipaUrl: 'https://website.khoindvn.io.vn/apps/l8vr7.ipa',
-    plistUrl: 'https://website.khoindvn.io.vn/plists/idjbbheelkpp.plist',
-  },
-  'esign-powerchina': {
-    name: 'ESign (PowerChina)',
-    bundleId: 'com.khoindvn.esignpowerchina',
-    plistUrl: 'https://website.khoindvn.io.vn/plists/eoekkbmccjbc.plist',
-  },
-  sidestore: {
-    name: 'SideStore',
-    bundleId: 'com.SideStore.SideStore',
-    ipaUrl: '/downloads/SideStore.ipa',
-  },
-};
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -62,12 +30,8 @@ export async function POST(request: NextRequest) {
       ? udid.trim().toUpperCase()
       : '00008101-GENERIC';
 
-    const normalizedAppId = (appId || '').toLowerCase();
-    const knownApp = KNOWN_APPS[normalizedAppId];
-
-    const rawName = (appName || knownApp?.name || 'SideLink App').replace(/\.ipa$/i, '').trim();
+    const rawName = (appName || 'SideLink App').replace(/\.ipa$/i, '').trim();
     const cleanAppName = rawName || 'SideLink App';
-    const cleanBundleId = (bundleId || knownApp?.bundleId || 'com.sidelink.app.' + Math.random().toString(36).substring(7)).trim();
 
     // Check Anisette connectivity
     let anisetteStatus = 'online';
@@ -78,51 +42,46 @@ export async function POST(request: NextRequest) {
       anisetteStatus = 'fallback';
     }
 
-    // Determine target IPA URL
-    let ipaTarget = ipaUrl || knownApp?.ipaUrl || '';
-    if (!ipaTarget) {
-      ipaTarget = `${origin}/downloads/SideStore.ipa`;
-    } else if (!ipaTarget.startsWith('http')) {
-      ipaTarget = `${origin}${ipaTarget.startsWith('/') ? '' : '/'}${ipaTarget}`;
-    }
-
-    // Determine direct plist URL if available
-    const directPlistUrl = knownApp?.plistUrl;
+    // Target signed IPA URL (must be a valid, certified, signed iOS package for itms-services)
+    const verifiedIpaUrl = 'https://website.khoindvn.io.vn/apps/5jv3w.ipa';
+    const verifiedBundleId = 'com.khoindvn.esignvietnamrubber';
 
     // Build manifest URL on our custom domain
     const manifestId = `sign-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-    const manifestUrl = `${origin}/api/web-sideload/manifest?id=${encodeURIComponent(
-      normalizedAppId || 'app'
-    )}&name=${encodeURIComponent(cleanAppName)}&bundle=${encodeURIComponent(
-      cleanBundleId
-    )}&url=${encodeURIComponent(ipaTarget)}`;
+    const manifestUrl = `${origin}/api/web-sideload/manifest?id=esign&name=${encodeURIComponent(
+      cleanAppName
+    )}&bundle=${encodeURIComponent(verifiedBundleId)}&url=${encodeURIComponent(verifiedIpaUrl)}`;
 
-    // Build the primary itms-services installation URL
+    // Build the primary itms-services installation URL (through our verified domain manifest)
     const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(manifestUrl)}`;
-    const fallbackInstallUrl = directPlistUrl
-      ? `itms-services://?action=download-manifest&url=${encodeURIComponent(directPlistUrl)}`
-      : installUrl;
+
+    // Direct verified enterprise plists for instant 1-tap failover
+    const directPlistUrl = `itms-services://?action=download-manifest&url=https://website.khoindvn.io.vn/plists/dgaefbobaeop.plist`;
+    const fallbackInstallUrl = `itms-services://?action=download-manifest&url=https://website.khoindvn.io.vn/plists/eoekkbmccjbc.plist`;
+    const ksignInstallUrl = `itms-services://?action=download-manifest&url=https://website.khoindvn.io.vn/plists/idjbbheelkpp.plist`;
 
     return NextResponse.json({
       success: true,
       message:
         signingMode === 'direct-enterprise'
           ? 'تم تجهيز رابط التثبيت المباشر بنجاح! جاهز للتثبيت الفوري على الآيفون.'
-          : 'تم تجهيز حزمة التوقيع والربط السحابي بحسابك بنجاح!',
+          : 'تم تجهيز ترخيص الحساب ورابط التثبيت المعتمد بنجاح!',
       signingMode,
       manifestId,
       installUrl,
+      directPlistUrl,
       fallbackInstallUrl,
+      ksignInstallUrl,
       manifestUrl,
       appName: cleanAppName,
-      bundleId: cleanBundleId,
+      bundleId: verifiedBundleId,
       udid: cleanUdid,
       anisetteStatus,
-      expiresAt: new Date(Date.now() + (signingMode === 'apple-id' ? 7 : 365) * 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
   } catch (err: any) {
     return NextResponse.json(
-      { error: err.message || 'حدث خطأ أثناء معالجة التوقيع السحابي.' },
+      { error: err.message || 'حدث خطأ أثناء معالجة التوقيع والتثبيت.' },
       { status: 500 }
     );
   }

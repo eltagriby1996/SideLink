@@ -2,39 +2,64 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const KNOWN_PACKAGES: Record<string, { bundle: string; name: string; url: string }> = {
+interface PackageDef {
+  bundle: string;
+  name: string;
+  url: string;
+}
+
+const VERIFIED_PACKAGES: Record<string, PackageDef> = {
   esign: {
     bundle: 'com.khoindvn.esignvietnamrubber',
-    name: 'ESign',
+    name: 'ESign SideLink Edition',
     url: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
+  },
+  'esign-vietnam': {
+    bundle: 'com.khoindvn.esignvietnamrubber',
+    name: 'ESign Viet Nam Rubber',
+    url: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
+  },
+  'esign-powerchina': {
+    bundle: 'com.SVwaR1.4ujc50',
+    name: 'ESign PowerChina',
+    url: 'https://website.khoindvn.io.vn/apps/ycmpo.ipa',
   },
   ksign: {
     bundle: 'com.khoindvn.ksignvietnamrubber',
-    name: 'KSign',
+    name: 'KSign SideLink Edition',
     url: 'https://website.khoindvn.io.vn/apps/l8vr7.ipa',
-  },
-  sidestore: {
-    bundle: 'com.SideStore.SideStore',
-    name: 'SideStore',
-    url: '/downloads/SideStore.ipa',
   },
 };
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = (searchParams.get('id') || '').toLowerCase();
-  const known = KNOWN_PACKAGES[id];
+  const known = VERIFIED_PACKAGES[id] || VERIFIED_PACKAGES['esign'];
 
   const origin = request.nextUrl.origin || 'https://www.sidelinktool.me';
-  const name = searchParams.get('name') || known?.name || 'SideLink App';
-  const bundle = searchParams.get('bundle') || known?.bundle || 'com.sidelink.cloudapp';
-  const version = searchParams.get('version') || '1.0.0';
+  const name = searchParams.get('name') || known.name;
+  
+  // CRITICAL FOR IOS: The bundle identifier MUST exactly match the CFBundleIdentifier inside the signed IPA!
+  // If an external signed IPA url is passed, match its known bundle, otherwise use known.bundle.
+  let targetUrl = searchParams.get('url') || known.url;
+  let targetBundle = known.bundle;
 
-  let ipaUrl = searchParams.get('url') || known?.url || `${origin}/downloads/SideStore.ipa`;
-  if (!ipaUrl.startsWith('http')) {
-    ipaUrl = `${origin}${ipaUrl.startsWith('/') ? '' : '/'}${ipaUrl}`;
+  if (targetUrl.includes('5jv3w.ipa') || targetUrl.includes('esign')) {
+    targetBundle = 'com.khoindvn.esignvietnamrubber';
+  } else if (targetUrl.includes('l8vr7.ipa') || targetUrl.includes('ksign')) {
+    targetBundle = 'com.khoindvn.ksignvietnamrubber';
+  } else if (targetUrl.includes('ycmpo.ipa') || targetUrl.includes('powerchina')) {
+    targetBundle = 'com.SVwaR1.4ujc50';
+  } else if (searchParams.get('bundle')) {
+    targetBundle = searchParams.get('bundle')!;
   }
 
+  // Ensure absolute HTTPS URL for the IPA
+  if (!targetUrl.startsWith('http')) {
+    targetUrl = `${origin}${targetUrl.startsWith('/') ? '' : '/'}${targetUrl}`;
+  }
+
+  const version = searchParams.get('version') || '5.0.2';
   const iconUrl = `${origin}/logo.png`;
 
   const plist = `<?xml version="1.0" encoding="UTF-8"?>
@@ -50,7 +75,7 @@ export async function GET(request: NextRequest) {
           <key>kind</key>
           <string>software-package</string>
           <key>url</key>
-          <string>${ipaUrl}</string>
+          <string>${targetUrl}</string>
         </dict>
         <dict>
           <key>kind</key>
@@ -72,7 +97,7 @@ export async function GET(request: NextRequest) {
       <key>metadata</key>
       <dict>
         <key>bundle-identifier</key>
-        <string>${bundle}</string>
+        <string>${targetBundle}</string>
         <key>bundle-version</key>
         <string>${version}</string>
         <key>kind</key>

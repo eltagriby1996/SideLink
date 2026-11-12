@@ -56,7 +56,9 @@ export default function WebSideloadPage() {
   const [signResult, setSignResult] = useState<{
     success: boolean;
     installUrl?: string;
+    directPlistUrl?: string;
     fallbackInstallUrl?: string;
+    ksignInstallUrl?: string;
     appName?: string;
     bundleId?: string;
     signingMode?: string;
@@ -231,7 +233,9 @@ export default function WebSideloadPage() {
       setSignResult({
         success: true,
         installUrl: data.installUrl,
+        directPlistUrl: data.directPlistUrl,
         fallbackInstallUrl: data.fallbackInstallUrl,
+        ksignInstallUrl: data.ksignInstallUrl,
         appName: cleanAppName,
         bundleId: cleanBundleId,
         signingMode: data.signingMode,
@@ -695,8 +699,8 @@ export default function WebSideloadPage() {
                   </p>
                 </div>
 
-                {/* 1-Click Install Button & ESign Direct Open */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
+                {/* 1-Click Install Button & Direct Servers */}
+                <div className="flex flex-col items-center justify-center gap-3 pt-1">
                   <a
                     href={signResult.installUrl}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-base shadow-xl shadow-emerald-600/30 hover:shadow-emerald-500/40 transition-all hover:-translate-y-1 active:scale-95"
@@ -705,13 +709,45 @@ export default function WebSideloadPage() {
                     <span>اضغط لتثبيت التطبيق على الآيفون الآن (Install)</span>
                   </a>
 
-                  <a
-                    href={`esign://import?url=${encodeURIComponent(signResult.installUrl || '')}`}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shadow-md shadow-indigo-600/20 active:scale-95"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    <span>فتح وتثبيت في تطبيق ESign 📲</span>
-                  </a>
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-1 w-full">
+                    {signResult.directPlistUrl && (
+                      <a
+                        href={signResult.directPlistUrl}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/20 transition active:scale-95"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-300" />
+                        <span>سيرفر مباشر 1 (Viet Nam Rubber)</span>
+                      </a>
+                    )}
+
+                    {signResult.fallbackInstallUrl && (
+                      <a
+                        href={signResult.fallbackInstallUrl}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs transition active:scale-95"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>سيرفر احتياطي 2 (PowerChina)</span>
+                      </a>
+                    )}
+
+                    {signResult.ksignInstallUrl && (
+                      <a
+                        href={signResult.ksignInstallUrl}
+                        className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs transition active:scale-95"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>سيرفر سريع 3 (KSign)</span>
+                      </a>
+                    )}
+
+                    <a
+                      href="esign://"
+                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shadow-md shadow-indigo-600/20 active:scale-95"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>فتح وتثبيت في تطبيق ESign 📲</span>
+                    </a>
+                  </div>
                 </div>
 
                 {/* Quick 3-Step Setup Help */}
