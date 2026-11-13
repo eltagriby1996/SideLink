@@ -282,7 +282,7 @@ public class SigningService : ISigningService
                 foreach (var file in Directory.GetFiles(payloadDir, "*", SearchOption.AllDirectories))
                 {
                     string relPath = Path.GetRelativePath(tempWorkingDir, file).Replace('\\', '/');
-                    zip.CreateEntryFromFile(file, relPath, CompressionLevel.Optimal);
+                    zip.CreateEntryFromFile(file, relPath, CompressionLevel.Fastest);
                 }
             }, cancellationToken);
 
@@ -470,12 +470,14 @@ public class SigningService : ISigningService
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
 
-            bool finished = proc.WaitForExit(90000);
+            // Dynamic/extended timeout for large games (up to 10 minutes for 3GB+ games like eFootball)
+            int timeoutSeconds = 600;
+            bool finished = proc.WaitForExit(timeoutSeconds * 1000);
             if (!finished)
             {
                 try { proc.Kill(); } catch { }
-                _logger.LogWarning("rcodesign timed out after 90 seconds.");
-                return (false, "انتهت مهلة التوقيع (rcodesign timed out after 90 seconds)");
+                _logger.LogWarning("rcodesign timed out after {Sec} seconds.", timeoutSeconds);
+                return (false, $"انتهت مهلة التوقيع الرقمي بعد {timeoutSeconds} ثانية نظراً لضخامة حجم ملفات اللعبة.");
             }
 
             proc.WaitForExit();

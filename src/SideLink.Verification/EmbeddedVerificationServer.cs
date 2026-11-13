@@ -92,10 +92,11 @@ public class EmbeddedVerificationServer : IDisposable
         var req = context.Request;
         var res = context.Response;
 
-        // Enable CORS
+        // Enable CORS & Private Network Access for modern Chromium/Edge
         res.Headers.Add("Access-Control-Allow-Origin", "*");
         res.Headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        res.Headers.Add("Access-Control-Allow-Headers", "*");
+        res.Headers.Add("Access-Control-Allow-Private-Network", "true");
 
         if (req.HttpMethod == "OPTIONS")
         {
@@ -253,7 +254,11 @@ public class EmbeddedVerificationServer : IDisposable
                         }
                     }
                 }
-                res.StatusCode = 204;
+                // 1x1 transparent GIF to ensure image beacon completes cleanly
+                byte[] gif = Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+                res.ContentType = "image/gif";
+                res.StatusCode = 200;
+                await res.OutputStream.WriteAsync(gif);
                 res.Close();
                 return;
             }
