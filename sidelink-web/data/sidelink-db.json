@@ -50,6 +50,14 @@
       "expiresAt": "2026-11-12T10:27:11.282Z",
       "verifiedAt": null,
       "challengeNonce": "nonce-xyz"
+    },
+    "c3b4c4e0d902478abc95b64b0312b2e0": {
+      "sessionId": "c3b4c4e0d902478abc95b64b0312b2e0",
+      "status": "pending",
+      "createdAt": "2026-11-13T11:56:11.907Z",
+      "expiresAt": "2026-11-13T12:11:11.907Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
     }
   },
   "ipas": [
@@ -116,7 +124,7 @@
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
       "expiresAt": null,
-      "usedCount": 1,
+      "usedCount": 2,
       "maxUses": 0,
       "isActive": true,
       "boundHwid": "727AE365BAFEFB801E4AAFF185139DDA311C4606078BA0638DD75DA19E713A4F",
