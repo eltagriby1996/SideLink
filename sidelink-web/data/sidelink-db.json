@@ -6,7 +6,7 @@
     "killSwitchMessage": "تطبيق SideLink متوقف مؤقتاً لأعمال الصيانة والتطوير الأمني. سنعود للعمل قريباً.",
     "latestVersion": "1.0.0",
     "downloadUrl": "/downloads/SideLink-v1.0.0-win-x64.zip",
-    "forceUpdate": false,
+    "forceUpdate": true,
     "releaseNotes": "الإصدار الأول المستقر: دعم توقيع وتثبيت تطبيقات iOS بحسابات أبل الشخصية، مع شهادات RSA PKCS#8 ونظام التجديد التلقائي.",
     "broadcastBanner": {
       "enabled": false,
