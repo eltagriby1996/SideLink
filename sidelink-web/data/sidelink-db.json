@@ -9,7 +9,7 @@
     "forceUpdate": false,
     "releaseNotes": "الإصدار الأول المستقر: دعم توقيع وتثبيت تطبيقات iOS بحسابات أبل الشخصية، مع شهادات RSA PKCS#8 ونظام التجديد التلقائي.",
     "broadcastBanner": {
-      "enabled": true,
+      "enabled": false,
       "message": "مرحباً بكم في SideLink v1.0.0! تم تفعيل دعم التوقيع الفوري لكافة أجهزة iOS 15 - 18.2.",
       "type": "warning",
       "link": "https://github.com/eltagriby1996/SideLink",
