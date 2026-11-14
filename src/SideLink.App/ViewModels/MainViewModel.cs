@@ -114,6 +114,7 @@ public partial class MainViewModel : ObservableObject
         _isAppUnlocked = linkUnlock.CheckMachineAuthorized();
 
         Dashboard.NavigationRequested += Navigate;
+        InstalledApps.NavigationRequested += Navigate;
         LinkUnlock.VerificationCompleted += OnVerificationCompleted;
         _deviceService.DeviceStateChanged += (s, d) =>
         {

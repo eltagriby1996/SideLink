@@ -219,12 +219,18 @@ public class SigningService : ISigningService
 
             if (config.Method == SigningMethodType.PersonalTeam)
             {
-                // Free personal profiles cannot sign App Extensions (PlugIns)
+                // Free personal profiles cannot sign App Extensions (PlugIns / Extensions)
                 string pluginsDir = Path.Combine(appBundlePath, "PlugIns");
                 if (Directory.Exists(pluginsDir))
                 {
                     _logger.LogInformation("Stripping PlugIns/ extensions for personal profile compatibility.");
                     try { Directory.Delete(pluginsDir, true); } catch { }
+                }
+                string extDir = Path.Combine(appBundlePath, "Extensions");
+                if (Directory.Exists(extDir))
+                {
+                    _logger.LogInformation("Stripping Extensions/ for personal profile compatibility.");
+                    try { Directory.Delete(extDir, true); } catch { }
                 }
 
                 ReportProgress(progress, "تعديل معرّف الحزمة ليتطابق مع ملف التعريف والشهادة...", 45);

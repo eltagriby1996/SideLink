@@ -92,6 +92,58 @@ public partial class IpaLibraryViewModel : ObservableObject
         return $"{originalBundleId}.sidelink";
     }
 
+    [RelayCommand]
+    public void CloneAsSecondInstance()
+    {
+        if (SelectedIpa == null) return;
+        string baseTitle = CleanCloneSuffix(SelectedIpa.EffectiveTitle);
+        string baseBundle = CleanCloneSuffix(SelectedIpa.BundleIdentifier);
+        CustomDisplayName = $"{baseTitle} 2";
+        TargetBundleId = $"{baseBundle}.clone2";
+        AutoModifyBundleId = true;
+        StatusMessage = $"⚡ تم تفعيل الاستنساخ: سيتم تثبيت ({CustomDisplayName}) كنسخة ثانية معزولة بالكامل دون التأثير على التطبيق الأصلي!";
+    }
+
+    [RelayCommand]
+    public void CloneAsThirdInstance()
+    {
+        if (SelectedIpa == null) return;
+        string baseTitle = CleanCloneSuffix(SelectedIpa.EffectiveTitle);
+        string baseBundle = CleanCloneSuffix(SelectedIpa.BundleIdentifier);
+        CustomDisplayName = $"{baseTitle} 3";
+        TargetBundleId = $"{baseBundle}.clone3";
+        AutoModifyBundleId = true;
+        StatusMessage = $"⚡ تم تفعيل الاستنساخ: سيتم تثبيت ({CustomDisplayName}) كنسخة ثالثة معزولة بالكامل!";
+    }
+
+    [RelayCommand]
+    public void ResetToOriginal()
+    {
+        if (SelectedIpa == null) return;
+        CustomDisplayName = SelectedIpa.EffectiveTitle;
+        TargetBundleId = SelectedIpa.BundleIdentifier;
+        AutoModifyBundleId = false;
+        StatusMessage = $"تمت إعادة ضبط اسم ومعرّف التطبيق للأصل ({SelectedIpa.EffectiveTitle}).";
+    }
+
+    public async Task PrepareAppForCloningAsync(string ipaPath, string customDisplayName, string targetBundleId)
+    {
+        await LoadIpaFileAsync(ipaPath);
+        CustomDisplayName = customDisplayName;
+        TargetBundleId = targetBundleId;
+        AutoModifyBundleId = true;
+        StatusMessage = $"⚡ تم تجهيز النسخة المستنسخة ({customDisplayName})! اضغط على زر 'توقيع وتثبيت التطبيق على الآيفون' في الأسفل للبدء فوراً.";
+    }
+
+    private static string CleanCloneSuffix(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return text;
+        var trimmed = text.Trim();
+        trimmed = System.Text.RegularExpressions.Regex.Replace(trimmed, @"\s+(2|3|\d+)$", "");
+        trimmed = System.Text.RegularExpressions.Regex.Replace(trimmed, @"\.(clone\d*|sidelink|sl)$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return trimmed;
+    }
+
     public IpaLibraryViewModel(
         IIpaInspectorService ipaInspector,
         ISigningService signingService,

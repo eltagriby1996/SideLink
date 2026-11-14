@@ -82,6 +82,11 @@ public class RefreshAndExpirationTests
         {
             return Task.FromResult(true);
         }
+
+        public Task<IReadOnlyList<DiscoveredAppInfo>> GetInstalledAppsOnDeviceAsync(IosDevice targetDevice, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<IReadOnlyList<DiscoveredAppInfo>>(new List<DiscoveredAppInfo>());
+        }
     }
 
     [Fact]

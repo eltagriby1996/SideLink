@@ -512,6 +512,216 @@ public static class NativeMobileDevice
         }, cancellationToken);
     }
 
+    public static async Task<List<DiscoveredAppInfo>> BrowseInstalledAppsAsync(
+        string targetUdid,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+    {
+        var resultList = new List<DiscoveredAppInfo>();
+        if (!EnsureInitialized(logger)) return resultList;
+
+        return await Task.Run(() =>
+        {
+            IntPtr notifHandle = IntPtr.Zero;
+            IntPtr devicePtr = IntPtr.Zero;
+
+            AMDeviceNotificationCallback notifCb = (ref AMDeviceNotificationCallbackInfo info, IntPtr arg) =>
+            {
+                if (info.msg == 1 && info.dev_ptr != IntPtr.Zero)
+                {
+                    string udid = GetDeviceUdid(info.dev_ptr);
+                    if (string.IsNullOrWhiteSpace(targetUdid) || 
+                        string.Equals(udid, targetUdid, StringComparison.OrdinalIgnoreCase) || 
+                        devicePtr == IntPtr.Zero)
+                    {
+                        devicePtr = info.dev_ptr;
+                    }
+                }
+            };
+
+            try
+            {
+                int subRet = AMDeviceNotificationSubscribe(notifCb, 0, 0, IntPtr.Zero, out notifHandle);
+                if (subRet != 0) return resultList;
+
+                IntPtr defaultMode = CreateCFString("kCFRunLoopDefaultMode");
+                for (int i = 0; i < 6 && devicePtr == IntPtr.Zero; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    CFRunLoopRunInMode(defaultMode, 0.5, false);
+                }
+                CFRelease(defaultMode);
+
+                if (devicePtr == IntPtr.Zero) return resultList;
+
+                if (AMDeviceConnect(devicePtr) != 0) return resultList;
+                if (AMDeviceIsPaired(devicePtr) == 0 || AMDeviceValidatePairing(devicePtr) != 0)
+                {
+                    AMDeviceDisconnect(devicePtr);
+                    return resultList;
+                }
+
+                if (AMDeviceStartSession(devicePtr) != 0)
+                {
+                    AMDeviceDisconnect(devicePtr);
+                    return resultList;
+                }
+
+                try
+                {
+                    IntPtr serviceName = CreateCFString("com.apple.mobile.installation_proxy");
+                    IntPtr serviceConn;
+                    int sRet = AMDeviceSecureStartService(devicePtr, serviceName, IntPtr.Zero, out serviceConn);
+                    CFRelease(serviceName);
+
+                    if (sRet != 0 || serviceConn == IntPtr.Zero) return resultList;
+
+                    try
+                    {
+                        string browseXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                            "<plist version=\"1.0\">\n<dict>\n" +
+                            "    <key>Command</key><string>Browse</string>\n" +
+                            "    <key>ClientOptions</key>\n" +
+                            "    <dict>\n" +
+                            "        <key>ApplicationType</key><string>User</string>\n" +
+                            "    </dict>\n" +
+                            "</dict>\n</plist>";
+
+                        byte[] xmlBytes = Encoding.UTF8.GetBytes(browseXml);
+                        IntPtr cfData = CFDataCreate(IntPtr.Zero, xmlBytes, xmlBytes.Length);
+                        int formatOut;
+                        IntPtr errorOut;
+                        IntPtr plist = CFPropertyListCreateWithData(IntPtr.Zero, cfData, 0, out formatOut, out errorOut);
+                        CFRelease(cfData);
+
+                        AMDServiceConnectionSendMessage(serviceConn, plist, 200);
+                        CFRelease(plist);
+
+                        string cacheDir = Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "SideLink",
+                            "AppCache");
+
+                        for (int attempt = 0; attempt < 25 && !cancellationToken.IsCancellationRequested; attempt++)
+                        {
+                            IntPtr respPlist;
+                            int respFormat;
+                            int recvRet = AMDServiceConnectionReceiveMessage(serviceConn, out respPlist, out respFormat);
+                            if (recvRet != 0 || respPlist == IntPtr.Zero) break;
+
+                            IntPtr xmlData = CFPropertyListCreateData(IntPtr.Zero, respPlist, 100 /* XML */, 0, out errorOut);
+                            CFRelease(respPlist);
+
+                            if (xmlData != IntPtr.Zero)
+                            {
+                                int len = CFDataGetLength(xmlData);
+                                byte[] buf = new byte[len];
+                                IntPtr ptr = CFDataGetBytePtr(xmlData);
+                                Marshal.Copy(ptr, buf, 0, len);
+                                CFRelease(xmlData);
+
+                                string xml = Encoding.UTF8.GetString(buf);
+                                ParseBrowseResponse(xml, cacheDir, resultList);
+
+                                if (xml.Contains("<key>Status</key>") && xml.Contains("<string>Complete</string>"))
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        AMDServiceConnectionInvalidate(serviceConn);
+                    }
+                }
+                finally
+                {
+                    AMDeviceStopSession(devicePtr);
+                    AMDeviceDisconnect(devicePtr);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("BrowseInstalledAppsAsync exception: {Msg}", ex.Message);
+            }
+            finally
+            {
+                if (notifHandle != IntPtr.Zero)
+                {
+                    AMDeviceNotificationUnsubscribe(notifHandle);
+                }
+            }
+
+            return resultList;
+        }, cancellationToken);
+    }
+
+    private static void ParseBrowseResponse(string xml, string cacheDir, List<DiscoveredAppInfo> list)
+    {
+        try
+        {
+            var doc = XDocument.Parse(xml);
+            var currentListKey = doc.Descendants("key").FirstOrDefault(k => k.Value == "CurrentList");
+            var array = currentListKey?.ElementsAfterSelf().FirstOrDefault();
+            if (array == null || array.Name.LocalName != "array") return;
+
+            foreach (var dict in array.Elements("dict"))
+            {
+                string bundleId = string.Empty;
+                string displayName = string.Empty;
+                string version = "1.0";
+                string? signer = null;
+
+                var keys = dict.Elements("key").ToList();
+                foreach (var keyNode in keys)
+                {
+                    var valNode = keyNode.ElementsAfterSelf().FirstOrDefault();
+                    if (valNode == null || valNode.Name.LocalName == "key") continue;
+
+                    if (keyNode.Value == "CFBundleIdentifier") bundleId = valNode.Value;
+                    else if (keyNode.Value == "CFBundleDisplayName") displayName = valNode.Value;
+                    else if (keyNode.Value == "CFBundleName" && string.IsNullOrEmpty(displayName)) displayName = valNode.Value;
+                    else if (keyNode.Value == "CFBundleShortVersionString") version = valNode.Value;
+                    else if (keyNode.Value == "SignerIdentity") signer = valNode.Value;
+                }
+
+                if (string.IsNullOrWhiteSpace(bundleId)) continue;
+                if (string.IsNullOrWhiteSpace(displayName)) displayName = bundleId;
+
+                string? cachedIpa = null;
+                if (Directory.Exists(cacheDir))
+                {
+                    string byBundle = Path.Combine(cacheDir, $"{bundleId}.ipa");
+                    if (File.Exists(byBundle)) cachedIpa = byBundle;
+                    else
+                    {
+                        string byName = Path.Combine(cacheDir, $"{displayName}.ipa");
+                        if (File.Exists(byName)) cachedIpa = byName;
+                    }
+                }
+
+                bool isSideLink = !string.IsNullOrEmpty(signer) && signer.Contains("Apple Development", StringComparison.OrdinalIgnoreCase);
+
+                if (!list.Any(a => a.BundleIdentifier == bundleId))
+                {
+                    list.Add(new DiscoveredAppInfo
+                    {
+                        BundleIdentifier = bundleId,
+                        AppName = displayName,
+                        Version = version,
+                        SignerIdentity = signer,
+                        IsAppStore = !isSideLink,
+                        IsSideLinkManaged = isSideLink,
+                        CachedIpaPath = cachedIpa
+                    });
+                }
+            }
+        }
+        catch { }
+    }
+
     public static async Task<(bool Success, string? ErrorMessage)> InstallProvisioningProfileAsync(
         byte[] profileData,
         string targetUdid,

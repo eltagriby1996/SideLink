@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -14,18 +15,34 @@ public partial class InstalledAppsViewModel : ObservableObject
     private readonly IInstallationService _installationService;
     private readonly IDeviceDiscoveryService _deviceService;
     private readonly ICredentialStore _credentialStore;
+    private readonly IpaLibraryViewModel _ipaLibrary;
     private readonly ILogger<InstalledAppsViewModel> _logger;
 
+    public event Action<string>? NavigationRequested;
+
     public ObservableCollection<ManagedApp> Apps { get; } = new();
+    public ObservableCollection<DiscoveredAppInfo> DiscoveredApps { get; } = new();
 
     [ObservableProperty]
     private ManagedApp? _selectedApp;
+
+    [ObservableProperty]
+    private DiscoveredAppInfo? _selectedDiscoveredApp;
 
     [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
     private bool _isRefreshing;
+
+    [ObservableProperty]
+    private bool _isScanningDevice;
+
+    [ObservableProperty]
+    private bool _showAllDeviceApps;
+
+    [ObservableProperty]
+    private int _selectedViewTab; // 0: SideLink Apps, 1: All iPhone Apps
 
     [ObservableProperty]
     private string _statusMessage = "جاري تحميل التطبيقات المثبتة...";
@@ -39,6 +56,7 @@ public partial class InstalledAppsViewModel : ObservableObject
         IInstallationService installationService,
         IDeviceDiscoveryService deviceService,
         ICredentialStore credentialStore,
+        IpaLibraryViewModel ipaLibrary,
         ILogger<InstalledAppsViewModel> logger)
     {
         _appRepository = appRepository;
@@ -46,6 +64,7 @@ public partial class InstalledAppsViewModel : ObservableObject
         _installationService = installationService;
         _deviceService = deviceService;
         _credentialStore = credentialStore;
+        _ipaLibrary = ipaLibrary;
         _logger = logger;
     }
 
@@ -260,5 +279,130 @@ public partial class InstalledAppsViewModel : ObservableObject
             _logger.LogError(ex, "Failed to uninstall {App}", target.AppName);
             StatusMessage = $"Uninstall failed: {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    public void SwitchToManagedApps() => SelectedViewTab = 0;
+
+    [RelayCommand]
+    public void SwitchToDiscoveredApps() => SelectedViewTab = 1;
+
+    [RelayCommand]
+    public async Task ScanDeviceAppsAsync()
+    {
+        var device = _deviceService.CurrentDevice;
+        if (device == null || !device.IsConnected)
+        {
+            StatusMessage = "تنبيه: يرجى توصيل هاتف الآيفون بالكمبيوتر عبر كابل USB لفحص كافة التطبيقات المثبتة.";
+            return;
+        }
+
+        if (device.IsLocked)
+        {
+            StatusMessage = "تنبيه: الآيفون مقفل برمز مرور. يرجى فتح قفل الهاتف وإعادة المحاولة.";
+            return;
+        }
+
+        IsScanningDevice = true;
+        StatusMessage = "جاري قراءة واستكشاف كافة التطبيقات المثبتة على هاتفك الآيفون...";
+
+        try
+        {
+            var apps = await _installationService.GetInstalledAppsOnDeviceAsync(device);
+            DiscoveredApps.Clear();
+            foreach (var a in apps.OrderBy(x => x.AppName))
+            {
+                DiscoveredApps.Add(a);
+            }
+
+            ShowAllDeviceApps = true;
+            SelectedViewTab = 1;
+            StatusMessage = $"✓ تم استكشاف {DiscoveredApps.Count} تطبيق مثبت على الآيفون! يمكنك الآن استنساخ أي تطبيق بنقرة واحدة.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to scan device apps");
+            StatusMessage = "فشل فحص تطبيقات الهاتف: " + ex.Message;
+        }
+        finally
+        {
+            IsScanningDevice = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task CloneAppAsync(ManagedApp? app)
+    {
+        var target = app ?? SelectedApp;
+        if (target == null) return;
+
+        string? ipaPath = target.ResolvedIpaPath;
+        if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",
+                Title = $"اختر ملف IPA لتطبيق ({target.AppName}) للبدء في استنساخه كنسخة ثانية معزولة"
+            };
+
+            var owner = System.Windows.Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive) 
+                        ?? System.Windows.Application.Current?.MainWindow;
+            bool? result = owner != null ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+
+            if (result == true && File.Exists(dialog.FileName))
+            {
+                ipaPath = dialog.FileName;
+            }
+            else
+            {
+                StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                return;
+            }
+        }
+
+        string cloneName = $"{target.AppName} 2";
+        string cloneBundleId = $"{target.BundleIdentifier}.clone2";
+
+        StatusMessage = $"جاري إعداد النسخة المستنسخة من {target.AppName}...";
+        await _ipaLibrary.PrepareAppForCloningAsync(ipaPath, cloneName, cloneBundleId);
+        NavigationRequested?.Invoke("IpaLibrary");
+    }
+
+    [RelayCommand]
+    public async Task CloneDiscoveredAppAsync(DiscoveredAppInfo? app)
+    {
+        var target = app ?? SelectedDiscoveredApp;
+        if (target == null) return;
+
+        string? ipaPath = target.CachedIpaPath;
+        if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",
+                Title = $"تطبيق ({target.AppName}) رسمي من متجر App Store - يرجى اختيار ملف الـ IPA النظيف لاستنساخه"
+            };
+
+            var owner = System.Windows.Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive) 
+                        ?? System.Windows.Application.Current?.MainWindow;
+            bool? result = owner != null ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+
+            if (result == true && File.Exists(dialog.FileName))
+            {
+                ipaPath = dialog.FileName;
+            }
+            else
+            {
+                StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                return;
+            }
+        }
+
+        string cloneName = $"{target.AppName} 2";
+        string cloneBundleId = $"{target.BundleIdentifier}.clone2";
+
+        StatusMessage = $"جاري إعداد النسخة المستنسخة من {target.AppName}...";
+        await _ipaLibrary.PrepareAppForCloningAsync(ipaPath, cloneName, cloneBundleId);
+        NavigationRequested?.Invoke("IpaLibrary");
     }
 }

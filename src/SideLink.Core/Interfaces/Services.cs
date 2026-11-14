@@ -51,6 +51,10 @@ public interface IInstallationService
         string bundleIdentifier,
         IosDevice targetDevice,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<DiscoveredAppInfo>> GetInstalledAppsOnDeviceAsync(
+        IosDevice targetDevice,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IRefreshService

@@ -172,6 +172,24 @@ public class InstallationService : IInstallationService
         return nativeSuccess;
     }
 
+    public async Task<IReadOnlyList<DiscoveredAppInfo>> GetInstalledAppsOnDeviceAsync(IosDevice targetDevice, CancellationToken cancellationToken = default)
+    {
+        if (targetDevice == null || !targetDevice.IsConnected)
+        {
+            return Array.Empty<DiscoveredAppInfo>();
+        }
+
+        try
+        {
+            return await NativeMobileDevice.BrowseInstalledAppsAsync(targetDevice.DeviceId, _logger, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to browse installed apps on device {UDID}", targetDevice.DeviceId);
+            return Array.Empty<DiscoveredAppInfo>();
+        }
+    }
+
     private static void ReportProgress(IProgress<AppOperationProgress>? progress, string step, int percent, bool isCompleted = false, bool hasError = false, string? errorMessage = null)
     {
         progress?.Report(new AppOperationProgress
