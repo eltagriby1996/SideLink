@@ -1,6 +1,6 @@
 {
   "config": {
-    "isVerificationEnabled": false,
+    "isVerificationEnabled": true,
     "maintenanceMode": false,
     "emergencyKillSwitch": false,
     "killSwitchMessage": "تطبيق SideLink متوقف مؤقتاً لأعمال الصيانة والتطوير الأمني. سنعود للعمل قريباً.",
