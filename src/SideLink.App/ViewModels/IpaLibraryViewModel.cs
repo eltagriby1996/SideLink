@@ -182,10 +182,10 @@ public partial class IpaLibraryViewModel : ObservableObject
                 return;
             }
 
-            StatusMessage = "جاري فحص حزمة SideLink Container...";
+            StatusMessage = "جاري فحص حزمة SideLink...";
             await LoadIpaFileAsync(containerPath);
 
-            CustomDisplayName = "SideLink Container";
+            CustomDisplayName = "SideLink";
             TargetBundleId = "com.sidelink.container";
             AutoModifyBundleId = false;
 
@@ -201,7 +201,7 @@ public partial class IpaLibraryViewModel : ObservableObject
             }
             else
             {
-                StatusMessage = "⚡ تم تجهيز SideLink Container! اضغط الآن على زر 'توقيع وتثبيت التطبيق على الآيفون' في الأسفل للبدء.";
+                StatusMessage = "⚡ تم تجهيز SideLink! اضغط الآن على زر 'توقيع وتثبيت التطبيق على الآيفون' في الأسفل للبدء.";
             }
         }
         catch (Exception ex)
