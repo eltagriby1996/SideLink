@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck,
+  ShieldAlert,
+  Lock,
   Activity,
   Key,
   Settings,
@@ -17,7 +19,10 @@ import {
   CheckCircle2,
   ExternalLink,
   UserCheck,
-  Laptop
+  Laptop,
+  Eye,
+  EyeOff,
+  LogOut
 } from 'lucide-react';
 
 interface RemoteConfigState {
@@ -52,6 +57,13 @@ interface VipKey {
 }
 
 export default function AdminPage() {
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [loginPassword, setLoginPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [loginError, setLoginError] = useState<string>('');
+  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+
   // Active Tab
   const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'vip'>('overview');
 
@@ -84,6 +96,11 @@ export default function AdminPage() {
         fetch('/api/admin/vip-keys'),
       ]);
 
+      if (statsRes.status === 401 || configRes.status === 401) {
+        setIsAuthenticated(false);
+        return;
+      }
+
       if (statsRes.ok) {
         const d = await statsRes.json();
         setStats(d.stats);
@@ -101,9 +118,62 @@ export default function AdminPage() {
     }
   }, []);
 
+  // Initial Auth Check
   useEffect(() => {
-    fetchAllData();
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('/api/admin/auth');
+        if (res.ok) {
+          setIsAuthenticated(true);
+          fetchAllData();
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch {
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
   }, [fetchAllData]);
+
+  // Login Handler
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginPassword.trim() || isLoggingIn) return;
+    setIsLoggingIn(true);
+    setLoginError('');
+
+    try {
+      const res = await fetch('/api/admin/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: loginPassword }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsAuthenticated(true);
+        setLoginPassword('');
+        fetchAllData();
+      } else {
+        setLoginError(data.error || 'كلمة المرور غير صحيحة. حاول مرة أخرى.');
+      }
+    } catch {
+      setLoginError('تعذر الاتصال بالسيرفر. يرجى التحقق من اتصال الإنترنت.');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  // Logout Handler
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth', { method: 'DELETE' });
+    } catch {}
+    setIsAuthenticated(false);
+    setLoginPassword('');
+    setLoginError('');
+  };
 
   // Save Remote Config
   const handleSaveConfig = async () => {
@@ -238,6 +308,118 @@ export default function AdminPage() {
     setTimeout(() => setCopiedKey(''), 2500);
   };
 
+  // ----------------------------------------------------
+  // 1. LOADING STATE
+  // ----------------------------------------------------
+  if (isAuthenticated === null) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center font-sans" dir="rtl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center animate-pulse">
+            <ShieldCheck className="w-6 h-6 text-blue-400" />
+          </div>
+          <p className="text-xs text-slate-400 animate-pulse font-medium">جاري فحص صلاحيات الأمان...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // 2. LOCKED / LOGIN GATE SCREEN
+  // ----------------------------------------------------
+  if (isAuthenticated === false) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4 font-sans relative overflow-hidden" dir="rtl">
+        {/* Background glow effects */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 translate-y-1/2 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl space-y-6 relative z-10 backdrop-blur-xl">
+          {/* Header Icon */}
+          <div className="text-center space-y-3">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-cyan-500 p-0.5 mx-auto shadow-xl shadow-blue-600/30">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+                <Lock className="w-7 h-7 text-blue-400" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-white tracking-tight">SideLink Master Admin</h1>
+              <p className="text-xs text-slate-400 mt-1">منطقة محمية ومخصصة لمدير النظام فقط</p>
+            </div>
+          </div>
+
+          {/* Error Banner */}
+          {loginError && (
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>{loginError}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                كلمة مرور الإدارة (Admin Password):
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoFocus
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="أدخل كلمة المرور..."
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-blue-500 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 outline-none transition pl-11"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition"
+                  title={showPassword ? 'إخفاء' : 'إظهار'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoggingIn}
+              className="w-full py-3.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold text-sm shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              {isLoggingIn ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>جاري التحقق من الصلاحيات...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>تسجيل الدخول إلى لوحة التحكم</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer note */}
+          <div className="text-center pt-2 border-t border-slate-800/80">
+            <a
+              href="/"
+              className="text-xs text-slate-500 hover:text-slate-300 transition inline-flex items-center gap-1.5"
+            >
+              <span>العودة للصفحة الرئيسية للموقع</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // 3. AUTHENTICATED ADMIN DASHBOARD
+  // ----------------------------------------------------
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans" dir="rtl">
       {/* Toast Notification */}
@@ -264,15 +446,15 @@ export default function AdminPage() {
                   Master Admin
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">مركز التحكم والإدارة الشامل</p>
+              <p className="text-[10px] text-slate-400">مركز التحكم والإدارة المحمي</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* Live Indicator */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>الخادم متصل ونشط</span>
+              <span>جلسة موثوقة ومحمية</span>
             </div>
 
             <button
@@ -285,11 +467,23 @@ export default function AdminPage() {
 
             <a
               href="/"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-300 text-xs font-semibold transition"
             >
               <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
               <span className="hidden sm:inline">عرض الموقع</span>
             </a>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              title="تسجيل الخروج وقفل اللوحة"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 border border-rose-500/30 text-rose-300 hover:text-white text-xs font-semibold transition cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">قفل وخروج</span>
+            </button>
           </div>
         </div>
       </header>
