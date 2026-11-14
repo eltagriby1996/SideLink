@@ -451,17 +451,9 @@
                                     <Border Background="#101A2D" BorderBrush="#2563EB" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,0,0,16">
                                         <StackPanel>
                                             <CheckBox IsChecked="{Binding IpaLibrary.AutoModifyBundleId}" Foreground="White" FontWeight="Bold" FontSize="13" Margin="0,0,0,6" Cursor="Hand">
-                                                <TextBlock Text="🛡️ تثبيت التطبيق كنسخة مكررة بمعرّف مختلف (استنساخ التطبيق - Dual App Cloner)" Foreground="White" FontWeight="Bold" />
+                                                <TextBlock Text="🛡️ تخصيص اسم ومعرّف التطبيق (Custom App Name &amp; Bundle ID)" Foreground="White" FontWeight="Bold" />
                                             </CheckBox>
-                                            <TextBlock Text="ميزة حصرية: تتيح استنساخ وتشغيل نسختين أو أكثر من أي تطبيق أو لعبة (مثل واتساب أو ألعاب) جنباً إلى جنب مع بيانات وحسابات معزولة بالكامل دون أي تعارض مع متجر App Store." FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="24,0,0,10" TextWrapping="Wrap" LineHeight="16" />
-
-                                            <!-- Quick 1-Click Clone Presets -->
-                                            <StackPanel Orientation="Horizontal" Margin="24,0,0,12">
-                                                <TextBlock Text="⚡ إجراءات استنساخ سريعة: " FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="👯 استنساخ: نسخة 2" Command="{Binding IpaLibrary.CloneAsSecondInstanceCommand}" Padding="10,4" Margin="0,0,6,0" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" BorderBrush="#0284C7" ToolTip="تغيير اسم ومعرّف التطبيق لإنشاء نسخة ثانية معزولة" />
-                                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="👯 استنساخ: نسخة 3" Command="{Binding IpaLibrary.CloneAsThirdInstanceCommand}" Padding="10,4" Margin="0,0,6,0" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" BorderBrush="#0284C7" ToolTip="تغيير اسم ومعرّف التطبيق لإنشاء نسخة ثالثة معزولة" />
-                                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="🔄 إعادة ضبط للأصل" Command="{Binding IpaLibrary.ResetToOriginalCommand}" Padding="10,4" FontSize="11" Foreground="#94A3B8" ToolTip="إلغاء التعديلات والعودة للاسم والمعرّف الأصلي للحزمة" />
-                                            </StackPanel>
+                                            <TextBlock Text="ميزة اختيارية: تتيح تخصيص اسم التطبيق ومعرّف الحزمة قبل تثبيته على الجهاز." FontSize="11" Foreground="{StaticResource TextMutedBrush}" Margin="24,0,0,10" TextWrapping="Wrap" LineHeight="16" />
 
                                             <Grid Margin="24,0,0,0">
                                                 <Grid.ColumnDefinitions>
