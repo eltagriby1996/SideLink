@@ -16,6 +16,7 @@ public partial class InstalledAppsViewModel : ObservableObject
     private readonly IDeviceDiscoveryService _deviceService;
     private readonly ICredentialStore _credentialStore;
     private readonly IpaLibraryViewModel _ipaLibrary;
+    private readonly SideLink.App.Services.CloudIpaCatalogService _cloudCatalog;
     private readonly ILogger<InstalledAppsViewModel> _logger;
 
     public event Action<string>? NavigationRequested;
@@ -78,6 +79,7 @@ public partial class InstalledAppsViewModel : ObservableObject
         IDeviceDiscoveryService deviceService,
         ICredentialStore credentialStore,
         IpaLibraryViewModel ipaLibrary,
+        SideLink.App.Services.CloudIpaCatalogService cloudCatalog,
         ILogger<InstalledAppsViewModel> logger)
     {
         _appRepository = appRepository;
@@ -86,6 +88,7 @@ public partial class InstalledAppsViewModel : ObservableObject
         _deviceService = deviceService;
         _credentialStore = credentialStore;
         _ipaLibrary = ipaLibrary;
+        _cloudCatalog = cloudCatalog;
         _logger = logger;
     }
 
@@ -361,19 +364,44 @@ public partial class InstalledAppsViewModel : ObservableObject
         string? ipaPath = target.ResolvedIpaPath;
         if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
         {
-            var msgResult = System.Windows.MessageBox.Show(
-                $"تطبيق ({target.AppName}) لم يتم العثور على ملف الـ IPA المخزن له محلياً.\n\n" +
-                "💡 لاستنساخ هذا التطبيق وتشغيل نسختين في نفس الوقت:\n" +
-                "يرجى اختيار ملف الـ IPA النظيف (Decrypted IPA) لهذا التطبيق من جهاز الكمبيوتر، وسيقوم SideLink بتجهيزه فوراً وتثبيته كنسخة ثانية معزولة.\n\n" +
-                "هل تريد اختيار ملف الـ IPA الآن؟",
-                "استنساخ تطبيق",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Information);
-
-            if (msgResult != System.Windows.MessageBoxResult.Yes)
+            var cloudEntry = _cloudCatalog.FindApp(target.BundleIdentifier, target.AppName);
+            if (cloudEntry != null)
             {
-                StatusMessage = "تم إلغاء عملية الاستنساخ.";
-                return;
+                var cloudChoice = System.Windows.MessageBox.Show(
+                    $"⚡ تم العثور على حزمة نظيفة لتطبيق ({cloudEntry.AppName}) جاهزة للتحميل والاستنساخ من سحابة SideLink!\n\n" +
+                    $"• الحجم: {cloudEntry.Size}\n" +
+                    $"• الإصدار: {cloudEntry.Version}\n" +
+                    $"• الوصف: {cloudEntry.Description}\n\n" +
+                    "هل تريد من SideLink تنزيل الحزمة تلقائياً واستنساخها وتثبيتها كنسخة ثانية على هاتفك؟\n" +
+                    "(اضغط [Yes] للتحميل التلقائي الفوري، أو [No] لاختيار ملف IPA من جهازك)",
+                    $"استنساخ تلقائي سحابي: {cloudEntry.AppName}",
+                    System.Windows.MessageBoxButton.YesNoCancel,
+                    System.Windows.MessageBoxImage.Information);
+
+                if (cloudChoice == System.Windows.MessageBoxResult.Yes)
+                {
+                    StatusMessage = $"⚡ جاري تنزيل حزمة {cloudEntry.AppName} من السحابة... يرجى الانتظار";
+                    var prog = new Progress<string>(msg => App.Current?.Dispatcher?.Invoke(() => StatusMessage = msg));
+                    string? downloadedPath = await _cloudCatalog.DownloadIpaAsync(cloudEntry.DownloadUrl, cloudEntry.BundleId, prog);
+                    if (!string.IsNullOrEmpty(downloadedPath) && File.Exists(downloadedPath))
+                    {
+                        string cName = $"{cloudEntry.AppName} 2";
+                        string cBundleId = $"{cloudEntry.BundleId}.clone2";
+                        StatusMessage = $"✓ اكتمل تنزيل الحزمة بنجاح! جاري التجهيز للتوقيع والتثبيت...";
+                        await _ipaLibrary.PrepareAppForCloningAsync(downloadedPath, cName, cBundleId);
+                        NavigationRequested?.Invoke("IpaLibrary");
+                        return;
+                    }
+                    else
+                    {
+                        StatusMessage = $"تعذر إكمال تنزيل حزمة {cloudEntry.AppName}. يمكنك اختيار ملف IPA من جهازك.";
+                    }
+                }
+                else if (cloudChoice == System.Windows.MessageBoxResult.Cancel)
+                {
+                    StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                    return;
+                }
             }
 
             var dialog = new Microsoft.Win32.OpenFileDialog
@@ -414,21 +442,82 @@ public partial class InstalledAppsViewModel : ObservableObject
         string? ipaPath = target.CachedIpaPath;
         if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
         {
-            var msgResult = System.Windows.MessageBox.Show(
-                $"تطبيق ({target.AppName}) مثبت حالياً على هاتفك من متجر App Store الرسمي (محمي بتشفير آبل FairPlay DRM ولا يسمح نظام iOS بسحبه عبر كابل الـ USB بدون جيلبريك).\n\n" +
-                "💡 لاستنساخ هذا التطبيق وتشغيل نسختين في نفس الوقت على شاشة الآيفون:\n" +
-                "يرجى تحديد ملف الـ IPA النظيف للتطبيق (Decrypted IPA) من جهازك، وسيقوم SideLink بتعديل المعرّف فوراً وتثبيت النسخة الثانية كنسخة مستقلة تماماً جنباً إلى جنب مع نسختك الحالية!\n\n" +
-                "هل تريد اختيار ملف الـ IPA الآن؟",
-                "استنساخ تطبيق رسمي من App Store",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Information);
-
-            if (msgResult != System.Windows.MessageBoxResult.Yes)
+            // 1. Check if the app exists in our Cloud IPA Catalog (WhatsApp, Telegram, TikTok, Instagram, etc.)
+            var cloudEntry = _cloudCatalog.FindApp(target.BundleIdentifier, target.AppName);
+            if (cloudEntry != null)
             {
-                StatusMessage = "تم إلغاء عملية الاستنساخ.";
-                return;
+                var cloudChoice = System.Windows.MessageBox.Show(
+                    $"⚡ تم العثور على حزمة نظيفة لتطبيق ({cloudEntry.AppName}) جاهزة للتحميل والاستنساخ من سحابة SideLink!\n\n" +
+                    $"• الحجم: {cloudEntry.Size}\n" +
+                    $"• الإصدار: {cloudEntry.Version}\n" +
+                    $"• الوصف: {cloudEntry.Description}\n\n" +
+                    "هل تريد من SideLink تنزيل الحزمة تلقائياً واستنساخها وتثبيتها كنسخة ثانية على هاتفك؟\n" +
+                    "(اضغط [Yes] للتحميل التلقائي الفوري، أو [No] لاختيار ملف IPA من جهازك)",
+                    $"استنساخ تلقائي سحابي: {cloudEntry.AppName}",
+                    System.Windows.MessageBoxButton.YesNoCancel,
+                    System.Windows.MessageBoxImage.Information);
+
+                if (cloudChoice == System.Windows.MessageBoxResult.Yes)
+                {
+                    StatusMessage = $"⚡ جاري تنزيل حزمة {cloudEntry.AppName} من السحابة... يرجى الانتظار";
+                    var prog = new Progress<string>(msg => App.Current?.Dispatcher?.Invoke(() => StatusMessage = msg));
+                    string? downloadedPath = await _cloudCatalog.DownloadIpaAsync(cloudEntry.DownloadUrl, cloudEntry.BundleId, prog);
+                    if (!string.IsNullOrEmpty(downloadedPath) && File.Exists(downloadedPath))
+                    {
+                        string cName = $"{cloudEntry.AppName} 2";
+                        string cBundleId = $"{cloudEntry.BundleId}.clone2";
+                        StatusMessage = $"✓ اكتمل تنزيل الحزمة بنجاح! جاري التجهيز للتوقيع والتثبيت...";
+                        await _ipaLibrary.PrepareAppForCloningAsync(downloadedPath, cName, cBundleId);
+                        NavigationRequested?.Invoke("IpaLibrary");
+                        return;
+                    }
+                    else
+                    {
+                        StatusMessage = $"تعذر إكمال تنزيل حزمة {cloudEntry.AppName}. يمكنك اختيار ملف IPA من جهازك.";
+                    }
+                }
+                else if (cloudChoice == System.Windows.MessageBoxResult.Cancel)
+                {
+                    StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                    return;
+                }
+            }
+            else
+            {
+                // App not in predefined cloud list
+                var searchChoice = System.Windows.MessageBox.Show(
+                    $"تطبيق ({target.AppName}) مثبت حالياً من متجر App Store الرسمي (مشفر بحماية آبل FairPlay DRM ولا يسمح نظام iOS بسحبه عبر USB بدون جيلبريك).\n\n" +
+                    "💡 للحصول على نسخة IPA نظيفة واستنساخها:\n" +
+                    "• اضغط [Yes] للبحث التلقائي في الإنترنت وتحميل الـ IPA النظيف للتطبيق بنقرة واحدة.\n" +
+                    "• اضغط [No] لاختيار ملف IPA من جهازك إذا كان متوفراً لديك.\n\n" +
+                    "هل تريد البحث عن ملف التطبيق في الإنترنت الآن؟",
+                    "استنساخ تطبيق App Store",
+                    System.Windows.MessageBoxButton.YesNoCancel,
+                    System.Windows.MessageBoxImage.Question);
+
+                if (searchChoice == System.Windows.MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        string searchUrl = $"https://decrypt.day/search?q={Uri.EscapeDataString(target.AppName)}";
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = searchUrl,
+                            UseShellExecute = true
+                        });
+                        StatusMessage = $"تم فتح صفحة البحث عن IPA نظيف لتطبيق ({target.AppName}). بعد التنزيل اضغط استنساخ مجدداً لاختياره.";
+                    }
+                    catch { }
+                    return;
+                }
+                else if (searchChoice == System.Windows.MessageBoxResult.Cancel)
+                {
+                    StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                    return;
+                }
             }
 
+            // Fallback: Pick IPA
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",

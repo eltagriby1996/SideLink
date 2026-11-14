@@ -106,6 +106,8 @@ public partial class App : Application
             services.AddSingleton<IDiagnosticsService>(sp =>
                 new DiagnosticsService(backendBaseUrl, sp.GetRequiredService<ILogger<DiagnosticsService>>()));
 
+            services.AddSingleton<SideLink.App.Services.CloudIpaCatalogService>();
+
             // ViewModels
             services.AddSingleton<DashboardViewModel>();
             services.AddSingleton<DevicesViewModel>();
