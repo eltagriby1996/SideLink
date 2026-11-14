@@ -390,6 +390,55 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public void OpenTelegramChannel()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://t.me/sidelink_channel") { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    public void OpenFacebookProfile()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://facebook.com/ahmed.monged.0") { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    public void OpenOfficialWebsite()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://sidelinktool.me") { UseShellExecute = true });
+        }
+        catch { }
+    }
+
+    [RelayCommand]
+    public async Task CheckForUpdatesManuallyAsync()
+    {
+        try
+        {
+            bool ok = await CheckRemoteGovernanceAsync();
+            if (!IsUpdateAvailable)
+            {
+                BroadcastBannerMessage = "أنت تستخدم أحدث إصدار من أداة SideLink (v" + CurrentAppVersion + ")";
+                BroadcastBannerType = "success";
+                BroadcastBannerBg = "#064E3B";
+                BroadcastBannerBorder = "#10B981";
+                BroadcastBannerIcon = "✓";
+                IsBroadcastBannerVisible = true;
+            }
+        }
+        catch { }
+    }
+
+    [RelayCommand]
     public void ExitApplication()
     {
         System.Windows.Application.Current?.Shutdown();

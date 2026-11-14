@@ -126,6 +126,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="50" /> <!-- Custom Modern Title Bar -->
                 <RowDefinition Height="*" />  <!-- Main Work Area -->
+                <RowDefinition Height="40" /> <!-- Modern Community & Channels Bar -->
             </Grid.RowDefinitions>
 
             <!-- Custom Modern Title Bar -->
@@ -205,6 +206,27 @@
                                 <Button Style="{StaticResource NavBtnDiagnostics}" Content="🩺  فحص النظام والتعريفات" Command="{Binding NavigateCommand}" CommandParameter="Diagnostics" />
                                 <Button Style="{StaticResource NavBtnLogs}" Content="📜  السجلات (Logs)" Command="{Binding NavigateCommand}" CommandParameter="Logs" />
                                 <Button Style="{StaticResource NavBtnSettings}" Content="⚙️  الإعدادات (Settings)" Command="{Binding NavigateCommand}" CommandParameter="Settings" />
+
+                                <!-- Group 4: Community & Official Channels -->
+                                <TextBlock Text="المجتمع والدعم الفني" FontSize="10" FontWeight="Bold" Foreground="#38BDF8" Margin="18,14,0,6" />
+                                <Button Style="{StaticResource NavButtonStyle}" Command="{Binding OpenTelegramChannelCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="✈️" FontSize="12" Margin="0,0,10,0" />
+                                        <TextBlock Text="قناة التليجرام الرسمية" FontSize="11.5" Foreground="#38BDF8" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource NavButtonStyle}" Command="{Binding OpenFacebookProfileCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="👤" FontSize="12" Margin="0,0,10,0" />
+                                        <TextBlock Text="فيسبوك: Ahmed Monged" FontSize="11.5" Foreground="#93C5FD" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource NavButtonStyle}" Command="{Binding OpenOfficialWebsiteCommand}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="🌐" FontSize="12" Margin="0,0,10,0" />
+                                        <TextBlock Text="الموقع: sidelinktool.me" FontSize="11.5" Foreground="#94A3B8" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
                         </ScrollViewer>
 
@@ -1511,6 +1533,64 @@
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <!-- ======================================================== -->
+            <!-- MODERN COMMUNITY & OFFICIAL CHANNELS BAR (Grid.Row="2") -->
+            <!-- ======================================================== -->
+            <Border Grid.Row="2" Background="#0A0F1D" BorderBrush="#1E293B" BorderThickness="0,1,0,0">
+                <Grid Margin="16,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Social & Community Quick Links -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Telegram Pill -->
+                        <Border Background="#0C4A6E" BorderBrush="#0284C7" BorderThickness="1" CornerRadius="12" Margin="0,0,8,0">
+                            <Button Command="{Binding OpenTelegramChannelCommand}" Background="Transparent" BorderThickness="0" Padding="10,4" Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="✈️" FontSize="12" Margin="0,0,6,0" />
+                                    <TextBlock Text="قناة التليجرام: @sidelink_channel" FontSize="11" FontWeight="Bold" Foreground="#38BDF8" />
+                                </StackPanel>
+                            </Button>
+                        </Border>
+
+                        <!-- Facebook Pill -->
+                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12" Margin="0,0,8,0">
+                            <Button Command="{Binding OpenFacebookProfileCommand}" Background="Transparent" BorderThickness="0" Padding="10,4" Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="👤" FontSize="12" Margin="0,0,6,0" />
+                                    <TextBlock Text="المطور: Ahmed Monged" FontSize="11" FontWeight="SemiBold" Foreground="#CBD5E1" />
+                                </StackPanel>
+                            </Button>
+                        </Border>
+
+                        <!-- Website Pill -->
+                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="12">
+                            <Button Command="{Binding OpenOfficialWebsiteCommand}" Background="Transparent" BorderThickness="0" Padding="10,4" Cursor="Hand">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🌐" FontSize="12" Margin="0,0,6,0" />
+                                    <TextBlock Text="sidelinktool.me" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8" />
+                                </StackPanel>
+                            </Button>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Version & Check Updates on the Right -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Command="{Binding CheckForUpdatesManuallyCommand}" Background="Transparent" BorderThickness="0" Cursor="Hand" Padding="8,4">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="🔄" FontSize="11" Margin="0,0,5,0" />
+                                <TextBlock Text="فحص التحديثات" FontSize="11" Foreground="#38BDF8" FontWeight="SemiBold" />
+                            </StackPanel>
+                        </Button>
+                        <Border Width="1" Height="14" Background="#334155" Margin="8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="SideLink v1.0.0 PRO" FontSize="11" FontWeight="Bold" Foreground="#64748B" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
     </Border>
 </Window>
