@@ -113,6 +113,64 @@ public partial class IpaLibraryViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task InstallSideLinkContainerAsync()
+    {
+        try
+        {
+            HasError = false;
+            ErrorMessage = string.Empty;
+
+            string[] potentialPaths = 
+            [
+                Path.Combine(AppContext.BaseDirectory, "Assets", "SideLinkContainer.ipa"),
+                Path.Combine(AppContext.BaseDirectory, "SideLinkContainer.ipa"),
+                Path.Combine(Directory.GetCurrentDirectory(), "Assets", "SideLinkContainer.ipa"),
+                Path.GetFullPath("src/SideLink.App/Assets/SideLinkContainer.ipa"),
+                Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Assets", "SideLinkContainer.ipa")
+            ];
+
+            string? containerPath = potentialPaths.FirstOrDefault(File.Exists);
+
+            if (containerPath == null)
+            {
+                HasError = true;
+                ErrorMessage = "لم يتم العثور على ملف SideLinkContainer.ipa في مجلد الأصول. يرجى التأكد من وجوده.";
+                StatusMessage = ErrorMessage;
+                return;
+            }
+
+            StatusMessage = "جاري فحص حزمة SideLink Container...";
+            await LoadIpaFileAsync(containerPath);
+
+            CustomDisplayName = "SideLink Container";
+            TargetBundleId = "com.sidelink.container";
+            AutoModifyBundleId = false;
+
+            var device = _deviceService.ConnectedDevices.FirstOrDefault(d => d.IsConnected);
+            string? activeAppleId = !string.IsNullOrWhiteSpace(_signingRefresh.AppleId) 
+                ? _signingRefresh.AppleId.Trim() 
+                : await _credentialStore.GetLastAppleIdAsync();
+
+            if (device != null && (_signingRefresh.SelectedMethod == SigningMethodType.PersonalTeam || _signingRefresh.SelectedMethod == SigningMethodType.PaidDeveloper) && !string.IsNullOrWhiteSpace(activeAppleId))
+            {
+                StatusMessage = "⚡ تم تجهيز الحاوية! جاري التوقيع والتثبيت التلقائي على هاتفك لتجاوز حد الـ 3 تطبيقات...";
+                await InstallSelectedIpaAsync();
+            }
+            else
+            {
+                StatusMessage = "⚡ تم تجهيز SideLink Container! اضغط الآن على زر 'توقيع وتثبيت التطبيق على الآيفون' في الأسفل للبدء.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to prepare SideLink Container");
+            HasError = true;
+            ErrorMessage = "حدث خطأ أثناء تجهيز الحاوية: " + ex.Message;
+            StatusMessage = ErrorMessage;
+        }
+    }
+
+    [RelayCommand]
     public async Task BrowseForIpaAsync()
     {
         try

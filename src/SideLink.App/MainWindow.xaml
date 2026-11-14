@@ -333,7 +333,48 @@
                         <StackPanel>
                             <!-- Header -->
                             <TextBlock Text="تثبيت وتوقيع تطبيقات iOS (IPA Package)" FontSize="24" FontWeight="Black" Foreground="White" />
-                            <TextBlock Text="اسحب أي تطبيق أو لعبة بصيغة .ipa لتوقيعها بشهادتك الشخصية وتثبيتها مباشرة على هاتفك" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,20" />
+                            <TextBlock Text="اسحب أي تطبيق أو لعبة بصيغة .ipa لتوقيعها بشهادتك الشخصية وتثبيتها مباشرة على هاتفك" FontSize="13" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,16" />
+
+                            <!-- SideLink Container Banner: Break 3-App Limit -->
+                            <Border Background="#0F172A" 
+                                    BorderBrush="#38BDF8" 
+                                    BorderThickness="1.5" 
+                                    CornerRadius="16" 
+                                    Padding="20,16" 
+                                    Margin="0,0,0,18">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Container Badge Icon -->
+                                    <Border Width="50" Height="50" CornerRadius="12" Background="#1E293B" BorderBrush="#0284C7" BorderThickness="1" Margin="0,0,16,0" VerticalAlignment="Center">
+                                        <TextBlock Text="⚡" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,16,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                            <TextBlock Text="SideLink Container (تجاوز حد الـ 3 تطبيقات)" FontSize="15" FontWeight="Bold" Foreground="White" />
+                                            <Border Background="#065F46" CornerRadius="4" Padding="6,2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="حل حصري للأبد" FontSize="9" FontWeight="Bold" Foreground="#34D399" />
+                                            </Border>
+                                        </StackPanel>
+                                        <TextBlock Text="شغّل عدد لا نهائي من التطبيقات والألعاب المعدلة بنفس الشهادة المجانية دون استهلاك خانات أبل الإضافية (تستهلك خانة 1 فقط وبكامل سرعة الجهاز 100%)." 
+                                                   FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                    </StackPanel>
+
+                                    <Button Grid.Column="2" 
+                                            Style="{StaticResource PrimaryButtonStyle}" 
+                                            Content="🚀 تثبيت الحاوية بضغطة واحدة" 
+                                            Command="{Binding IpaLibrary.InstallSideLinkContainerCommand}" 
+                                            VerticalAlignment="Center" 
+                                            Padding="16,10" 
+                                            FontSize="12" 
+                                            FontWeight="Bold" />
+                                </Grid>
+                            </Border>
 
                             <!-- Interactive Drag & Drop Zone -->
                             <Border Background="#101728" 

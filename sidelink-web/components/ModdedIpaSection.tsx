@@ -30,6 +30,23 @@ interface ModdedApp {
 
 const INITIAL_TOP_APPS: ModdedApp[] = [
   {
+    id: 'sidelink-container',
+    name: 'SideLink Container (تجاوز حد الـ 3 تطبيقات)',
+    category: 'utilities',
+    version: 'v3.8.0',
+    size: '4.7 MB',
+    icon: 'https://raw.githubusercontent.com/LiveContainer/LiveContainer/main/LiveContainer/Assets.xcassets/AppIcon.appiconset/AppIcon-60%402x.png',
+    badge: 'تجاوز حد الـ 3 تطبيقات 🔥',
+    description: 'الحاوية الذكية الرسمية لتشغيل عدد لا نهائي من التطبيقات والألعاب (IPA) على الآيفون بالشهادة المجانية بدون استهلاك خانات أبل وبأداء كامل 100% بدون لاج أو محاكاة.',
+    features: [
+      'تثبيت وتشغيل عدد غير محدود من التطبيقات والألعاب',
+      'تستهلك خانة واحدة فقط من الـ 3 تطبيقات المسموحة',
+      'تعمل بكامل سرعة معالج الآيفون وكارت الشاشة (Native)',
+      'دعم تشغيل ألعاب وتطبيقات بلس وحفظ البيانات بالكامل'
+    ],
+    downloadUrl: '/downloads/SideLinkContainer.ipa',
+  },
+  {
     id: 'youtube-uyou',
     name: 'YouTube uYouEnhanced (يوتيوب بلس)',
     category: 'social',
@@ -246,6 +263,33 @@ export default function ModdedIpaSection() {
           <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base leading-relaxed">
             حمل أشهر تطبيقات السوشيال ميديا بلس، تطبيقات المشاهدة والاستماع بدون إعلانات، وألعاب المحاكيات جاهزة للتثبيت فوراً عبر برنامج <span className="text-blue-400 font-semibold">SideLink</span>.
           </p>
+
+          {/* Featured SideLink Container Banner: Bypass 3-App Limit */}
+          <div className="mt-8 mb-6 p-6 rounded-2xl bg-gradient-to-r from-blue-950/70 via-indigo-950/50 to-slate-900 border border-blue-500/40 text-right shadow-2xl relative overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="space-y-2 text-center md:text-right">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
+                  <span>⚡ حل حصري لكسر قيود أبل</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white">
+                  تشغيل عدد لا نهائي من التطبيقات بالشهادة المجانية (SideLink Container)
+                </h3>
+                <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                  تجاوز حد الـ 3 تطبيقات المفروض من أبل! قم بتثبيت الحاوية الذكية مرة واحدة، وشغّل عشرات التطبيقات والألعاب بداخلها بنفس الشهادة المجانية وبكامل سرعة جهازك الأصلية 100%.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+                <a
+                  href="/downloads/SideLinkContainer.ipa"
+                  download="SideLinkContainer.ipa"
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>تحميل الحاوية IPA (4.7 MB)</span>
+                </a>
+              </div>
+            </div>
+          </div>
 
           {/* Search & Clean Wrapped Category Filters */}
           <div className="pt-4 max-w-2xl mx-auto space-y-4">
