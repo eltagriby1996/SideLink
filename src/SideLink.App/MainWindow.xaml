@@ -639,9 +639,9 @@
                     <!-- ======================================================== -->
                     <!-- PAGE 3: INSTALLED APPS -->
                     <!-- ======================================================== -->
-                    <StackPanel>
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ScrollViewer.Style>
+                            <Style TargetType="ScrollViewer">
                                 <Setter Property="Visibility" Value="Collapsed" />
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding CurrentPage}" Value="InstalledApps">
@@ -649,9 +649,10 @@
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
-                        </StackPanel.Style>
+                        </ScrollViewer.Style>
 
-                        <Grid Margin="0,0,0,16">
+                        <StackPanel Margin="0,0,14,20">
+                            <Grid Margin="0,0,0,16">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
@@ -836,7 +837,24 @@
                                 </StackPanel>
                             </Border>
 
-                            <ItemsControl ItemsSource="{Binding InstalledApps.DiscoveredApps}">
+                            <!-- Search / Filter Bar for Discovered Apps -->
+                            <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,6" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="🔍 " FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0" />
+                                    <TextBox Grid.Column="1" Text="{Binding InstalledApps.FilterQuery, UpdateSourceTrigger=PropertyChanged}" 
+                                             FontSize="13" Background="Transparent" BorderThickness="0" Foreground="White" 
+                                             CaretBrush="White" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding InstalledApps.FilteredDiscoveredApps.Count, StringFormat='{}{0} تطبيق'}" 
+                                               FontSize="11" Foreground="#38BDF8" FontWeight="Bold" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+
+                            <ItemsControl ItemsSource="{Binding InstalledApps.FilteredDiscoveredApps}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
                                         <Border Style="{StaticResource CardStyle}" Margin="0,0,0,10">
@@ -884,6 +902,7 @@
                             </ItemsControl>
                         </StackPanel>
                     </StackPanel>
+                </ScrollViewer>
 
                     <!-- ======================================================== -->
                     <!-- PAGE 4: DEVICES VIEW -->

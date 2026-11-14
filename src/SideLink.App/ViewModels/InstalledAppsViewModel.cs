@@ -22,6 +22,7 @@ public partial class InstalledAppsViewModel : ObservableObject
 
     public ObservableCollection<ManagedApp> Apps { get; } = new();
     public ObservableCollection<DiscoveredAppInfo> DiscoveredApps { get; } = new();
+    public ObservableCollection<DiscoveredAppInfo> FilteredDiscoveredApps { get; } = new();
 
     [ObservableProperty]
     private ManagedApp? _selectedApp;
@@ -49,6 +50,26 @@ public partial class InstalledAppsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _filterQuery = string.Empty;
+
+    partial void OnFilterQueryChanged(string value)
+    {
+        ApplyFilter();
+    }
+
+    private void ApplyFilter()
+    {
+        FilteredDiscoveredApps.Clear();
+        var query = FilterQuery?.Trim() ?? string.Empty;
+        foreach (var app in DiscoveredApps)
+        {
+            if (string.IsNullOrWhiteSpace(query) ||
+                app.AppName.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                app.BundleIdentifier.Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                FilteredDiscoveredApps.Add(app);
+            }
+        }
+    }
 
     public InstalledAppsViewModel(
         IAppRepository appRepository,
@@ -314,6 +335,7 @@ public partial class InstalledAppsViewModel : ObservableObject
             {
                 DiscoveredApps.Add(a);
             }
+            ApplyFilter();
 
             ShowAllDeviceApps = true;
             SelectedViewTab = 1;
@@ -339,6 +361,21 @@ public partial class InstalledAppsViewModel : ObservableObject
         string? ipaPath = target.ResolvedIpaPath;
         if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
         {
+            var msgResult = System.Windows.MessageBox.Show(
+                $"تطبيق ({target.AppName}) لم يتم العثور على ملف الـ IPA المخزن له محلياً.\n\n" +
+                "💡 لاستنساخ هذا التطبيق وتشغيل نسختين في نفس الوقت:\n" +
+                "يرجى اختيار ملف الـ IPA النظيف (Decrypted IPA) لهذا التطبيق من جهاز الكمبيوتر، وسيقوم SideLink بتجهيزه فوراً وتثبيته كنسخة ثانية معزولة.\n\n" +
+                "هل تريد اختيار ملف الـ IPA الآن؟",
+                "استنساخ تطبيق",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Information);
+
+            if (msgResult != System.Windows.MessageBoxResult.Yes)
+            {
+                StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                return;
+            }
+
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",
@@ -377,10 +414,25 @@ public partial class InstalledAppsViewModel : ObservableObject
         string? ipaPath = target.CachedIpaPath;
         if (string.IsNullOrWhiteSpace(ipaPath) || !File.Exists(ipaPath))
         {
+            var msgResult = System.Windows.MessageBox.Show(
+                $"تطبيق ({target.AppName}) مثبت حالياً على هاتفك من متجر App Store الرسمي (محمي بتشفير آبل FairPlay DRM ولا يسمح نظام iOS بسحبه عبر كابل الـ USB بدون جيلبريك).\n\n" +
+                "💡 لاستنساخ هذا التطبيق وتشغيل نسختين في نفس الوقت على شاشة الآيفون:\n" +
+                "يرجى تحديد ملف الـ IPA النظيف للتطبيق (Decrypted IPA) من جهازك، وسيقوم SideLink بتعديل المعرّف فوراً وتثبيت النسخة الثانية كنسخة مستقلة تماماً جنباً إلى جنب مع نسختك الحالية!\n\n" +
+                "هل تريد اختيار ملف الـ IPA الآن؟",
+                "استنساخ تطبيق رسمي من App Store",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Information);
+
+            if (msgResult != System.Windows.MessageBoxResult.Yes)
+            {
+                StatusMessage = "تم إلغاء عملية الاستنساخ.";
+                return;
+            }
+
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "iOS Application Packages (*.ipa)|*.ipa|All Files (*.*)|*.*",
-                Title = $"تطبيق ({target.AppName}) رسمي من متجر App Store - يرجى اختيار ملف الـ IPA النظيف لاستنساخه"
+                Title = $"اختر ملف الـ IPA لتطبيق ({target.AppName}) لإنشاء وتثبيت النسخة المستنسخة"
             };
 
             var owner = System.Windows.Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive) 
