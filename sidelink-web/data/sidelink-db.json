@@ -2,7 +2,7 @@
   "config": {
     "isVerificationEnabled": true,
     "maintenanceMode": false,
-    "emergencyKillSwitch": true,
+    "emergencyKillSwitch": false,
     "killSwitchMessage": "تطبيق SideLink متوقف مؤقتاً لأعمال الصيانة والتطوير الأمني. سنعود للعمل قريباً.",
     "latestVersion": "1.0.0",
     "downloadUrl": "/downloads/SideLink-v1.0.0-win-x64.zip",
