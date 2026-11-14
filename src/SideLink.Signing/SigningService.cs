@@ -239,9 +239,12 @@ public class SigningService : ISigningService
             }
 
             // SideLink Container Auto-Activation Pre-bundling
-            bool isContainerApp = requestedBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
-                                  originalBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
-                                  appBundlePath.EndsWith("LiveContainer.app", StringComparison.OrdinalIgnoreCase);
+            bool isContainerApp = requestedBundleId.Contains("container", StringComparison.OrdinalIgnoreCase) ||
+                                  originalBundleId.Contains("container", StringComparison.OrdinalIgnoreCase) ||
+                                  appBundlePath.EndsWith("LiveContainer.app", StringComparison.OrdinalIgnoreCase) ||
+                                  appBundlePath.EndsWith("SideLink.app", StringComparison.OrdinalIgnoreCase) ||
+                                  Directory.Exists(Path.Combine(appBundlePath, "Frameworks", "LiveContainerSwiftUI.framework")) ||
+                                  Directory.Exists(Path.Combine(appBundlePath, "Frameworks", "LiveContainerShared.framework"));
 
             if (isContainerApp && !string.IsNullOrWhiteSpace(effectiveP12) && File.Exists(effectiveP12))
             {
