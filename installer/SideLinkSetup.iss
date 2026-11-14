@@ -5,7 +5,7 @@
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "SideLink Open Source Project"
 #define MyAppURL "https://www.sidelinktool.me"
-#define MyAppExeName "SideLink.App.exe"
+#define MyAppExeName "SideLink.exe"
 
 [Setup]
 AppId={{5E70BFB4-8461-4DC3-816E-1D96D2C8BF2A}

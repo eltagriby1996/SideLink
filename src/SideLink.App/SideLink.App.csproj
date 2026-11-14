@@ -7,7 +7,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RootNamespace>SideLink.App</RootNamespace>
+    <AssemblyName>SideLink</AssemblyName>
+    <Product>SideLink</Product>
+    <Company>SideLink Team</Company>
+    <Authors>SideLink</Authors>
+    <Description>SideLink - Ultimate iOS Sideloading and App Management Utility for Windows</Description>
+    <Copyright>Copyright © 2026 SideLink Team</Copyright>
+    <Version>1.0.0</Version>
+    <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +26,9 @@
     <Content Include="Assets\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="Start-SideLink.bat">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

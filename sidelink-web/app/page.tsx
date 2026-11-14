@@ -303,7 +303,7 @@ export default function HomePage() {
               </div>
               <h3 className="font-bold text-white text-base group-hover:text-emerald-300 transition-colors">التثبيت والتوقيع</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                شغّل <code className="text-emerald-300">SideLink.App.exe</code>، اختر ملف IPA ثم اضغط <strong>Sign &amp; Install</strong> ليتم توقيعه وتثبيته مباشرة!
+                شغّل <code className="text-emerald-300">SideLink.exe</code>، اختر ملف IPA ثم اضغط <strong>Sign &amp; Install</strong> ليتم توقيعه وتثبيته مباشرة!
               </p>
             </div>
           </ScrollReveal>
