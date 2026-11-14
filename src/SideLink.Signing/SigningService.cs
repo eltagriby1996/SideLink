@@ -195,6 +195,37 @@ public class SigningService : ISigningService
                 }
             }
 
+            if (!string.IsNullOrWhiteSpace(effectiveP12) && File.Exists(effectiveP12) &&
+                !string.IsNullOrWhiteSpace(effectiveProfile) && File.Exists(effectiveProfile))
+            {
+                try
+                {
+                    using var p12Cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(effectiveP12, p12Password);
+                    string p12Thumbprint = p12Cert.Thumbprint;
+                    var provCerts = new List<string>();
+                    ExtractProfileDetails(effectiveProfile, out _, out _, out _, provCerts);
+                    if (provCerts.Count > 0)
+                    {
+                        bool match = provCerts.Any(tp => string.Equals(tp, p12Thumbprint, StringComparison.OrdinalIgnoreCase));
+                        if (!match)
+                        {
+                            _logger.LogWarning("Selected profile {Profile} does NOT match active P12 certificate ({Thumbprint})! Re-provisioning profile for bundle {Bundle}...", effectiveProfile, p12Thumbprint, requestedBundleId);
+                            var refreshedIdentity = await _identityService.AutoConfigureIdentityForAccountAsync(config.AppleId, targetDevice.DeviceId, requestedBundleId, forceRefresh: true);
+                            if (refreshedIdentity != null && refreshedIdentity.IsReadyToSign)
+                            {
+                                effectiveProfile = refreshedIdentity.MobileProvisionPath;
+                                effectiveP12 = refreshedIdentity.P12Path;
+                                profileTeamId = refreshedIdentity.TeamId;
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Profile certificate validation warning: {Msg}", ex.Message);
+                }
+            }
+
             if (!string.IsNullOrWhiteSpace(effectiveProfile) && File.Exists(effectiveProfile))
             {
                 File.Copy(effectiveProfile, embeddedProvisionTarget, true);
@@ -204,6 +235,27 @@ public class SigningService : ISigningService
                 if (string.IsNullOrWhiteSpace(profileTeamId))
                 {
                     profileTeamId = extractedTeamId;
+                }
+            }
+
+            // SideLink Container Auto-Activation Pre-bundling
+            bool isContainerApp = requestedBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
+                                  originalBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
+                                  appBundlePath.EndsWith("LiveContainer.app", StringComparison.OrdinalIgnoreCase);
+
+            if (isContainerApp && !string.IsNullOrWhiteSpace(effectiveP12) && File.Exists(effectiveP12))
+            {
+                try
+                {
+                    string certDest = Path.Combine(appBundlePath, "cert.p12");
+                    File.Copy(effectiveP12, certDest, true);
+                    string passDest = Path.Combine(appBundlePath, "pass.txt");
+                    File.WriteAllText(passDest, p12Password, Encoding.UTF8);
+                    _logger.LogInformation("Pre-bundled cert.p12 and pass.txt into SideLink Container app bundle: {Dest}", certDest);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Could not pre-bundle cert into SideLink Container: {Msg}", ex.Message);
                 }
             }
 
@@ -526,7 +578,7 @@ public class SigningService : ISigningService
         return null;
     }
 
-    private static void ExtractProfileDetails(string profilePath, out string? allowedBundleId, out string? teamId, out string? entitlementsXml)
+    private static void ExtractProfileDetails(string profilePath, out string? allowedBundleId, out string? teamId, out string? entitlementsXml, List<string>? certThumbprints = null)
     {
         allowedBundleId = null;
         teamId = null;
@@ -547,6 +599,26 @@ public class SigningService : ISigningService
             var doc = XDocument.Parse(xml);
             var rootDict = doc.Root?.Element("dict");
             if (rootDict == null) return;
+
+            if (certThumbprints != null)
+            {
+                var devCertsKey = rootDict.Elements("key").FirstOrDefault(k => k.Value == "DeveloperCertificates");
+                var devCertsArray = devCertsKey?.ElementsAfterSelf().FirstOrDefault();
+                if (devCertsArray != null)
+                {
+                    foreach (var dataNode in devCertsArray.Elements("data"))
+                    {
+                        try
+                        {
+                            byte[] cBytes = Convert.FromBase64String(dataNode.Value.Trim());
+                            using var cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(cBytes);
+                            if (!string.IsNullOrEmpty(cert.Thumbprint))
+                                certThumbprints.Add(cert.Thumbprint);
+                        }
+                        catch { }
+                    }
+                }
+            }
 
             var entKey = rootDict.Elements("key").FirstOrDefault(k => k.Value == "Entitlements");
             var entDict = entKey?.ElementsAfterSelf().FirstOrDefault();

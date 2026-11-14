@@ -194,9 +194,14 @@ public partial class IpaLibraryViewModel : ObservableObject
                 ? _signingRefresh.AppleId.Trim() 
                 : await _credentialStore.GetLastAppleIdAsync();
 
-            if (device != null && (_signingRefresh.SelectedMethod == SigningMethodType.PersonalTeam || _signingRefresh.SelectedMethod == SigningMethodType.PaidDeveloper) && !string.IsNullOrWhiteSpace(activeAppleId))
+            bool canAutoInstall = device != null && (
+                ((_signingRefresh.SelectedMethod == SigningMethodType.PersonalTeam || _signingRefresh.SelectedMethod == SigningMethodType.PaidDeveloper) && !string.IsNullOrWhiteSpace(activeAppleId)) ||
+                (_signingRefresh.SelectedMethod == SigningMethodType.CustomP12 && !string.IsNullOrWhiteSpace(_signingRefresh.P12Path) && File.Exists(_signingRefresh.P12Path))
+            );
+
+            if (canAutoInstall)
             {
-                StatusMessage = "⚡ تم تجهيز الحاوية! جاري التوقيع والتثبيت التلقائي على هاتفك لتجاوز حد الـ 3 تطبيقات...";
+                StatusMessage = "⚡ تم تجهيز SideLink! جاري التوقيع والتثبيت التلقائي مع تفعيل الشهادة بدون أي خطوات يدوية...";
                 await InstallSelectedIpaAsync();
             }
             else

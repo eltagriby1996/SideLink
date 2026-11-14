@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.Extensions.Logging;
 using SideLink.Core.Interfaces;
 using SideLink.Core.Models;
@@ -71,6 +72,76 @@ public class InstallationService : IInstallationService
                 _logger.LogWarning("Real iOS installation rejected: {Error}", errorMessage);
                 ReportProgress(progress, errorMessage ?? "فشل تثبيت التطبيق على جهاز الآيفون.", 0, hasError: true, errorMessage: errorMessage);
                 return false;
+            }
+
+            // SideLink Container: Automate Certificate & Profile Deployment via House Arrest
+            if (metadata.BundleIdentifier.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
+                metadata.BundleIdentifier.Contains("livecontainer", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    ReportProgress(progress, "تفعيل شهادة SideLink Container تلقائياً على الهاتف...", 95);
+                    byte[]? p12Bytes = null;
+                    string p12Password = "sidelink";
+                    byte[]? profileBytes = null;
+
+                    using (var archive = System.IO.Compression.ZipFile.OpenRead(signedIpaPath))
+                    {
+                        var p12Entry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith("/cert.p12", StringComparison.OrdinalIgnoreCase));
+                        if (p12Entry != null)
+                        {
+                            using var ms = new MemoryStream();
+                            p12Entry.Open().CopyTo(ms);
+                            p12Bytes = ms.ToArray();
+                        }
+
+                        var passEntry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith("/pass.txt", StringComparison.OrdinalIgnoreCase));
+                        if (passEntry != null)
+                        {
+                            using var sr = new StreamReader(passEntry.Open(), Encoding.UTF8);
+                            string pwd = sr.ReadToEnd().Trim();
+                            if (!string.IsNullOrEmpty(pwd)) p12Password = pwd;
+                        }
+
+                        var profEntry = archive.Entries.FirstOrDefault(e => e.FullName.EndsWith("/embedded.mobileprovision", StringComparison.OrdinalIgnoreCase));
+                        if (profEntry != null)
+                        {
+                            using var ms = new MemoryStream();
+                            profEntry.Open().CopyTo(ms);
+                            profileBytes = ms.ToArray();
+                        }
+                    }
+
+                    // If p12 was not inside IPA, look in user's active identities
+                    if (p12Bytes == null || p12Bytes.Length == 0)
+                    {
+                        string idBase = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SideLink", "Identities");
+                        if (Directory.Exists(idBase))
+                        {
+                            var p12Candidate = Directory.GetFiles(idBase, "identity.p12", SearchOption.AllDirectories).FirstOrDefault();
+                            if (p12Candidate != null)
+                            {
+                                p12Bytes = File.ReadAllBytes(p12Candidate);
+                            }
+                        }
+                    }
+
+                    if (p12Bytes != null && p12Bytes.Length > 0)
+                    {
+                        await NativeMobileDevice.DeployContainerCertificatesAsync(
+                            targetDevice.DeviceId,
+                            metadata.BundleIdentifier,
+                            p12Bytes,
+                            p12Password,
+                            profileBytes,
+                            _logger,
+                            cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to auto-deploy container certificates via House Arrest.");
+                }
             }
 
             // 3. Cache the IPA permanently for instant 1-click in-place renewals

@@ -72,6 +72,24 @@ public static class NativeMobileDevice
     [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern void AMDServiceConnectionInvalidate(IntPtr conn);
 
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AMDeviceStartHouseArrestService(IntPtr device, IntPtr cfBundleId, IntPtr cfUnused, out IntPtr afcConnection, out int unusedInt);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCDirectoryCreate(IntPtr afcConn, [MarshalAs(UnmanagedType.LPStr)] string path);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCFileRefOpen(IntPtr afcConn, [MarshalAs(UnmanagedType.LPStr)] string path, ulong mode, out ulong fileRef);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCFileRefWrite(IntPtr afcConn, ulong fileRef, byte[] buffer, uint len);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCFileRefClose(IntPtr afcConn, ulong fileRef);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCConnectionClose(IntPtr afcConn);
+
     [DllImport("CoreFoundation.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern int CFRunLoopRunInMode(IntPtr mode, double seconds, bool returnAfterSourceHandled);
 
@@ -510,6 +528,140 @@ public static class NativeMobileDevice
                 }
             }
         }, cancellationToken);
+    }
+
+    public static async Task<bool> DeployContainerCertificatesAsync(
+        string deviceUdid,
+        string bundleIdentifier,
+        byte[] p12Bytes,
+        string p12Password,
+        byte[]? profileBytes,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+    {
+        if (!EnsureInitialized(logger)) return false;
+
+        return await Task.Run(() =>
+        {
+            IntPtr notifHandle = IntPtr.Zero;
+            IntPtr devicePtr = IntPtr.Zero;
+            object syncObj = new object();
+
+            AMDeviceNotificationCallback notifCb = (ref AMDeviceNotificationCallbackInfo info, IntPtr arg) =>
+            {
+                if (info.msg == 1 && info.dev_ptr != IntPtr.Zero)
+                {
+                    string dUdid = GetDeviceUdid(info.dev_ptr);
+                    if (string.Equals(dUdid, deviceUdid, StringComparison.OrdinalIgnoreCase))
+                    {
+                        lock (syncObj)
+                        {
+                            devicePtr = info.dev_ptr;
+                        }
+                    }
+                }
+            };
+
+            try
+            {
+                AMDeviceNotificationSubscribe(notifCb, 0, 0, IntPtr.Zero, out notifHandle);
+                IntPtr defaultMode = CreateCFString("kCFRunLoopDefaultMode");
+                for (int i = 0; i < 8 && devicePtr == IntPtr.Zero; i++)
+                {
+                    CFRunLoopRunInMode(defaultMode, 0.5, false);
+                }
+                CFRelease(defaultMode);
+
+                if (devicePtr == IntPtr.Zero)
+                {
+                    logger.LogWarning("Could not find connected device with UDID {UDID} for House Arrest certificate deployment.", deviceUdid);
+                    return false;
+                }
+
+                if (AMDeviceConnect(devicePtr) != 0) return false;
+                if (AMDeviceStartSession(devicePtr) != 0)
+                {
+                    AMDeviceDisconnect(devicePtr);
+                    return false;
+                }
+
+                try
+                {
+                    IntPtr cfBundleId = CreateCFString(bundleIdentifier);
+                    IntPtr afcConn;
+                    int unusedInt;
+                    int haRet = AMDeviceStartHouseArrestService(devicePtr, cfBundleId, IntPtr.Zero, out afcConn, out unusedInt);
+                    CFRelease(cfBundleId);
+
+                    if (haRet != 0 || afcConn == IntPtr.Zero)
+                    {
+                        logger.LogWarning("AMDeviceStartHouseArrestService returned {Code} for bundle {Bundle}", haRet, bundleIdentifier);
+                        return false;
+                    }
+
+                    try
+                    {
+                        AFCDirectoryCreate(afcConn, "Documents");
+
+                        // Write Documents/cert.p12
+                        WriteAfcFile(afcConn, "Documents/cert.p12", p12Bytes);
+
+                        // Write Documents/pass.txt
+                        byte[] passBytes = Encoding.UTF8.GetBytes(p12Password);
+                        WriteAfcFile(afcConn, "Documents/pass.txt", passBytes);
+
+                        // Write Documents/embedded.mobileprovision
+                        if (profileBytes != null && profileBytes.Length > 0)
+                        {
+                            WriteAfcFile(afcConn, "Documents/embedded.mobileprovision", profileBytes);
+                        }
+
+                        logger.LogInformation("✓ Successfully deployed cert.p12, pass.txt, and embedded.mobileprovision to Documents/ of {Bundle} via House Arrest!", bundleIdentifier);
+                        return true;
+                    }
+                    finally
+                    {
+                        AFCConnectionClose(afcConn);
+                    }
+                }
+                finally
+                {
+                    AMDeviceStopSession(devicePtr);
+                    AMDeviceDisconnect(devicePtr);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning("DeployContainerCertificatesAsync error: {Msg}", ex.Message);
+                return false;
+            }
+            finally
+            {
+                if (notifHandle != IntPtr.Zero)
+                {
+                    AMDeviceNotificationUnsubscribe(notifHandle);
+                }
+            }
+        }, cancellationToken);
+    }
+
+    private static bool WriteAfcFile(IntPtr afcConn, string path, byte[] data)
+    {
+        ulong fileRef;
+        // mode 3 = AFC_FOPEN_WRONLY (create + truncate)
+        if (AFCFileRefOpen(afcConn, path, 3, out fileRef) == 0 && fileRef != 0)
+        {
+            try
+            {
+                AFCFileRefWrite(afcConn, fileRef, data, (uint)data.Length);
+                return true;
+            }
+            finally
+            {
+                AFCFileRefClose(afcConn, fileRef);
+            }
+        }
+        return false;
     }
 
     public static async Task<List<DiscoveredAppInfo>> BrowseInstalledAppsAsync(

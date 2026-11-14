@@ -652,63 +652,81 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
             except Exception:
                 private_key = None
 
-        if not private_key:
-            private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-            with open(private_key_path, "wb") as f:
-                f.write(private_key.private_bytes(
-                    encoding=serialization.Encoding.DER,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption()
-                ))
-
-        csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
-            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "SideLink"),
-            x509.NameAttribute(NameOID.COMMON_NAME, f"iPhone Developer: {apple_id}")
-        ])).sign(private_key, hashes.SHA256())
-
-        csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
-
-        # 4. Submit CSR (handle error 7460 max certs)
         cert_content = None
-        for attempt in range(3):
+        # Check existing active certs FIRST: if an active cert matches our private key, reuse it!
+        # This prevents revoking certificates, keeps installed apps working, and avoids unnecessary network requests.
+        if private_key:
             try:
-                csr_resp = send_dev_request("submitDevelopmentCSR", session, {
-                    "teamId": team_id,
-                    "csrContent": csr_pem,
-                    "machineName": "SideLink-PC",
-                    "machineId": str(uuid.uuid4()).upper()
-                })
-                cert_req = csr_resp.get("certRequest", {})
-                cert_id = cert_req.get("certRequestId")
-
-                # Fetch certificate list to get the issued .cer bytes
                 all_certs_resp = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id})
                 for c in all_certs_resp.get("certificates", []):
-                    if c.get("certificateId") == cert_id or (c.get("machineName") == "SideLink-PC" and c.get("certContent")):
-                        cert_content = c.get("certContent")
-                        break
-                if cert_content:
-                    break
-            except Exception as e:
-                if "7460" in str(e):
-                    # Revoke oldest cert
-                    all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
-                    if all_certs and all_certs[0].get("serialNumber"):
-                        send_dev_request("revokeDevelopmentCert", session, {
-                            "teamId": team_id,
-                            "serialNumber": all_certs[0]["serialNumber"]
-                        })
-                        continue
-                raise e
+                    if c.get("status") == "Issued" and c.get("certContent"):
+                        try:
+                            cand = x509.load_der_x509_certificate(c["certContent"])
+                            if cand.public_key().public_numbers() == private_key.public_key().public_numbers():
+                                cert_content = c["certContent"]
+                                break
+                        except Exception:
+                            pass
+            except Exception:
+                pass
 
         if not cert_content:
-            # Check existing active certs
-            all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
-            for c in all_certs:
-                if c.get("certContent"):
-                    cert_content = c.get("certContent")
-                    break
+            if not private_key:
+                private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+                with open(private_key_path, "wb") as f:
+                    f.write(private_key.private_bytes(
+                        encoding=serialization.Encoding.DER,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    ))
+
+            csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
+                x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+                x509.NameAttribute(NameOID.ORGANIZATION_NAME, "SideLink"),
+                x509.NameAttribute(NameOID.COMMON_NAME, f"iPhone Developer: {apple_id}")
+            ])).sign(private_key, hashes.SHA256())
+
+            csr_pem = csr.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+            # 4. Submit CSR (handle error 7460 max certs)
+            for attempt in range(3):
+                try:
+                    csr_resp = send_dev_request("submitDevelopmentCSR", session, {
+                        "teamId": team_id,
+                        "csrContent": csr_pem,
+                        "machineName": "SideLink-PC",
+                        "machineId": str(uuid.uuid4()).upper()
+                    })
+                    cert_req = csr_resp.get("certRequest", {})
+                    cert_id = cert_req.get("certRequestId")
+
+                    # Fetch certificate list to get the issued .cer bytes
+                    all_certs_resp = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id})
+                    for c in all_certs_resp.get("certificates", []):
+                        if c.get("certificateId") == cert_id or (c.get("machineName") == "SideLink-PC" and c.get("certContent")):
+                            cert_content = c.get("certContent")
+                            break
+                    if cert_content:
+                        break
+                except Exception as e:
+                    if "7460" in str(e):
+                        # Revoke oldest cert
+                        all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
+                        if all_certs and all_certs[0].get("serialNumber"):
+                            send_dev_request("revokeDevelopmentCert", session, {
+                                "teamId": team_id,
+                                "serialNumber": all_certs[0]["serialNumber"]
+                            })
+                            continue
+                    raise e
+
+            if not cert_content:
+                # Check existing active certs
+                all_certs = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id}).get("certificates", [])
+                for c in all_certs:
+                    if c.get("certContent"):
+                        cert_content = c.get("certContent")
+                        break
 
         if not cert_content:
             return {"success": False, "error": "تعذر استخراج شهادة المطور من خوادم Apple."}

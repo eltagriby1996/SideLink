@@ -338,15 +338,36 @@ public class AppleIdentityService : IAppleIdentityService
             try
             {
                 var existingInfo = await ParseMobileProvisionAsync(defaultProfilePath, appleId);
+                string? targetP12Thumbprint = null;
                 if (File.Exists(targetP12Path))
                 {
+                    try
+                    {
+                        using var p12Cert = new System.Security.Cryptography.X509Certificates.X509Certificate2(targetP12Path, "sidelink");
+                        targetP12Thumbprint = p12Cert.Thumbprint;
+                    }
+                    catch { }
                     existingInfo.P12Path = targetP12Path;
                 }
+
+                bool certMatches = string.IsNullOrEmpty(targetP12Thumbprint) || 
+                                   existingInfo.DeveloperCertificatesThumbprints.Count == 0 ||
+                                   existingInfo.DeveloperCertificatesThumbprints.Any(tp => string.Equals(tp, targetP12Thumbprint, StringComparison.OrdinalIgnoreCase));
+
+                bool bundleMatches = string.IsNullOrWhiteSpace(bundleId) ||
+                                     string.IsNullOrWhiteSpace(existingInfo.AllowedBundleId) ||
+                                     existingInfo.AllowedBundleId.Contains('*') ||
+                                     string.Equals(existingInfo.AllowedBundleId, bundleId, StringComparison.OrdinalIgnoreCase);
+
                 if (!string.IsNullOrEmpty(deviceUdid))
                 {
                     existingInfo.IsMatchingCurrentDevice = existingInfo.ProvisionedDevices.Any(d => string.Equals(d, deviceUdid, StringComparison.OrdinalIgnoreCase));
                 }
-                return existingInfo;
+
+                if (certMatches && bundleMatches && existingInfo.ExpirationDate > DateTime.UtcNow)
+                {
+                    return existingInfo;
+                }
             }
             catch { }
         }
@@ -642,10 +663,10 @@ public class AppleIdentityService : IAppleIdentityService
             var stderrTask = proc.StandardError.ReadToEndAsync();
 
             var waitTask = proc.WaitForExitAsync();
-            if (await Task.WhenAny(waitTask, Task.Delay(15000)) != waitTask)
+            if (await Task.WhenAny(waitTask, Task.Delay(60000)) != waitTask)
             {
                 try { proc.Kill(); } catch { }
-                _logger.LogWarning("sidelink-provisioner process timed out after 15 seconds.");
+                _logger.LogWarning("sidelink-provisioner process timed out after 60 seconds.");
                 return false;
             }
 
