@@ -663,15 +663,6 @@
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                 <Button Style="{StaticResource PrimaryButtonStyle}" 
-                                        Content="🔍 فحص كافة تطبيقات الآيفون" 
-                                        Command="{Binding InstalledApps.ScanDeviceAppsCommand}" 
-                                        Margin="0,0,8,0" 
-                                        Padding="14,8" 
-                                        FontSize="13" 
-                                        FontWeight="Bold"
-                                        Background="#0284C7"
-                                        ToolTip="فحص واستكشاف كافة التطبيقات والألعاب الفعلية المثبتة على هاتفك الآيفون لتمكين استنساخ أي منها" />
-                                <Button Style="{StaticResource PrimaryButtonStyle}" 
                                         Content="⚡ تجديد كل التطبيقات (تجديد فوري)" 
                                         Command="{Binding InstalledApps.RefreshAllAppsCommand}" 
                                         Margin="0,0,8,0" 
@@ -687,220 +678,45 @@
                             </StackPanel>
                         </Grid>
 
-                        <!-- View Mode Tabs -->
-                        <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="10" Padding="4" Margin="0,0,0,16">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                
-                                <Button Grid.Column="0" Command="{Binding InstalledApps.SwitchToManagedAppsCommand}" Margin="0,0,4,0" Padding="12,8" FontSize="12" FontWeight="Bold" Cursor="Hand">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="BorderBrush" Value="Transparent" />
-                                            <Setter Property="Foreground" Value="#94A3B8" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding InstalledApps.SelectedViewTab}" Value="0">
-                                                    <Setter Property="Background" Value="#1E293B" />
-                                                    <Setter Property="BorderBrush" Value="#38BDF8" />
-                                                    <Setter Property="Foreground" Value="White" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="🛡️ تطبيقات SideLink والشهادات (" FontSize="12" />
-                                        <TextBlock Text="{Binding InstalledApps.Apps.Count}" FontSize="12" FontWeight="Black" Foreground="#38BDF8" />
-                                        <TextBlock Text=")" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
+                        <!-- Installed Apps List -->
+                        <ItemsControl ItemsSource="{Binding InstalledApps.Apps}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,10">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="1" Command="{Binding InstalledApps.SwitchToDiscoveredAppsCommand}" Padding="12,8" FontSize="12" FontWeight="Bold" Cursor="Hand">
-                                    <Button.Style>
-                                        <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
-                                            <Setter Property="Background" Value="Transparent" />
-                                            <Setter Property="BorderBrush" Value="Transparent" />
-                                            <Setter Property="Foreground" Value="#94A3B8" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding InstalledApps.SelectedViewTab}" Value="1">
-                                                    <Setter Property="Background" Value="#1E293B" />
-                                                    <Setter Property="BorderBrush" Value="#10B981" />
-                                                    <Setter Property="Foreground" Value="White" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Button.Style>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                        <TextBlock Text="📱 كافة تطبيقات الآيفون المستكشفة (" FontSize="12" />
-                                        <TextBlock Text="{Binding InstalledApps.DiscoveredApps.Count}" FontSize="12" FontWeight="Black" Foreground="#10B981" />
-                                        <TextBlock Text=")" FontSize="12" />
-                                    </StackPanel>
-                                </Button>
-                            </Grid>
-                        </Border>
+                                            <!-- App Icon -->
+                                            <Border Width="44" Height="44" Background="#1E3A8A" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
+                                                <TextBlock Text="📱" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
 
-                        <!-- Tab 0: SideLink Managed Apps -->
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Visible" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding InstalledApps.SelectedViewTab}" Value="1">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding AppName}" FontSize="15" FontWeight="Bold" Foreground="White" />
+                                                <TextBlock Text="{Binding BundleIdentifier}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" FontFamily="Consolas" />
+                                                <TextBlock Text="{Binding Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" />
+                                            </StackPanel>
 
-                            <ItemsControl ItemsSource="{Binding InstalledApps.Apps}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,10">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
+                                            <!-- Expiration Badge -->
+                                            <Border Grid.Column="2" Background="#141E33" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,10,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding ExpirationStatusBadge}" FontSize="11" FontWeight="Bold" Foreground="{Binding ExpirationBadgeColor}" />
+                                            </Border>
 
-                                                <!-- App Icon -->
-                                                <Border Width="44" Height="44" Background="#1E3A8A" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="📱" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                </Border>
-
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding AppName}" FontSize="15" FontWeight="Bold" Foreground="White" />
-                                                    <TextBlock Text="{Binding BundleIdentifier}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" FontFamily="Consolas" />
-                                                    <TextBlock Text="{Binding Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" />
-                                                </StackPanel>
-
-                                                <!-- Expiration Badge -->
-                                                <Border Grid.Column="2" Background="#141E33" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,10,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding ExpirationStatusBadge}" FontSize="11" FontWeight="Bold" Foreground="{Binding ExpirationBadgeColor}" />
-                                                </Border>
-
-                                                <!-- Action Buttons -->
-                                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                                            Content="👯 استنساخ (نسخة 2)" 
-                                                            Command="{Binding DataContext.InstalledApps.CloneAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                            CommandParameter="{Binding}" 
-                                                            Margin="0,0,8,0" 
-                                                            Padding="12,6" 
-                                                            FontSize="12" 
-                                                            FontWeight="Bold" 
-                                                            Foreground="#38BDF8" 
-                                                            BorderBrush="#0284C7" 
-                                                            ToolTip="إنشاء نسخة ثانية معزولة تماماً لتشغيل حسابين في وقت واحد" />
-                                                    <Button Style="{StaticResource PrimaryButtonStyle}" Content="⚡ تجديد الشهادة" Command="{Binding DataContext.InstalledApps.RefreshSingleAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,8,0" Padding="14,6" FontSize="12" FontWeight="Bold" ToolTip="تجديد شهادة المطور لـ 7 أيام جديدة دون حذف بيانات أو محادثات التطبيق" />
-                                                    <Button Style="{StaticResource SecondaryButtonStyle}" Content="✕ إزالة" Command="{Binding DataContext.InstalledApps.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,6" FontSize="12" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <!-- Tab 1: All iPhone Apps Discovered on Device -->
-                        <StackPanel>
-                            <StackPanel.Style>
-                                <Style TargetType="StackPanel">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding InstalledApps.SelectedViewTab}" Value="1">
-                                            <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </StackPanel.Style>
-
-                            <!-- Empty / Prompt State when not scanned yet -->
-                            <Border BorderThickness="1" CornerRadius="10" Padding="20" Margin="0,0,0,14" Background="#0F172A" BorderBrush="#1E293B">
-                                <Border.Style>
-                                    <Style TargetType="Border">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding InstalledApps.DiscoveredApps.Count}" Value="0">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <StackPanel HorizontalAlignment="Center">
-                                    <TextBlock Text="🔍 لم يتم فحص تطبيقات الآيفون بعد" FontSize="16" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
-                                    <TextBlock Text="اضغط على زر 'فحص كافة تطبيقات الآيفون' أعلاه لقراءة كافة التطبيقات والألعاب الفعلية المثبتة على هاتفك واستنساخ أي منها بنقرة واحدة." FontSize="12" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" Margin="0,6,0,14" />
-                                    <Button Style="{StaticResource PrimaryButtonStyle}" Content="🔍 فحص تطبيقات الآيفون الآن" Command="{Binding InstalledApps.ScanDeviceAppsCommand}" HorizontalAlignment="Center" Padding="20,10" FontWeight="Bold" Background="#0284C7" />
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Search / Filter Bar for Discovered Apps -->
-                            <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12,6" Margin="0,0,0,12">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="🔍 " FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0" />
-                                    <TextBox Grid.Column="1" Text="{Binding InstalledApps.FilterQuery, UpdateSourceTrigger=PropertyChanged}" 
-                                             FontSize="13" Background="Transparent" BorderThickness="0" Foreground="White" 
-                                             CaretBrush="White" VerticalAlignment="Center" />
-                                    <TextBlock Grid.Column="2" Text="{Binding InstalledApps.FilteredDiscoveredApps.Count, StringFormat='{}{0} تطبيق'}" 
-                                               FontSize="11" Foreground="#38BDF8" FontWeight="Bold" VerticalAlignment="Center" />
-                                </Grid>
-                            </Border>
-
-                            <ItemsControl ItemsSource="{Binding InstalledApps.FilteredDiscoveredApps}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,10">
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <!-- App Icon -->
-                                                <Border Width="44" Height="44" Background="#064E3B" CornerRadius="12" Margin="0,0,14,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="📱" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                                </Border>
-
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding AppName}" FontSize="15" FontWeight="Bold" Foreground="White" />
-                                                    <TextBlock Text="{Binding BundleIdentifier}" FontSize="11" Foreground="{StaticResource TextMutedBrush}" FontFamily="Consolas" />
-                                                    <TextBlock Text="{Binding Version, StringFormat='v{0}'}" FontSize="11" Foreground="#64748B" />
-                                                </StackPanel>
-
-                                                <!-- Source Badge -->
-                                                <Border Grid.Column="2" Background="#141E33" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="10,5" Margin="0,0,10,0" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding AppSourceBadge}" FontSize="11" FontWeight="Bold" Foreground="{Binding AppSourceBadgeColor}" />
-                                                </Border>
-
-                                                <!-- Clone Action Button -->
-                                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                                                    <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                                            Content="👯 استنساخ التطبيق (نسخة 2)" 
-                                                            Command="{Binding DataContext.InstalledApps.CloneDiscoveredAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" 
-                                                            CommandParameter="{Binding}" 
-                                                            Padding="14,8" 
-                                                            FontSize="12" 
-                                                            FontWeight="Bold" 
-                                                            Foreground="#38BDF8" 
-                                                            BorderBrush="#0284C7" 
-                                                            ToolTip="إنشاء نسخة مكررة معزولة بالكامل من هذا التطبيق لتشغيل حسابين على الآيفون" />
-                                                </StackPanel>
-                                            </Grid>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
+                                            <!-- Action Buttons -->
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Style="{StaticResource PrimaryButtonStyle}" Content="⚡ تجديد الشهادة" Command="{Binding DataContext.InstalledApps.RefreshSingleAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Margin="0,0,8,0" Padding="14,6" FontSize="12" FontWeight="Bold" ToolTip="تجديد شهادة المطور لـ 7 أيام جديدة دون حذف بيانات أو محادثات التطبيق" />
+                                                <Button Style="{StaticResource SecondaryButtonStyle}" Content="✕ إزالة" Command="{Binding DataContext.InstalledApps.UninstallAppCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}" Padding="10,6" FontSize="12" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </StackPanel>
                 </ScrollViewer>
 

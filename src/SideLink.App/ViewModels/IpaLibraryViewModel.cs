@@ -126,15 +126,6 @@ public partial class IpaLibraryViewModel : ObservableObject
         StatusMessage = $"تمت إعادة ضبط اسم ومعرّف التطبيق للأصل ({SelectedIpa.EffectiveTitle}).";
     }
 
-    public async Task PrepareAppForCloningAsync(string ipaPath, string customDisplayName, string targetBundleId)
-    {
-        await LoadIpaFileAsync(ipaPath);
-        CustomDisplayName = customDisplayName;
-        TargetBundleId = targetBundleId;
-        AutoModifyBundleId = true;
-        StatusMessage = $"⚡ تم تجهيز النسخة المستنسخة ({customDisplayName})! اضغط على زر 'توقيع وتثبيت التطبيق على الآيفون' في الأسفل للبدء فوراً.";
-    }
-
     private static string CleanCloneSuffix(string text)
     {
         if (string.IsNullOrWhiteSpace(text)) return text;
