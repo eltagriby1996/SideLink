@@ -1,4 +1,8 @@
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -497,5 +501,195 @@ public partial class SigningRefreshViewModel : ObservableObject
         ProvisioningStatusDisplay = $"✓ تم اعتماد الشهادة المخصصة ({Path.GetFileName(P12Path)}) بنجاح! جاهز للتوقيع والتثبيت.";
         StatusMessage = ProvisioningStatusDisplay;
         IsSuccessStatus = true;
+    }
+
+    [RelayCommand]
+    public async Task ExportCertificatePackageAsync()
+    {
+        try
+        {
+            // 1. Try to ensure we have the active identity
+            if (string.IsNullOrWhiteSpace(P12Path) || !File.Exists(P12Path) ||
+                string.IsNullOrWhiteSpace(MobileProvisionPath) || !File.Exists(MobileProvisionPath))
+            {
+                await RefreshCertificateStatusAsync();
+            }
+
+            string? p12Source = P12Path;
+            string? mobileProvisionSource = MobileProvisionPath;
+            string p12Password = !string.IsNullOrWhiteSpace(P12Password) ? P12Password : "sidelink";
+
+            // If still missing and we have an AppleId, try auto-configuring
+            if ((string.IsNullOrWhiteSpace(p12Source) || !File.Exists(p12Source) ||
+                 string.IsNullOrWhiteSpace(mobileProvisionSource) || !File.Exists(mobileProvisionSource)) &&
+                !string.IsNullOrWhiteSpace(AppleId))
+            {
+                string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
+                var identity = await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
+                if (identity != null && identity.IsReadyToSign)
+                {
+                    p12Source = identity.P12Path;
+                    mobileProvisionSource = identity.MobileProvisionPath;
+                    P12Path = p12Source ?? string.Empty;
+                    MobileProvisionPath = mobileProvisionSource ?? string.Empty;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(p12Source) || !File.Exists(p12Source))
+            {
+                MessageBox.Show(
+                    "لم يتم العثور على ملف شهادة (P12) جاهز للتصدير.\n\nيرجى تسجيل الدخول بحساب Apple ID في صفحة 'التوقيع والحسابات' لتوليد الشهادة تلقائياً، أو استيراد ملف P12 مخصص.",
+                    "تصدير شهادة SideLink",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                StatusMessage = "⚠️ لم يتم العثور على شهادة P12 لتصديرها. سجل الدخول أولاً.";
+                IsSuccessStatus = false;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(mobileProvisionSource) || !File.Exists(mobileProvisionSource))
+            {
+                MessageBox.Show(
+                    "لم يتم العثور على ملف تعريف التثبيت (Mobileprovision) الخاص بجهازك.\n\nيرجى توصيل جهاز الآيفون بالكمبيوتر والتأكد من تسجيل الحساب لإنشاء ملف التعريف.",
+                    "تصدير شهادة SideLink",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                StatusMessage = "⚠️ لم يتم العثور على ملف التعريف (Mobileprovision).";
+                IsSuccessStatus = false;
+                return;
+            }
+
+            // 2. Prompt user for save location
+            string defaultName = string.IsNullOrWhiteSpace(AppleId)
+                ? "SideLink_Certificate_Package.zip"
+                : $"SideLink_Certificate_{SanitizeFileName(AppleId.Split('@')[0])}.zip";
+
+            var saveDialog = new SaveFileDialog
+            {
+                Title = "تصدير حزمة شهادة SideLink Container",
+                Filter = "حزمة ملفات مضغوطة (*.zip)|*.zip|جميع الملفات (*.*)|*.*",
+                FileName = defaultName
+            };
+
+            var owner = System.Windows.Application.Current?.Windows.OfType<System.Windows.Window>().FirstOrDefault(w => w.IsActive)
+                        ?? System.Windows.Application.Current?.MainWindow;
+            bool? result = owner != null ? saveDialog.ShowDialog(owner) : saveDialog.ShowDialog();
+
+            if (result != true || string.IsNullOrWhiteSpace(saveDialog.FileName))
+            {
+                return;
+            }
+
+            string zipDestination = saveDialog.FileName;
+            string destinationFolder = Path.Combine(
+                Path.GetDirectoryName(zipDestination) ?? string.Empty,
+                Path.GetFileNameWithoutExtension(zipDestination));
+
+            Directory.CreateDirectory(destinationFolder);
+
+            // 3. Prepare loose files inside folder
+            string destP12 = Path.Combine(destinationFolder, "SideLink_Certificate.p12");
+            string destProfile = Path.Combine(destinationFolder, "SideLink_Profile.mobileprovision");
+            string destReadme = Path.Combine(destinationFolder, "تعليمات_استيراد_الشهادة_في_الحاوية.txt");
+
+            File.Copy(p12Source, destP12, true);
+            File.Copy(mobileProvisionSource, destProfile, true);
+
+            string accountDisplay = !string.IsNullOrWhiteSpace(AppleId) ? AppleId : "مطور مخصص";
+            string teamDisplay = !string.IsNullOrWhiteSpace(TeamId) ? TeamId : "—";
+            string expDisplay = !string.IsNullOrWhiteSpace(ExpirationDisplay) ? ExpirationDisplay : "Active";
+
+            string readmeContent = 
+$@"======================================================================
+تعليمات استيراد شهادة المطور داخل تطبيق SideLink Container على الآيفون
+======================================================================
+
+🔑 كلمة مرور ملف الشهادة (P12 Password):
+{p12Password}
+
+📋 بيانات الشهادة:
+- الحساب / المطور: {accountDisplay}
+- معرّف الفريق (Team ID): {teamDisplay}
+- تاريخ الانتهاء والصلاحية: {expDisplay}
+
+----------------------------------------------------------------------
+📱 خطوات الاستيراد والتفعيل داخل الآيفون:
+----------------------------------------------------------------------
+1. قم بنقل الملفات التالية إلى جهاز الآيفون الخاص بك:
+   - SideLink_Certificate.p12
+   - SideLink_Profile.mobileprovision
+   (يمكنك إرسالها لنفسك عبر تيليجرام Saved Messages أو AirDrop أو حفظها في تطبيق الملفات Files).
+
+2. افتح تطبيق SideLink Container على شاشة الآيفون.
+
+3. اضغط على أيقونة الإعدادات (Settings / الترس في الأسفل).
+
+4. اضغط على خيار استيراد الشهادة (Import Certificate / P12):
+   - اختر ملف: SideLink_Certificate.p12
+   - اكتب كلمة المرور: {p12Password}
+
+5. اضغط على خيار استيراد ملف التعريف (Import Mobileprovision):
+   - اختر ملف: SideLink_Profile.mobileprovision
+
+✅ مبروك! أصبحت الحاوية مفعلة بنجاح وجاهزة لتشغيل عدد لا نهائي من التطبيقات والألعاب المعدلة للأبد دون توقف وبدون قيود!
+----------------------------------------------------------------------
+SideLink Engine © برمجة وتطوير Ahmed Monged
+الموقع الرسمي: https://sidelinktool.me
+قناة التليجرام: https://t.me/sidelink_channel
+======================================================================
+";
+            File.WriteAllText(destReadme, readmeContent, System.Text.Encoding.UTF8);
+
+            // 4. Create ZIP archive
+            if (File.Exists(zipDestination))
+            {
+                File.Delete(zipDestination);
+            }
+            ZipFile.CreateFromDirectory(destinationFolder, zipDestination);
+
+            // 5. Open Explorer with the exported folder / zip selected
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{zipDestination}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+
+            StatusMessage = $"✓ تم تصدير الشهادة بنجاح! كلمة مرور الـ P12 هي: ({p12Password}). تم حفظ الملفات في المجلد.";
+            IsSuccessStatus = true;
+
+            MessageBox.Show(
+                $"تم تصدير ملفات الشهادة بنجاح!\n\n" +
+                $"🔑 كلمة مرور ملف الـ P12 هي: {p12Password}\n\n" +
+                $"📁 تم إنشاء حزمة ZIP ومجلد يحتوي على:\n" +
+                $"  • SideLink_Certificate.p12\n" +
+                $"  • SideLink_Profile.mobileprovision\n" +
+                $"  • دليل تعليمات الاستيراد والتفعيل\n\n" +
+                $"انقل الملفات إلى الآيفون واستوردها من إعدادات تطبيق SideLink Container.",
+                "تصدير شهادة SideLink Container",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to export certificate package");
+            StatusMessage = "خطأ أثناء تصدير الشهادة: " + ex.Message;
+            IsSuccessStatus = false;
+            MessageBox.Show(
+                "حدث خطأ أثناء تصدير حزمة الشهادة: " + ex.Message,
+                "خطأ في التصدير",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        return string.Concat(name.Where(c => !invalid.Contains(c)));
     }
 }

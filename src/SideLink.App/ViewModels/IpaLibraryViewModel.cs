@@ -214,6 +214,12 @@ public partial class IpaLibraryViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task ExportContainerCertificateAsync()
+    {
+        await _signingRefresh.ExportCertificatePackageAsync();
+    }
+
+    [RelayCommand]
     public async Task BrowseForIpaAsync()
     {
         try

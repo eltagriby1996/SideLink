@@ -387,14 +387,22 @@
                                                    FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" />
                                     </StackPanel>
 
-                                    <Button Grid.Column="2" 
-                                            Style="{StaticResource PrimaryButtonStyle}" 
-                                            Content="🚀 تثبيت الحاوية بضغطة واحدة" 
-                                            Command="{Binding IpaLibrary.InstallSideLinkContainerCommand}" 
-                                            VerticalAlignment="Center" 
-                                            Padding="16,10" 
-                                            FontSize="12" 
-                                            FontWeight="Bold" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                                Content="📤 تصدير الشهادة للحاوية" 
+                                                Command="{Binding IpaLibrary.ExportContainerCertificateCommand}" 
+                                                Margin="0,0,10,0" 
+                                                Padding="14,10" 
+                                                FontSize="12" 
+                                                FontWeight="Bold" 
+                                                ToolTip="تصدير ملفات P12 و Mobileprovision لاستيرادها داخل تطبيق SideLink Container على الآيفون" />
+                                        <Button Style="{StaticResource PrimaryButtonStyle}" 
+                                                Content="🚀 تثبيت الحاوية بضغطة واحدة" 
+                                                Command="{Binding IpaLibrary.InstallSideLinkContainerCommand}" 
+                                                Padding="16,10" 
+                                                FontSize="12" 
+                                                FontWeight="Bold" />
+                                    </StackPanel>
                                 </Grid>
                             </Border>
 
@@ -1023,6 +1031,35 @@
 
                                             <TextBlock Grid.Row="3" Text="حالة الجهاز المتصل:" FontSize="12" Foreground="{StaticResource TextMutedBrush}" VerticalAlignment="Center" />
                                             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SigningRefresh.ProvisioningStatusDisplay}" FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Export Certificate for SideLink Container -->
+                                    <Border Background="#0B132B" BorderBrush="#00E5FF" BorderThickness="1" CornerRadius="8" Padding="14,12" Margin="0,4,0,0">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="📦 تصدير الشهادة لتطبيق SideLink Container على الآيفون" FontWeight="Bold" FontSize="13" Foreground="#00E5FF" />
+                                                    <Border Background="#0C4A6E" CornerRadius="4" Padding="6,1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                        <TextBlock Text="مهم لتشغيل الحاوية" FontSize="10" FontWeight="SemiBold" Foreground="#38BDF8" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="يقوم بتصدير ملف الشهادة (P12) وملف التعريف (Mobileprovision) مع كلمة المرور في حزمة واحدة لنقلها واستيرادها داخل تطبيق الحاوية." 
+                                                           FontSize="11" Foreground="#94A3B8" Margin="0,4,0,0" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" 
+                                                    Style="{StaticResource PrimaryButtonStyle}" 
+                                                    Content="📤 تصدير ملفات الشهادة الآن" 
+                                                    Command="{Binding SigningRefresh.ExportCertificatePackageCommand}" 
+                                                    Padding="16,8" 
+                                                    FontSize="12" 
+                                                    FontWeight="Bold" 
+                                                    VerticalAlignment="Center" 
+                                                    ToolTip="تصدير ملفات P12 و Mobileprovision لاستخدامها في SideLink Container على الآيفون" />
                                         </Grid>
                                     </Border>
                                 </StackPanel>
