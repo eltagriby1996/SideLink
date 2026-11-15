@@ -134,7 +134,7 @@
       "expiresAt": "2026-11-15T11:59:30.455Z",
       "usedCount": 1,
       "maxUses": 0,
-      "isActive": true,
+      "isActive": false,
       "boundWebClientId": "sl_web_szjoiu4n_mwhq3tau",
       "boundWebUserAgent": null,
       "boundWebAt": "2026-11-15T11:04:05.969Z",
