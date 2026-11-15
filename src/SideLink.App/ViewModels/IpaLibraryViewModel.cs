@@ -380,6 +380,129 @@ public partial class IpaLibraryViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task InjectCertificateToContainerAsync()
+    {
+        UpdateVipStatus();
+        if (!IsVipUser)
+        {
+            OpenVipModal();
+            return;
+        }
+
+        var device = _deviceService.CurrentDevice;
+        if (device == null || !device.IsConnected)
+        {
+            HasError = true;
+            ErrorMessage = "لا يوجد هاتف آيفون متصل. يرجى توصيل الآيفون بالكمبيوتر عبر كابل USB أولاً.";
+            StatusMessage = ErrorMessage;
+            return;
+        }
+
+        if (device.IsLocked)
+        {
+            HasError = true;
+            ErrorMessage = "الآيفون مقفل برمز مرور. يرجى فتح قفل الهاتف وإعادة المحاولة.";
+            StatusMessage = ErrorMessage;
+            return;
+        }
+
+        IsInstalling = true;
+        HasError = false;
+        InstallProgress = 0;
+        StatusMessage = "⚡ جاري تحضير حقن الشهادة وتفعيلها داخل الحاوية عبر كابل الـ USB...";
+
+        var progress = new Progress<AppOperationProgress>(p =>
+        {
+            App.Current?.Dispatcher?.Invoke(() =>
+            {
+                InstallProgress = p.PercentComplete;
+                StatusMessage = p.CurrentStep;
+                if (p.HasError)
+                {
+                    HasError = true;
+                    ErrorMessage = p.ErrorMessage ?? "Operation failed.";
+                }
+            });
+        });
+
+        try
+        {
+            byte[]? p12Bytes = null;
+            string p12Password = !string.IsNullOrWhiteSpace(_signingRefresh.P12Password) ? _signingRefresh.P12Password : "sidelink";
+            byte[]? profileBytes = null;
+
+            if (_signingRefresh.SelectedMethod == SigningMethodType.CustomP12 &&
+                !string.IsNullOrWhiteSpace(_signingRefresh.P12Path) && File.Exists(_signingRefresh.P12Path))
+            {
+                p12Bytes = await File.ReadAllBytesAsync(_signingRefresh.P12Path);
+                if (!string.IsNullOrWhiteSpace(_signingRefresh.MobileProvisionPath) && File.Exists(_signingRefresh.MobileProvisionPath))
+                {
+                    profileBytes = await File.ReadAllBytesAsync(_signingRefresh.MobileProvisionPath);
+                }
+            }
+            else
+            {
+                string? activeAppleId = !string.IsNullOrWhiteSpace(_signingRefresh.AppleId) 
+                    ? _signingRefresh.AppleId.Trim() 
+                    : await _credentialStore.GetLastAppleIdAsync();
+
+                if (!string.IsNullOrWhiteSpace(activeAppleId))
+                {
+                    var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId, "com.sidelink.container");
+                    if (identity != null && identity.IsReadyToSign && !string.IsNullOrWhiteSpace(identity.P12Path) && File.Exists(identity.P12Path))
+                    {
+                        p12Bytes = await File.ReadAllBytesAsync(identity.P12Path);
+                        if (!string.IsNullOrWhiteSpace(identity.MobileProvisionPath) && File.Exists(identity.MobileProvisionPath))
+                        {
+                            profileBytes = await File.ReadAllBytesAsync(identity.MobileProvisionPath);
+                        }
+                    }
+                }
+            }
+
+            if (p12Bytes == null || p12Bytes.Length == 0)
+            {
+                HasError = true;
+                ErrorMessage = "لم يتم العثور على شهادة توقيع جاهزة للحقن. يرجى تسجيل الدخول بحساب Apple ID أو استيراد ملف P12 أولاً من صفحة 'التوقيع والحسابات'.";
+                StatusMessage = ErrorMessage;
+                return;
+            }
+
+            bool success = await _installationService.DeployContainerCertificatesAsync(
+                device.DeviceId,
+                "com.sidelink.container",
+                p12Bytes,
+                p12Password,
+                profileBytes,
+                progress);
+
+            if (success)
+            {
+                StatusMessage = "✓ تم حقن وتفعيل الشهادة داخل الحاوية بنجاح ⚡ افتح الآيفون وستجد الحاوية جاهزة لتثبيت التطبيقات فوراً!";
+                HasError = false;
+                ErrorMessage = string.Empty;
+            }
+            else
+            {
+                HasError = true;
+                ErrorMessage = "تعذر حقن الشهادة في الحاوية. تأكد من تثبيت تطبيق SideLink أولاً على الآيفون وإبقاء الجهاز متصلاً بالـ USB ومفتوح القفل.";
+                StatusMessage = ErrorMessage;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to inject certificate to container");
+            HasError = true;
+            ErrorMessage = "خطأ أثناء حقن الشهادة: " + ex.Message;
+            StatusMessage = ErrorMessage;
+        }
+        finally
+        {
+            IsInstalling = false;
+        }
+    }
+
+    [RelayCommand]
     public async Task BrowseForIpaAsync()
     {
         try
@@ -586,7 +709,19 @@ public partial class IpaLibraryViewModel : ObservableObject
             bool success = await _installationService.InstallIpaAsync(signedIpa, device, progress);
             if (success)
             {
-                StatusMessage = $"✓ تم تثبيت {SelectedIpa.EffectiveTitle} بنجاح على جهاز الآيفون!";
+                bool isContainer = SelectedIpa.BundleIdentifier.Contains("container", StringComparison.OrdinalIgnoreCase) ||
+                                   SelectedIpa.BundleIdentifier.Contains("livecontainer", StringComparison.OrdinalIgnoreCase) ||
+                                   TargetBundleId == "com.sidelink.container" ||
+                                   SelectedIpa.EffectiveTitle.Contains("SideLink", StringComparison.OrdinalIgnoreCase);
+
+                if (isContainer)
+                {
+                    StatusMessage = "✓ تم تثبيت وتفعيل SideLink Container بنجاح ⚡ تم حقن الشهادة تلقائياً عبر الـ USB وهي جاهزة للاستخدام فوراً في الآيفون!";
+                }
+                else
+                {
+                    StatusMessage = $"✓ تم تثبيت {SelectedIpa.EffectiveTitle} بنجاح على جهاز الآيفون!";
+                }
                 HasError = false;
                 ErrorMessage = string.Empty;
             }

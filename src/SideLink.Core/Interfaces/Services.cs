@@ -55,6 +55,15 @@ public interface IInstallationService
     Task<IReadOnlyList<DiscoveredAppInfo>> GetInstalledAppsOnDeviceAsync(
         IosDevice targetDevice,
         CancellationToken cancellationToken = default);
+
+    Task<bool> DeployContainerCertificatesAsync(
+        string deviceUdid,
+        string bundleIdentifier,
+        byte[] p12Bytes,
+        string p12Password,
+        byte[]? profileBytes,
+        IProgress<AppOperationProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IRefreshService

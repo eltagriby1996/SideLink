@@ -87,6 +87,18 @@ public class RefreshAndExpirationTests
         {
             return Task.FromResult<IReadOnlyList<DiscoveredAppInfo>>(new List<DiscoveredAppInfo>());
         }
+
+        public Task<bool> DeployContainerCertificatesAsync(
+            string deviceUdid,
+            string bundleIdentifier,
+            byte[] p12Bytes,
+            string p12Password,
+            byte[]? profileBytes,
+            IProgress<AppOperationProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(true);
+        }
     }
 
     [Fact]

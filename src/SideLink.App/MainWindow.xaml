@@ -465,19 +465,28 @@
                                             </Style>
                                         </StackPanel.Style>
                                         <Button Style="{StaticResource SecondaryButtonStyle}" 
-                                                Content="📤 تصدير الشهادة للحاوية" 
-                                                Command="{Binding IpaLibrary.ExportContainerCertificateCommand}" 
-                                                Margin="0,0,10,0" 
-                                                Padding="14,10" 
+                                                Content="⚡ حقن الشهادة عبر USB" 
+                                                Command="{Binding IpaLibrary.InjectCertificateToContainerCommand}" 
+                                                Margin="0,0,8,0" 
+                                                Padding="12,10" 
                                                 FontSize="12" 
                                                 FontWeight="Bold" 
-                                                ToolTip="تصدير ملفات P12 و Mobileprovision لاستيرادها داخل تطبيق SideLink Container على الآيفون" />
+                                                ToolTip="حقن وتحديث ملف الشهادة فوراً عبر كابل الـ USB داخل الحاوية المثبتة على الآيفون دون إعادة تثبيت" />
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" 
+                                                Content="📤 تصدير الشهادة" 
+                                                Command="{Binding IpaLibrary.ExportContainerCertificateCommand}" 
+                                                Margin="0,0,8,0" 
+                                                Padding="12,10" 
+                                                FontSize="12" 
+                                                FontWeight="Bold" 
+                                                ToolTip="تصدير ملفات P12 و Mobileprovision يدوياً" />
                                         <Button Style="{StaticResource PrimaryButtonStyle}" 
                                                 Content="🚀 تثبيت الحاوية بضغطة واحدة" 
                                                 Command="{Binding IpaLibrary.InstallSideLinkContainerCommand}" 
                                                 Padding="16,10" 
                                                 FontSize="12" 
-                                                FontWeight="Bold" />
+                                                FontWeight="Bold" 
+                                                ToolTip="تثبيت الحاوية وحقن الشهادة تلقائياً 100% عبر الـ USB لتكون جاهزة فوراً للاستخدام دون أي خطوات يدوية" />
                                     </StackPanel>
 
                                     <!-- Non-VIP Buttons (Locked -> Triggers VIP Modal) -->

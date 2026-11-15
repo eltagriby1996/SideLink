@@ -74,12 +74,75 @@ public class InstallationService : IInstallationService
                 return false;
             }
 
-            // SideLink Container: In-App Self-Hydration is active via pre-bundled cert.p12 & pass.txt
-            if (metadata.BundleIdentifier.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
-                metadata.BundleIdentifier.Contains("livecontainer", StringComparison.OrdinalIgnoreCase))
+            // 2.5 SideLink Container: Automated USB Certificate Injection via Apple House Arrest / AFC
+            bool isContainer = metadata.BundleIdentifier.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) ||
+                               metadata.BundleIdentifier.Contains("livecontainer", StringComparison.OrdinalIgnoreCase) ||
+                               metadata.BundleIdentifier.Contains("container", StringComparison.OrdinalIgnoreCase) ||
+                               metadata.EffectiveTitle.Contains("SideLink", StringComparison.OrdinalIgnoreCase);
+
+            if (isContainer)
             {
-                ReportProgress(progress, "تم إعداد شهادة SideLink Container للتفعيل التلقائي الفوري...", 98);
-                _logger.LogInformation("SideLink Container installed with embedded zero-touch certificate auto-hydration.");
+                ReportProgress(progress, "⚡ جاري حقن وتفعيل الشهادة تلقائياً داخل الحاوية عبر الـ USB...", 95);
+                _logger.LogInformation("Attempting automatic USB certificate injection via House Arrest for container {BundleId}...", metadata.BundleIdentifier);
+
+                try
+                {
+                    byte[]? p12Bytes = null;
+                    string p12Password = "sidelink";
+                    byte[]? profileBytes = null;
+
+                    using (var zip = System.IO.Compression.ZipFile.OpenRead(signedIpaPath))
+                    {
+                        foreach (var entry in zip.Entries)
+                        {
+                            if (entry.Name.Equals("cert.p12", StringComparison.OrdinalIgnoreCase))
+                            {
+                                using var ms = new MemoryStream();
+                                using var s = entry.Open();
+                                s.CopyTo(ms);
+                                p12Bytes = ms.ToArray();
+                            }
+                            else if (entry.Name.Equals("pass.txt", StringComparison.OrdinalIgnoreCase))
+                            {
+                                using var reader = new StreamReader(entry.Open(), Encoding.UTF8);
+                                p12Password = reader.ReadToEnd().Trim();
+                            }
+                            else if (entry.Name.Equals("embedded.mobileprovision", StringComparison.OrdinalIgnoreCase) && profileBytes == null)
+                            {
+                                using var ms = new MemoryStream();
+                                using var s = entry.Open();
+                                s.CopyTo(ms);
+                                profileBytes = ms.ToArray();
+                            }
+                        }
+                    }
+
+                    if (p12Bytes != null && p12Bytes.Length > 0)
+                    {
+                        bool injected = await DeployContainerCertificatesAsync(
+                            targetDevice.DeviceId,
+                            metadata.BundleIdentifier,
+                            p12Bytes,
+                            p12Password,
+                            profileBytes,
+                            progress,
+                            cancellationToken);
+
+                        if (injected)
+                        {
+                            ReportProgress(progress, "✓ تم تثبيت وحقن الشهادة التلقائية بنجاح ⚡ جاهز للاستخدام فوراً على الآيفون!", 100);
+                            _logger.LogInformation("✓ Successfully injected certificates into container via House Arrest/AFC!");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Certificate injection via House Arrest returned false.");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to automatically inject container certificates via USB.");
+                }
             }
 
             // 3. Cache the IPA permanently for instant 1-click in-place renewals
@@ -197,6 +260,26 @@ public class InstallationService : IInstallationService
             _logger.LogError(ex, "Failed to browse installed apps on device {UDID}", targetDevice.DeviceId);
             return Array.Empty<DiscoveredAppInfo>();
         }
+    }
+
+    public async Task<bool> DeployContainerCertificatesAsync(
+        string deviceUdid,
+        string bundleIdentifier,
+        byte[] p12Bytes,
+        string p12Password,
+        byte[]? profileBytes,
+        IProgress<AppOperationProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await NativeMobileDevice.DeployContainerCertificatesAsync(
+            deviceUdid,
+            bundleIdentifier,
+            p12Bytes,
+            p12Password,
+            profileBytes,
+            _logger,
+            progress,
+            cancellationToken);
     }
 
     private static void ReportProgress(IProgress<AppOperationProgress>? progress, string step, int percent, bool isCompleted = false, bool hasError = false, string? errorMessage = null)
