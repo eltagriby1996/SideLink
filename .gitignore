@@ -44,3 +44,5 @@ tools/isideload_repo/
 *.ipa
 !sidelink-web/public/downloads/*.ipa
 *.zip
+!sidelink-web/public/downloads/*.zip
+!sidelink-web/public/downloads/*.exe
