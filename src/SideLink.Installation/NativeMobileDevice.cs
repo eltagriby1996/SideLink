@@ -784,23 +784,116 @@ public static class NativeMobileDevice
                         AFCDirectoryCreate(afcConn, "Library/Preferences");
 
                         string base64Cert = Convert.ToBase64String(p12Bytes);
-                        string userDefaultsXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-                            "<plist version=\"1.0\">\n<dict>\n" +
-                            "    <key>certData</key>\n" +
-                            $"    <data>{base64Cert}</data>\n" +
-                            "    <key>certPassword</key>\n" +
-                            $"    <string>{p12Password}</string>\n" +
-                            "</dict>\n</plist>";
-                        byte[] plistBytes = Encoding.UTF8.GetBytes(userDefaultsXml);
+                        string nowIso = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                        string expIso = DateTime.UtcNow.AddDays(7).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                        WriteAfcFile(afcConn, "Library/Preferences/com.sidelink.container.plist", plistBytes);
-                        WriteAfcFile(afcConn, "Library/Preferences/com.kdt.livecontainer.plist", plistBytes);
+                        // Extract TeamIdentifier from provisioning profile if available
+                        string? teamId = null;
+                        if (profileBytes != null && profileBytes.Length > 0)
+                        {
+                            try
+                            {
+                                string profileText = Encoding.Latin1.GetString(profileBytes);
+                                var match = Regex.Match(profileText, @"<key>TeamIdentifier</key>\s*<array>\s*<string>([A-Z0-9]+)</string>", RegexOptions.IgnoreCase);
+                                if (match.Success)
+                                {
+                                    teamId = match.Groups[1].Value.Trim();
+                                    LogToBootLog($"Extracted TeamIdentifier from provisioning profile: {teamId}");
+                                }
+                            }
+                            catch (Exception exTeam)
+                            {
+                                LogToBootLog($"TeamIdentifier extraction warning: {exTeam.Message}");
+                            }
+                        }
+
+                        var sb = new StringBuilder();
+                        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+                        sb.AppendLine("<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">");
+                        sb.AppendLine("<plist version=\"1.0\">");
+                        sb.AppendLine("<dict>");
+
+                        // LiveContainer official keys for automated certificate import
+                        sb.AppendLine("    <key>LCCertificateData</key>");
+                        sb.AppendLine($"    <data>{base64Cert}</data>");
+                        sb.AppendLine("    <key>LCCertificatePassword</key>");
+                        sb.AppendLine($"    <string>{p12Password}</string>");
+                        sb.AppendLine("    <key>LCCertificateUpdateDate</key>");
+                        sb.AppendLine($"    <date>{nowIso}</date>");
+                        sb.AppendLine("    <key>LCExpirationDate</key>");
+                        sb.AppendLine($"    <date>{expIso}</date>");
+
+                        if (!string.IsNullOrWhiteSpace(teamId))
+                        {
+                            sb.AppendLine("    <key>LCCertificateTeamId</key>");
+                            sb.AppendLine($"    <string>{teamId}</string>");
+                            sb.AppendLine("    <key>LCTeamId</key>");
+                            sb.AppendLine($"    <string>{teamId}</string>");
+                        }
+
+                        // Auxiliary compatibility keys
+                        sb.AppendLine("    <key>certificateData</key>");
+                        sb.AppendLine($"    <data>{base64Cert}</data>");
+                        sb.AppendLine("    <key>certificatePassword</key>");
+                        sb.AppendLine($"    <string>{p12Password}</string>");
+                        sb.AppendLine("    <key>certData</key>");
+                        sb.AppendLine($"    <data>{base64Cert}</data>");
+                        sb.AppendLine("    <key>certPassword</key>");
+                        sb.AppendLine($"    <string>{p12Password}</string>");
+
+                        sb.AppendLine("</dict>");
+                        sb.AppendLine("</plist>");
+
+                        string userDefaultsXml = sb.ToString();
+                        byte[] plistBytes = Encoding.UTF8.GetBytes(userDefaultsXml);
+                        byte[] finalPlistBytes = plistBytes;
+
+                        // Convert to binary plist (bplist00) if CoreFoundation is available
+                        try
+                        {
+                            IntPtr cfData = CFDataCreate(IntPtr.Zero, plistBytes, plistBytes.Length);
+                            if (cfData != IntPtr.Zero)
+                            {
+                                int formatOut;
+                                IntPtr errorOut;
+                                IntPtr plist = CFPropertyListCreateWithData(IntPtr.Zero, cfData, 0, out formatOut, out errorOut);
+                                CFRelease(cfData);
+
+                                if (plist != IntPtr.Zero)
+                                {
+                                    IntPtr binData = CFPropertyListCreateData(IntPtr.Zero, plist, 200, 0, out errorOut);
+                                    CFRelease(plist);
+
+                                    if (binData != IntPtr.Zero)
+                                    {
+                                        int len = CFDataGetLength(binData);
+                                        if (len > 0)
+                                        {
+                                            byte[] bplist = new byte[len];
+                                            IntPtr ptr = CFDataGetBytePtr(binData);
+                                            Marshal.Copy(ptr, bplist, 0, len);
+                                            finalPlistBytes = bplist;
+                                            LogToBootLog($"Converted NSUserDefaults to binary plist ({len} bytes).");
+                                        }
+                                        CFRelease(binData);
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception exBin)
+                        {
+                            LogToBootLog($"Binary plist conversion notice: {exBin.Message}");
+                        }
+
+                        WriteAfcFile(afcConn, "Library/Preferences/com.sidelink.container.plist", finalPlistBytes);
+                        WriteAfcFile(afcConn, "Library/Preferences/com.kdt.livecontainer.plist", finalPlistBytes);
+                        WriteAfcFile(afcConn, "Library/Preferences/group.com.rileytestut.AltStore.plist", finalPlistBytes);
+                        WriteAfcFile(afcConn, "Library/Preferences/group.com.SideStore.SideStore.plist", finalPlistBytes);
                         if (!string.IsNullOrWhiteSpace(connectedBundleId) &&
                             !connectedBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) &&
                             !connectedBundleId.Equals("com.kdt.livecontainer", StringComparison.OrdinalIgnoreCase))
                         {
-                            WriteAfcFile(afcConn, $"Library/Preferences/{connectedBundleId}.plist", plistBytes);
+                            WriteAfcFile(afcConn, $"Library/Preferences/{connectedBundleId}.plist", finalPlistBytes);
                         }
 
                         LogToBootLog($"✓ Successfully injected all certificates & preferences to {connectedBundleId} over USB!");

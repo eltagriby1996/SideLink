@@ -487,7 +487,7 @@ public partial class IpaLibraryViewModel : ObservableObject
 
             if (success)
             {
-                StatusMessage = "✓ تم حقن وتفعيل الشهادة داخل الحاوية بنجاح ⚡ افتح الآيفون وستجد الحاوية جاهزة لتثبيت التطبيقات فوراً!";
+                StatusMessage = "✓ تم حقن وتفعيل الشهادة داخل الحاوية بنجاح ⚡ أغلق تطبيق الحاوية من شاشة الآيفون (Swipe Up) ثم أعد فتحه وستجد الشهادة مفعّلة فوراً!";
                 HasError = false;
                 ErrorMessage = string.Empty;
             }
