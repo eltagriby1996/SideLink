@@ -181,8 +181,18 @@ public class AppleIdentityService : IAppleIdentityService
         if (exactMatch != null) return exactMatch;
         if (wildcardMatch != null) return wildcardMatch;
 
-        // If a specific bundle ID was requested, but no exact or wildcard profile exists for it,
-        // return null so that AutoConfigureIdentityForAccountAsync triggers provisioning for this specific bundle ID!
+        // If a specific bundle ID was requested, but we already have a valid general profile on disk
+        // (which matches the device and active P12), reuse that generalMatch profile!
+        // SigningService automatically aligns CFBundleIdentifier to match the profile.
+        // Returning generalMatch avoids unnecessary provisioning and prevents Apple certificate revocations.
+        if (generalMatch != null && generalMatch.IsMatchingCurrentDevice && !generalMatch.IsExpired && generalMatch.IsReadyToSign)
+        {
+            _logger.LogInformation("Reusing existing valid profile on disk for account {Account} (Profile App ID: {AllowedBundleId})", appleId, generalMatch.AllowedBundleId);
+            return generalMatch;
+        }
+
+        // If a specific bundle ID was requested, but no exact, wildcard, or valid general profile exists for it,
+        // return null so caller knows no profile exists.
         if (!string.IsNullOrWhiteSpace(bundleId))
         {
             _logger.LogInformation("No matching profile found on disk for account {Account} with bundle ID {Bundle}", appleId, bundleId);

@@ -638,10 +638,32 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
                 if "35" not in str(e):
                     raise e
 
-        # 3. Generate RSA 2048 Private Key & CSR
+        # 3. Check for existing valid identity.p12 or key.p8
+        p12_path = os.path.join(out_dir, "identity.p12")
         private_key_path = os.path.join(out_dir, "key.p8")
         private_key = None
-        if os.path.exists(private_key_path):
+        cert_content = None
+
+        now_utc = datetime.now(timezone.utc)
+
+        # Attempt to load existing valid certificate from identity.p12 first
+        if os.path.exists(p12_path):
+            try:
+                with open(p12_path, "rb") as f:
+                    p12_b = f.read()
+                pk, cert, _ = pkcs12.load_key_and_certificates(p12_b, b"sidelink")
+                if pk and cert:
+                    cert_expiry = getattr(cert, "not_valid_after_utc", None)
+                    if cert_expiry is None:
+                        cert_expiry = cert.not_valid_after.replace(tzinfo=timezone.utc)
+                    if cert_expiry > now_utc:
+                        private_key = pk
+                        cert_content = cert.public_bytes(serialization.Encoding.DER)
+            except Exception:
+                pass
+
+        # If private key was not found in identity.p12, try loading key.p8
+        if not private_key and os.path.exists(private_key_path):
             try:
                 with open(private_key_path, "rb") as f:
                     kb = f.read()
@@ -652,22 +674,29 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
             except Exception:
                 private_key = None
 
-        cert_content = None
-        # Check existing active certs FIRST: if an active cert matches our private key, reuse it!
+        # Check existing active certs on Apple: if an active cert matches our private key, reuse it!
         # This prevents revoking certificates, keeps installed apps working, and avoids unnecessary network requests.
         if private_key:
             try:
                 all_certs_resp = send_dev_request("listAllDevelopmentCerts", session, {"teamId": team_id})
-                for c in all_certs_resp.get("certificates", []):
+                apple_certs = all_certs_resp.get("certificates", [])
+                matched_apple_cert = None
+                for c in apple_certs:
                     if c.get("status") == "Issued" and c.get("certContent"):
                         try:
                             cand = x509.load_der_x509_certificate(c["certContent"])
                             if cand.public_key().public_numbers() == private_key.public_key().public_numbers():
-                                cert_content = c["certContent"]
+                                matched_apple_cert = c["certContent"]
                                 break
                         except Exception:
                             pass
+                if matched_apple_cert:
+                    cert_content = matched_apple_cert
+                elif cert_content is not None:
+                    # Apple no longer has this cert issued; reset so we issue a new one
+                    cert_content = None
             except Exception:
+                # If network request fails, retain existing valid cert_content
                 pass
 
         if not cert_content:
@@ -752,6 +781,17 @@ def provision_device_and_extract_certs(apple_id: str, device_udid: str, bundle_i
                 format=serialization.PrivateFormat.PKCS8,
                 encryption_algorithm=serialization.NoEncryption()
             ))
+
+        if not os.path.exists(private_key_path):
+            try:
+                with open(private_key_path, "wb") as f:
+                    f.write(private_key.private_bytes(
+                        encoding=serialization.Encoding.DER,
+                        format=serialization.PrivateFormat.PKCS8,
+                        encryption_algorithm=serialization.NoEncryption()
+                    ))
+            except Exception:
+                pass
 
         # 6. Register App ID / Match Application Identifier
         app_ids_resp = send_dev_request("listAppIds", session, {"teamId": team_id})

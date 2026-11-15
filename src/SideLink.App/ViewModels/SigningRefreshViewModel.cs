@@ -171,19 +171,16 @@ public partial class SigningRefreshViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(AppleId)) return;
 
-        string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
+        string? deviceUdid = _deviceService.CurrentDevice?.DeviceId;
+        // Strictly read from local storage - NEVER contact Apple or auto-configure during status refresh!
         var identity = await _identityService.GetIdentityForAccountAsync(AppleId, deviceUdid);
-        if (identity == null || !identity.IsReadyToSign)
-        {
-            identity = await _identityService.AutoConfigureIdentityForAccountAsync(AppleId, deviceUdid);
-        }
 
-        if (identity != null && identity.IsReadyToSign)
+        if (identity != null && identity.IsReadyToSign && !identity.IsExpired)
         {
             HasActiveCertificate = true;
             CertificateSubject = identity.CertificateSubject ?? $"iPhone Developer: {AppleId}";
-            TeamId = identity.TeamId ?? "NHDYBV5658";
-            ExpirationDisplay = identity.ExpirationDate?.ToString("yyyy-MM-dd HH:mm") ?? "Active (7-day)";
+            TeamId = identity.TeamId ?? "—";
+            ExpirationDisplay = identity.ExpirationDate?.ToString("yyyy-MM-dd HH:mm") ?? "نشط (7 أيام)";
             IsDeviceProvisioned = identity.IsMatchingCurrentDevice;
             MobileProvisionPath = identity.MobileProvisionPath ?? string.Empty;
             if (!string.IsNullOrEmpty(identity.P12Path))
@@ -191,9 +188,10 @@ public partial class SigningRefreshViewModel : ObservableObject
                 P12Path = identity.P12Path;
             }
 
+            string displayUdid = !string.IsNullOrWhiteSpace(deviceUdid) ? deviceUdid : "المسجل مسبقاً";
             ProvisioningStatusDisplay = IsDeviceProvisioned 
-                ? $"✓ شهادة مطور iOS صالحة ومقترنة بجهازك المتصل ({deviceUdid})" 
-                : $"⚠️ الشهادة متوفرة ولكن يجب إضافة جهازك ({deviceUdid}) إلى ملف التخصيص";
+                ? $"✓ شهادة مطور iOS صالحة ومقترنة بجهازك المتصل ({displayUdid})" 
+                : $"⚠️ الشهادة متوفرة ولكن يجب ربط جهازك ({displayUdid}) عبر الضغط على '⚡ تجديد الشهادة يدوياً'";
         }
         else
         {
@@ -205,7 +203,7 @@ public partial class SigningRefreshViewModel : ObservableObject
                 ExpirationDisplay = identity.ExpirationDate?.ToString("yyyy-MM-dd HH:mm") ?? "منتهية الصلاحية";
                 IsDeviceProvisioned = identity.IsMatchingCurrentDevice;
                 ProvisioningStatusDisplay = $"⚠️ ملف تعريف التثبيت (Mobileprovision) انتهت صلاحيته بتاريخ ({ExpirationDisplay}).\n" +
-                                            "صلاحية حسابات المطور المجانية 7 أيام فقط. اضغط على زر تسجيل الدخول (Sign-In & 2FA) أدناه لتجديد الشهادة تلقائياً لمدة 7 أيام جديدة.";
+                                            "صلاحية حسابات المطور المجانية 7 أيام فقط. اضغط على زر '⚡ تجديد الشهادة يدوياً' أدناه لتجديدها لـ 7 أيام جديدة.";
             }
             else
             {
@@ -214,8 +212,57 @@ public partial class SigningRefreshViewModel : ObservableObject
                 ExpirationDisplay = string.Empty;
                 IsDeviceProvisioned = false;
                 ProvisioningStatusDisplay = $"لم يتم العثور على شهادة توقيع (P12) أو ملف تعريف لهذا الحساب ({AppleId}).\n" +
-                                            "قم بتسجيل الدخول أو استيراد ملف P12 و Mobileprovision لتفعيل التوقيع.";
+                                            "قم بتسجيل الدخول أو الضغط على '⚡ تجديد الشهادة يدوياً' أو استيراد شهادة P12 مخصصة.";
             }
+        }
+    }
+
+    [RelayCommand]
+    public async Task RenewCertificateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AppleId))
+        {
+            StatusMessage = "يرجى اختيار حساب Apple ID أو إدخاله أولاً.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        var device = _deviceService.CurrentDevice;
+        string? deviceUdid = device?.DeviceId;
+        if (string.IsNullOrWhiteSpace(deviceUdid))
+        {
+            StatusMessage = "⚠️ يرجى توصيل جهاز آيفون بالكمبيوتر أولاً ليتم ربط الشهادة وملف التثبيت به.";
+            IsSuccessStatus = false;
+            return;
+        }
+
+        IsValidating = true;
+        StatusMessage = "جاري الاتصال بخوادم Apple وتجديد الشهادة وملف التثبيت يدوياً...";
+        try
+        {
+            var identity = await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid, forceRefresh: true);
+            await RefreshCertificateStatusAsync();
+
+            if (identity != null && identity.IsReadyToSign && !identity.IsExpired)
+            {
+                StatusMessage = "✓ تم تجديد الشهادة وملف التثبيت بنجاح! الحساب جاهز لتوقيع وتثبيت التطبيقات.";
+                IsSuccessStatus = true;
+            }
+            else
+            {
+                StatusMessage = "⚠️ اكتمل طلب التجديد. يرجى مراجعة تفاصيل الشهادة أعلاه.";
+                IsSuccessStatus = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Manual certificate renewal failed: {Message}", ex.Message);
+            StatusMessage = $"تعذر تجديد الشهادة: {ex.Message}";
+            IsSuccessStatus = false;
+        }
+        finally
+        {
+            IsValidating = false;
         }
     }
 
@@ -519,13 +566,13 @@ public partial class SigningRefreshViewModel : ObservableObject
             string? mobileProvisionSource = MobileProvisionPath;
             string p12Password = !string.IsNullOrWhiteSpace(P12Password) ? P12Password : "sidelink";
 
-            // If still missing and we have an AppleId, try auto-configuring
+            // If still missing and we have an AppleId, try resolving from local identity
             if ((string.IsNullOrWhiteSpace(p12Source) || !File.Exists(p12Source) ||
                  string.IsNullOrWhiteSpace(mobileProvisionSource) || !File.Exists(mobileProvisionSource)) &&
                 !string.IsNullOrWhiteSpace(AppleId))
             {
-                string deviceUdid = _deviceService.CurrentDevice?.DeviceId ?? "00008020-000E6D583C30003A";
-                var identity = await _identityService.AutoConfigureIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
+                string? deviceUdid = _deviceService.CurrentDevice?.DeviceId;
+                var identity = await _identityService.GetIdentityForAccountAsync(AppleId.Trim(), deviceUdid);
                 if (identity != null && identity.IsReadyToSign)
                 {
                     p12Source = identity.P12Path;

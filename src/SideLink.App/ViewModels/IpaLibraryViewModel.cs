@@ -372,10 +372,6 @@ public partial class IpaLibraryViewModel : ObservableObject
                         : SelectedIpa?.BundleIdentifier);
 
                 var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId, targetBundleId);
-                if (identity == null || !identity.IsReadyToSign || identity.IsExpired)
-                {
-                    identity = await _identityService.AutoConfigureIdentityForAccountAsync(activeAppleId, device.DeviceId, targetBundleId);
-                }
 
                 if (identity == null || string.IsNullOrWhiteSpace(identity.P12Path) || !File.Exists(identity.P12Path))
                 {
@@ -388,7 +384,7 @@ public partial class IpaLibraryViewModel : ObservableObject
                 if (identity.IsExpired)
                 {
                     HasError = true;
-                    ErrorMessage = $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({activeAppleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}). يرجى إعادة تسجيل الدخول في صفحة 'التوقيع والحسابات' لتجديد الشهادة تلقائياً.";
+                    ErrorMessage = $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({activeAppleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}). يرجى الانتقال إلى صفحة 'التوقيع والحسابات' والضغط على '⚡ تجديد الشهادة يدوياً'.";
                     StatusMessage = ErrorMessage;
                     return;
                 }

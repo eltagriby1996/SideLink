@@ -1002,9 +1002,11 @@
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="📋 حالة وتفاصيل شهادة التوقيع النشطة" FontSize="16" FontWeight="Bold" Foreground="White" />
-                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 تحديث الحالة" Command="{Binding SigningRefresh.RefreshCertificateStatusCommand}" Padding="10,4" />
+                                        <Button Grid.Column="1" Style="{StaticResource SecondaryButtonStyle}" Content="🔄 تحديث الحالة" Command="{Binding SigningRefresh.RefreshCertificateStatusCommand}" Padding="10,4" Margin="0,0,8,0" />
+                                        <Button Grid.Column="2" Style="{StaticResource PrimaryButtonStyle}" Content="⚡ تجديد الشهادة يدوياً" Command="{Binding SigningRefresh.RenewCertificateCommand}" Padding="12,4" />
                                     </Grid>
 
                                     <Border Background="#101726" BorderBrush="{StaticResource CardBorderBrush}" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,0,0,10">

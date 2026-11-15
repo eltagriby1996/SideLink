@@ -168,16 +168,12 @@ public class SigningService : ISigningService
                 if (!string.IsNullOrWhiteSpace(appleId))
                 {
                     var identity = await _identityService.GetIdentityForAccountAsync(appleId, targetDevice.DeviceId, requestedBundleId);
-                    if (identity == null || !identity.IsReadyToSign || identity.IsExpired)
-                    {
-                        identity = await _identityService.AutoConfigureIdentityForAccountAsync(appleId, targetDevice.DeviceId, requestedBundleId);
-                    }
 
                     if (identity != null && identity.IsExpired)
                     {
                         throw new InvalidOperationException(
                             $"⚠️ ملف تعريف التثبيت (Mobileprovision) لحساب ({appleId}) انتهت صلاحيته بتاريخ ({identity.ExpirationDate:yyyy-MM-dd HH:mm}).\n" +
-                            "يرجى الانتقال إلى صفحة 'التوقيع والحسابات' والضغط على زر تسجيل الدخول لتجديد الشهادة مجاناً من خوادم Apple لمدة 7 أيام جديدة.");
+                            "يرجى الانتقال إلى صفحة 'التوقيع والحسابات' والضغط على زر '⚡ تجديد الشهادة يدوياً' لتجديدها لـ 7 أيام جديدة.");
                     }
 
                     if (identity != null && identity.IsReadyToSign)
