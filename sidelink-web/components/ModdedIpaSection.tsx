@@ -192,10 +192,51 @@ export default function ModdedIpaSection() {
   const [visibleCount, setVisibleCount] = useState<number>(18);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // VIP & Tiers State
-  const [isVip, setIsVip] = useState<boolean>(false);
-  const [vipKey, setVipKey] = useState<string>('');
-  const [vipExpiry, setVipExpiry] = useState<string | null>(null);
+  // Helper to retrieve or generate persistent Web Client ID (Anti-sharing & Ctrl+F5 protection)
+  const getOrCreateWebClientId = (): string => {
+    if (typeof window === 'undefined') return '';
+    try {
+      let id = localStorage.getItem('sidelink_web_client_id');
+      if (!id || !id.startsWith('sl_web_')) {
+        id = 'sl_web_' + Math.random().toString(36).substring(2, 10) + '_' + Date.now().toString(36);
+        localStorage.setItem('sidelink_web_client_id', id);
+      }
+      return id;
+    } catch {
+      return 'sl_web_fallback_' + Date.now();
+    }
+  };
+
+  // Synchronous optimistic VIP initialization to prevent ANY ad flash on load
+  const [isVip, setIsVip] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      const savedKey = localStorage.getItem('sidelink_web_vip_key');
+      const savedExpiry = localStorage.getItem('sidelink_web_vip_expiry');
+      if (!savedKey) return false;
+      if (savedExpiry && new Date(savedExpiry).getTime() < Date.now()) return false;
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  const [vipKey, setVipKey] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      return localStorage.getItem('sidelink_web_vip_key') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [vipExpiry, setVipExpiry] = useState<string | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      return localStorage.getItem('sidelink_web_vip_expiry') || null;
+    } catch {
+      return null;
+    }
+  });
+
   const [showVipModal, setShowVipModal] = useState<boolean>(false);
   const [vipInput, setVipInput] = useState<string>('');
   const [vipError, setVipError] = useState<string>('');
@@ -219,30 +260,36 @@ export default function ModdedIpaSection() {
 
   // Load VIP state and Ads configuration on mount
   useEffect(() => {
-    // 1. Check local VIP key
+    // 1. Verify VIP status against server with Web Client ID (Never wipes key on reload)
     try {
       const savedKey = localStorage.getItem('sidelink_web_vip_key');
+      const webClientId = getOrCreateWebClientId();
       if (savedKey) {
-        setVipKey(savedKey);
-        fetch('/api/app/vip/verify', {
+        fetch('/api/app/vip/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: savedKey }),
+          body: JSON.stringify({ key: savedKey, webClientId }),
         })
           .then((res) => res.json())
           .then((data) => {
-            if (data.success && data.isVip) {
+            if (data.success && data.valid) {
               setIsVip(true);
+              setVipKey(savedKey);
               setVipExpiry(data.expiresAt || null);
-            } else {
+              if (data.expiresAt) {
+                localStorage.setItem('sidelink_web_vip_expiry', data.expiresAt);
+              }
+            } else if (data.success && !data.valid) {
+              // Server explicitly revoked or expired this key
               localStorage.removeItem('sidelink_web_vip_key');
               localStorage.removeItem('sidelink_web_vip_expiry');
               setIsVip(false);
+              setVipKey('');
+              setVipExpiry(null);
             }
           })
           .catch(() => {
-            // Keep active offline if user had valid key
-            setIsVip(true);
+            // Keep optimistic VIP active offline
           });
       }
     } catch {}
@@ -377,10 +424,15 @@ export default function ModdedIpaSection() {
     setVipSuccess('');
 
     try {
+      const webClientId = getOrCreateWebClientId();
       const res = await fetch('/api/app/vip/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: keyToTest }),
+        body: JSON.stringify({
+          key: keyToTest,
+          webClientId,
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Web Browser',
+        }),
       });
       const data = await res.json();
 
@@ -392,14 +444,21 @@ export default function ModdedIpaSection() {
         setIsVip(true);
         setVipKey(keyToTest);
         setVipExpiry(data.expiresAt || null);
-        setVipSuccess('🎉 تم تفعيل عضوية VIP بنجاح! يمكنك الآن التحميل الفوري وبدون أي إعلانات.');
+
+        // Immediate cleanup of any injected ad elements
+        try {
+          const adElements = document.querySelectorAll('[data-sidelink-ad="true"]');
+          adElements.forEach((el) => el.remove());
+        } catch {}
+
+        setVipSuccess('🎉 تم تفعيل عضوية VIP وربطها بهذا المتصفح بنجاح! التحميل فوري وبدون أي إعلانات.');
         setTimeout(() => {
           setShowVipModal(false);
           setVipSuccess('');
           setVipInput('');
         }, 1500);
       } else {
-        setVipError(data.error || 'الكود المدخل غير صالح أو انتهت صلاحيته.');
+        setVipError(data.error || 'الكود المدخل غير صالح أو مرتبط بمتصفح آخر.');
       }
     } catch {
       setVipError('حدث خطأ في الاتصال بالخادم. يرجى المحاولة مرة أخرى.');

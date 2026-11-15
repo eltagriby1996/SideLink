@@ -57,6 +57,9 @@ export interface VipKey {
   boundHwid?: string | null;
   boundMachine?: string | null;
   boundAt?: string | null;
+  boundWebClientId?: string | null;
+  boundWebUserAgent?: string | null;
+  boundWebAt?: string | null;
 }
 
 export interface BlacklistedIp {

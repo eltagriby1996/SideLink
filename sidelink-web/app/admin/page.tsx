@@ -20,6 +20,7 @@ import {
   ExternalLink,
   UserCheck,
   Laptop,
+  Globe,
   Eye,
   EyeOff,
   LogOut
@@ -54,6 +55,9 @@ interface VipKey {
   boundHwid?: string | null;
   boundMachine?: string | null;
   boundAt?: string | null;
+  boundWebClientId?: string | null;
+  boundWebUserAgent?: string | null;
+  boundWebAt?: string | null;
 }
 
 export default function AdminPage() {
@@ -284,17 +288,17 @@ export default function AdminPage() {
     }
   };
 
-  // Reset HWID binding for VIP Key
+  // Reset HWID & Web binding for VIP Key
   const handleResetHwid = async (key: string) => {
-    if (!confirm(`هل تريد فك ربط جهاز الكمبيوتر بهذا المفتاح (${key})؟ سيمكن للمستخدم الآن تفعيله على جهاز جديد.`)) return;
+    if (!confirm(`هل تريد فك ربط الأجهزة (الكمبيوتر والمتصفح) بهذا المفتاح (${key})؟ سيمكن للمستخدم الآن تفعيله على جهاز جديد أو متصفح جديد.`)) return;
     try {
       const res = await fetch(`/api/admin/vip-keys?key=${encodeURIComponent(key)}&action=reset-hwid`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok && data.success) {
-        showToast('✓ ' + (data.message || 'تم فك ارتباط الجهاز بنجاح!'));
+        showToast('✓ ' + (data.message || 'تم فك ارتباط الأجهزة بنجاح!'));
         fetchAllData();
       } else {
-        alert(data.error || 'فشل فك ارتباط الجهاز.');
+        alert(data.error || 'فشل فك ارتباط الأجهزة.');
       }
     } catch {
       alert('خطأ في الاتصال.');
@@ -1001,24 +1005,43 @@ export default function AdminPage() {
                             {k.usedCount} / {k.maxUses === 0 ? '∞' : k.maxUses}
                           </td>
                           <td className="p-3.5 text-xs">
-                            {k.boundHwid ? (
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px] font-mono">
-                                  <Laptop className="w-3 h-3 text-blue-400" />
-                                  <span>{k.boundMachine || 'مرتبط بجهاز'}</span>
-                                </span>
+                            <div className="flex flex-col gap-1.5">
+                              {/* PC Hardware Binding */}
+                              {k.boundHwid ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 text-[10px] font-mono">
+                                    <Laptop className="w-3 h-3 text-blue-400" />
+                                    <span>{k.boundMachine || 'كمبيوتر مرتبط'}</span>
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-500">💻 كمبيوتر: غير مقترن</span>
+                              )}
+
+                              {/* Web Browser Binding */}
+                              {k.boundWebClientId ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono">
+                                    <Globe className="w-3 h-3 text-emerald-400" />
+                                    <span>متصفح متجر الويب نشط</span>
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-500">🌐 المتصفح: غير مقترن</span>
+                              )}
+
+                              {/* Reset Button */}
+                              {(k.boundHwid || k.boundWebClientId) && (
                                 <button
                                   type="button"
                                   onClick={() => handleResetHwid(k.key)}
-                                  className="text-[10px] text-amber-400 hover:text-amber-300 underline font-semibold transition cursor-pointer"
-                                  title="فك ربط الجهاز بالسماح بتفعيله على كمبيوتر آخر"
+                                  className="text-[10px] text-amber-400 hover:text-amber-300 underline font-semibold transition cursor-pointer text-right w-fit mt-0.5"
+                                  title="فك ربط الأجهزة بالسماح بتفعيله على أجهزة جديدة"
                                 >
-                                  فك الارتباط
+                                  فك ارتباط الأجهزة
                                 </button>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-slate-500 font-mono">غير مقترن (جاهز للتفعيل)</span>
-                            )}
+                              )}
+                            </div>
                           </td>
                           <td className="p-3.5">
                             {k.isActive ? (

@@ -28,12 +28,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const key = body.key;
     const hwid = typeof body.hwid === 'string' ? body.hwid.trim() : undefined;
+    const webClientId = typeof body.webClientId === 'string' ? body.webClientId.trim() : (typeof body.clientId === 'string' ? body.clientId.trim() : undefined);
 
     if (!key || typeof key !== 'string') {
       return NextResponse.json({ success: true, valid: false, reason: 'المفتاح غير موجود.' }, { status: 400 });
     }
 
-    const status = await checkVipKeyStatus(key, hwid);
+    const status = await checkVipKeyStatus(key, hwid, webClientId);
     return NextResponse.json({
       success: true,
       valid: status.isValid,

@@ -8,12 +8,14 @@ export async function POST(request: NextRequest) {
     const key = body.key;
     const hwid = typeof body.hwid === 'string' ? body.hwid.trim() : undefined;
     const machineName = typeof body.machineName === 'string' ? body.machineName.trim() : undefined;
+    const webClientId = typeof body.webClientId === 'string' ? body.webClientId.trim() : (typeof body.clientId === 'string' ? body.clientId.trim() : undefined);
+    const userAgent = request.headers.get('user-agent') || (typeof body.userAgent === 'string' ? body.userAgent : undefined);
 
     if (!key || typeof key !== 'string') {
       return NextResponse.json({ error: 'يرجى إدخال مفتاح الـ VIP.' }, { status: 400 });
     }
 
-    const check = await validateVipKey(key, hwid, machineName);
+    const check = await validateVipKey(key, hwid, machineName, webClientId, userAgent);
     if (!check.isValid) {
       return NextResponse.json({ error: check.reason || 'المفتاح غير صالح.' }, { status: 400 });
     }

@@ -21,6 +21,7 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
         scriptEl.type = 'text/javascript';
         scriptEl.src = trimmed;
         scriptEl.async = true;
+        scriptEl.setAttribute('data-sidelink-ad', 'true');
         document.body.appendChild(scriptEl);
         injectedElements.push(scriptEl);
         return;
@@ -43,6 +44,7 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
           } else {
             scriptEl.textContent = node.textContent;
           }
+          scriptEl.setAttribute('data-sidelink-ad', 'true');
           document.body.appendChild(scriptEl);
           injectedElements.push(scriptEl);
         });
@@ -52,6 +54,7 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
           const scriptEl = document.createElement('script');
           scriptEl.type = 'text/javascript';
           scriptEl.textContent = trimmed;
+          scriptEl.setAttribute('data-sidelink-ad', 'true');
           document.body.appendChild(scriptEl);
           injectedElements.push(scriptEl);
         } catch {
@@ -68,6 +71,10 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
           }
         } catch {}
       });
+      try {
+        const tagged = document.querySelectorAll('[data-sidelink-ad="true"]');
+        tagged.forEach((el) => el.remove());
+      } catch {}
     };
   }, [scripts]);
 

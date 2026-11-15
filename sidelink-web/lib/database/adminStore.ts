@@ -212,7 +212,9 @@ export async function deleteVipKey(key: string): Promise<boolean> {
 export async function validateVipKey(
   key: string,
   hwid?: string,
-  machineName?: string
+  machineName?: string,
+  webClientId?: string,
+  webUserAgent?: string
 ): Promise<{ isValid: boolean; reason?: string; expiresAt?: string | null }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
@@ -232,25 +234,65 @@ export async function validateVipKey(
     if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
       return { isValid: false, reason: 'انتهت صلاحية كود التحقق. يرجى الحصول على كود جديد أو تجديد الجلسة.' };
     }
-    if (found.maxUses > 0 && found.usedCount >= found.maxUses && (!found.boundHwid || found.boundHwid !== hwid)) {
+
+    // 1. Web Client Binding Verification (Store Website)
+    if (webClientId) {
+      if (found.boundWebClientId) {
+        if (found.boundWebClientId === webClientId) {
+          // Returning authorized web browser - keep valid without consuming additional uses
+          return { isValid: true, expiresAt: found.expiresAt };
+        } else {
+          // Different browser attempting to use the same code
+          return {
+            isValid: false,
+            reason: 'هذا الكود مرتبط بمتصفح/جهاز ويب آخر بالفعل. لا يمكن مشاركة الكود مع أجهزة أخرى.',
+          };
+        }
+      } else {
+        // First web activation for this code
+        if (found.maxUses > 0 && found.usedCount >= found.maxUses && !found.boundHwid) {
+          return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا الكود.' };
+        }
+        found.boundWebClientId = webClientId;
+        found.boundWebUserAgent = webUserAgent || 'متصفح ويب';
+        found.boundWebAt = new Date().toISOString();
+        found.usedCount = Math.max(found.usedCount, 1);
+        await dbInstance.saveAsync();
+        return { isValid: true, expiresAt: found.expiresAt };
+      }
+    }
+
+    // 2. PC Hardware ID Binding Verification (Desktop SideLink App)
+    if (hwid) {
+      if (found.boundHwid) {
+        if (found.boundHwid === hwid) {
+          // Returning authorized PC
+          return { isValid: true, expiresAt: found.expiresAt };
+        } else {
+          const boundName = found.boundMachine || 'جهاز كمبيوتر آخر';
+          return {
+            isValid: false,
+            reason: `هذا الكود مرتبط بجهاز (${boundName}) بالفعل. يرجى التواصل مع الإدارة لفك الارتباط لاستخدامه على هذا الجهاز.`,
+          };
+        }
+      } else {
+        // First PC activation for this code
+        if (found.maxUses > 0 && found.usedCount >= found.maxUses && !found.boundWebClientId) {
+          return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا الكود.' };
+        }
+        found.boundHwid = hwid;
+        found.boundMachine = machineName || 'جهاز كمبيوتر';
+        found.boundAt = new Date().toISOString();
+        found.usedCount = Math.max(found.usedCount, 1);
+        await dbInstance.saveAsync();
+        return { isValid: true, expiresAt: found.expiresAt };
+      }
+    }
+
+    // 3. Fallback when neither identifier is supplied
+    if (found.maxUses > 0 && found.usedCount >= found.maxUses) {
       return { isValid: false, reason: 'تم استهلاك الحد الأقصى لاستخدام هذا الكود.' };
     }
-
-    // HWID Machine Binding Check
-    if (found.boundHwid) {
-      if (hwid && found.boundHwid !== hwid) {
-        const boundName = found.boundMachine || 'جهاز كمبيوتر آخر';
-        return {
-          isValid: false,
-          reason: `هذا الكود مرتبط بجهاز (${boundName}) بالفعل. يرجى التواصل مع الإدارة لفك الارتباط لاستخدامه على هذا الجهاز.`,
-        };
-      }
-    } else if (hwid) {
-      found.boundHwid = hwid;
-      found.boundMachine = machineName || 'جهاز كمبيوتر';
-      found.boundAt = new Date().toISOString();
-    }
-
     found.usedCount += 1;
     await dbInstance.saveAsync();
     return { isValid: true, expiresAt: found.expiresAt };
@@ -267,8 +309,11 @@ export async function validateVipKey(
       maxUses: 0,
       isActive: true,
       boundHwid: hwid || null,
-      boundMachine: machineName || 'جهاز كمبيوتر',
-      boundAt: new Date().toISOString(),
+      boundMachine: machineName || (hwid ? 'جهاز كمبيوتر' : null),
+      boundAt: hwid ? new Date().toISOString() : null,
+      boundWebClientId: webClientId || null,
+      boundWebUserAgent: webUserAgent || (webClientId ? 'متصفح ويب' : null),
+      boundWebAt: webClientId ? new Date().toISOString() : null,
     };
     db.vipKeys.unshift(newKey);
     await dbInstance.saveAsync();
@@ -280,7 +325,8 @@ export async function validateVipKey(
 
 export async function checkVipKeyStatus(
   key: string,
-  hwid?: string
+  hwid?: string,
+  webClientId?: string
 ): Promise<{ isValid: boolean; reason?: string; expiresAt?: string | null }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
@@ -299,16 +345,35 @@ export async function checkVipKeyStatus(
     if (found.expiresAt && new Date() > new Date(found.expiresAt)) {
       return { isValid: false, reason: 'انتهت صلاحية كود التحقق. يرجى تجديد الترخيص أو إعادة التحقق.' };
     }
-    if (found.boundHwid && hwid && found.boundHwid !== hwid) {
-      return { isValid: false, reason: 'هذا الكود مرتبط بجهاز كمبيوتر آخر.' };
+
+    // Web Client Check
+    if (webClientId) {
+      if (found.boundWebClientId && found.boundWebClientId !== webClientId) {
+        return { isValid: false, reason: 'هذا الكود مرتبط بمتصفح آخر.' };
+      }
+      if (!found.boundWebClientId) {
+        found.boundWebClientId = webClientId;
+        found.boundWebAt = new Date().toISOString();
+        await dbInstance.saveAsync();
+      }
+      return { isValid: true, expiresAt: found.expiresAt };
     }
+
+    // PC Hardware ID Check
+    if (hwid) {
+      if (found.boundHwid && found.boundHwid !== hwid) {
+        return { isValid: false, reason: 'هذا الكود مرتبط بجهاز كمبيوتر آخر.' };
+      }
+      return { isValid: true, expiresAt: found.expiresAt };
+    }
+
     return { isValid: true, expiresAt: found.expiresAt };
   }
 
   return { isValid: false, reason: 'كود التحقق غير موجود أو تم حذفه من قبل الإدارة.' };
 }
 
-export async function resetVipKeyHwid(key: string): Promise<boolean> {
+export async function resetVipKeyHwid(key: string, target: 'all' | 'pc' | 'web' = 'all'): Promise<boolean> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
 
@@ -320,9 +385,16 @@ export async function resetVipKeyHwid(key: string): Promise<boolean> {
   }
 
   if (found) {
-    found.boundHwid = null;
-    found.boundMachine = null;
-    found.boundAt = null;
+    if (target === 'all' || target === 'pc') {
+      found.boundHwid = null;
+      found.boundMachine = null;
+      found.boundAt = null;
+    }
+    if (target === 'all' || target === 'web') {
+      found.boundWebClientId = null;
+      found.boundWebUserAgent = null;
+      found.boundWebAt = null;
+    }
     await dbInstance.saveAsync();
     return true;
   }
