@@ -1,5 +1,9 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -18,6 +22,7 @@ public partial class IpaLibraryViewModel : ObservableObject
     private readonly ICredentialStore _credentialStore;
     private readonly IAppleIdentityService _identityService;
     private readonly SigningRefreshViewModel _signingRefresh;
+    private readonly ILinkUnlockService _linkUnlockService;
     private readonly ILogger<IpaLibraryViewModel> _logger;
 
     public ObservableCollection<IpaMetadata> LoadedIpas { get; } = new();
@@ -51,6 +56,24 @@ public partial class IpaLibraryViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _autoModifyBundleId = true;
+
+    [ObservableProperty]
+    private bool _isVipUser;
+
+    [ObservableProperty]
+    private bool _isVipModalOpen;
+
+    [ObservableProperty]
+    private string _vipKeyInput = string.Empty;
+
+    [ObservableProperty]
+    private bool _isVipValidating;
+
+    [ObservableProperty]
+    private string _vipValidationMessage = string.Empty;
+
+    [ObservableProperty]
+    private bool _isVipValidationSuccess;
 
     partial void OnSelectedIpaChanged(IpaMetadata? value)
     {
@@ -143,6 +166,7 @@ public partial class IpaLibraryViewModel : ObservableObject
         ICredentialStore credentialStore,
         IAppleIdentityService identityService,
         SigningRefreshViewModel signingRefresh,
+        ILinkUnlockService linkUnlockService,
         ILogger<IpaLibraryViewModel> logger)
     {
         _ipaInspector = ipaInspector;
@@ -152,12 +176,136 @@ public partial class IpaLibraryViewModel : ObservableObject
         _credentialStore = credentialStore;
         _identityService = identityService;
         _signingRefresh = signingRefresh;
+        _linkUnlockService = linkUnlockService;
         _logger = logger;
+
+        UpdateVipStatus();
+    }
+
+    public void UpdateVipStatus()
+    {
+        try
+        {
+            string? key = _linkUnlockService.GetSavedVipKey();
+            IsVipUser = !string.IsNullOrWhiteSpace(key) && !_linkUnlockService.IsVipExpired();
+        }
+        catch
+        {
+            IsVipUser = false;
+        }
+    }
+
+    [RelayCommand]
+    public void OpenVipModal()
+    {
+        UpdateVipStatus();
+        VipKeyInput = string.Empty;
+        VipValidationMessage = string.Empty;
+        IsVipValidationSuccess = false;
+        IsVipModalOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseVipModal()
+    {
+        IsVipModalOpen = false;
+        VipValidationMessage = string.Empty;
+    }
+
+    [RelayCommand]
+    public async Task SubmitVipKeyAsync()
+    {
+        if (string.IsNullOrWhiteSpace(VipKeyInput))
+        {
+            VipValidationMessage = "يرجى إدخال كود الـ VIP أولاً.";
+            IsVipValidationSuccess = false;
+            return;
+        }
+
+        try
+        {
+            IsVipValidating = true;
+            VipValidationMessage = "جاري التحقق من كود الـ VIP وتوثيق الترخيص...";
+            IsVipValidationSuccess = false;
+
+            string key = VipKeyInput.Trim().ToUpperInvariant();
+            string hwid = SideLink.Verification.LinkUnlockService.GetMachineHwid();
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(8) };
+            var payload = new
+            {
+                key,
+                hwid,
+                machineName = Environment.MachineName
+            };
+
+            var resp = await http.PostAsJsonAsync("https://www.sidelinktool.me/api/app/vip/verify", payload);
+            if (resp.IsSuccessStatusCode)
+            {
+                var doc = await resp.Content.ReadFromJsonAsync<JsonElement>();
+                if (doc.TryGetProperty("success", out var s) && s.GetBoolean())
+                {
+                    string? expiresAtIso = doc.TryGetProperty("expiresAt", out var exp) && exp.ValueKind == JsonValueKind.String ? exp.GetString() : null;
+                    string? serverMsg = doc.TryGetProperty("message", out var m) && m.ValueKind == JsonValueKind.String ? m.GetString() : null;
+
+                    _linkUnlockService.SavePersistentVipLicense(key, expiresAtIso);
+                    UpdateVipStatus();
+
+                    IsVipValidationSuccess = true;
+                    VipValidationMessage = !string.IsNullOrEmpty(serverMsg)
+                        ? "✓ " + serverMsg
+                        : "✓ تم تفعيل اشتراك VIP بنجاح! ميزة الحاوية متاحة لك الآن بالكامل.";
+
+                    await Task.Delay(1300);
+                    IsVipModalOpen = false;
+                    return;
+                }
+            }
+
+            var errDoc = await resp.Content.ReadFromJsonAsync<JsonElement>();
+            string msg = errDoc.TryGetProperty("error", out var e) ? e.GetString() ?? "كود VIP غير صالح." : "كود VIP غير صالح أو تم إلغاؤه من قبل الإدارة.";
+            VipValidationMessage = msg;
+            IsVipValidationSuccess = false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("SubmitVipKeyAsync error: {Msg}", ex.Message);
+            VipValidationMessage = "تعذر الاتصال بخادم التحقق. يرجى التأكد من اتصال الإنترنت.";
+            IsVipValidationSuccess = false;
+        }
+        finally
+        {
+            IsVipValidating = false;
+        }
+    }
+
+    [RelayCommand]
+    public void OpenVipPurchaseUrl()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.sidelinktool.me",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Failed to open VIP purchase url: {Msg}", ex.Message);
+        }
     }
 
     [RelayCommand]
     public async Task InstallSideLinkContainerAsync()
     {
+        UpdateVipStatus();
+        if (!IsVipUser)
+        {
+            OpenVipModal();
+            return;
+        }
+
         try
         {
             HasError = false;
@@ -221,6 +369,13 @@ public partial class IpaLibraryViewModel : ObservableObject
     [RelayCommand]
     public async Task ExportContainerCertificateAsync()
     {
+        UpdateVipStatus();
+        if (!IsVipUser)
+        {
+            OpenVipModal();
+            return;
+        }
+
         await _signingRefresh.ExportCertificatePackageAsync();
     }
 
