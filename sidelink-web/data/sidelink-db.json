@@ -136,21 +136,6 @@
   ],
   "vipKeys": [
     {
-      "key": "SL-VIP-BJR1-A607-0MQD",
-      "note": "11",
-      "createdAt": "2026-11-15T11:21:07.365Z",
-      "expiresAt": "2026-11-15T12:21:07.365Z",
-      "usedCount": 1,
-      "maxUses": 2,
-      "isActive": false,
-      "boundWebClientId": "sl_web_szjoiu4n_mwhq3tau",
-      "boundWebUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
-      "boundWebAt": "2026-11-15T11:27:42.571Z",
-      "boundHwid": null,
-      "boundMachine": null,
-      "boundAt": null
-    },
-    {
       "key": "SL-VIP-MASTER-2026",
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
