@@ -120,6 +120,15 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-KDIF-449O-0EK1",
+      "note": "trial",
+      "createdAt": "2026-11-15T10:34:18.179Z",
+      "expiresAt": "2026-11-15T11:34:18.179Z",
+      "usedCount": 0,
+      "maxUses": 1,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-MASTER-2026",
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
