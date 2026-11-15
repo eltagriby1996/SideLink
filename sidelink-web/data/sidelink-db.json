@@ -120,6 +120,15 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-WCBA-IEU5-2T0H",
+      "note": "trail",
+      "createdAt": "2026-11-15T10:59:30.455Z",
+      "expiresAt": "2026-11-15T11:59:30.455Z",
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-MASTER-2026",
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
