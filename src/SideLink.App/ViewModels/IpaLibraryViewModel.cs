@@ -449,6 +449,11 @@ public partial class IpaLibraryViewModel : ObservableObject
                 if (!string.IsNullOrWhiteSpace(activeAppleId))
                 {
                     var identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId, "com.sidelink.container");
+                    if (identity == null || !identity.IsReadyToSign || string.IsNullOrWhiteSpace(identity.P12Path) || !File.Exists(identity.P12Path))
+                    {
+                        identity = await _identityService.GetIdentityForAccountAsync(activeAppleId, device.DeviceId, null);
+                    }
+
                     if (identity != null && identity.IsReadyToSign && !string.IsNullOrWhiteSpace(identity.P12Path) && File.Exists(identity.P12Path))
                     {
                         p12Bytes = await File.ReadAllBytesAsync(identity.P12Path);

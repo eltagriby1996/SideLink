@@ -78,8 +78,10 @@ public class SigningService : ISigningService
             throw new FileNotFoundException("Source IPA file does not exist", sourceIpaPath);
 
         string tempWorkingDir = Path.Combine(Path.GetTempPath(), "SideLink_Signing_" + Guid.NewGuid().ToString("N"));
+        string signedOutputDir = Path.Combine(Path.GetTempPath(), "SideLink_Signed");
+        Directory.CreateDirectory(signedOutputDir);
         string outputIpaPath = Path.Combine(
-            Path.GetDirectoryName(sourceIpaPath) ?? Path.GetTempPath(),
+            signedOutputDir,
             $"{Path.GetFileNameWithoutExtension(sourceIpaPath)}_signed_{DateTime.UtcNow:yyyyMMddHHmmss}.ipa");
 
         try
