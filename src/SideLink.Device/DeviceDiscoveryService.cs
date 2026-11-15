@@ -11,6 +11,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
 {
     private readonly ILogger<DeviceDiscoveryService> _logger;
     private readonly List<IosDevice> _connectedDevices = new();
+    private readonly Dictionary<int, string> _usbmuxIdToUdid = new();
     private readonly object _lock = new();
     private CancellationTokenSource? _monitoringCts;
     private Task? _monitoringTask;
@@ -80,6 +81,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         lock (_lock)
         {
             _connectedDevices.Clear();
+            _usbmuxIdToUdid.Clear();
         }
         DeviceStateChanged?.Invoke(this, null);
         _logger.LogInformation("Stopped iOS device discovery monitoring.");
@@ -99,7 +101,7 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             await stream.FlushAsync(cancellationToken);
 
             using var shortCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            shortCts.CancelAfter(TimeSpan.FromMilliseconds(2000));
+            shortCts.CancelAfter(TimeSpan.FromMilliseconds(2500));
 
             try
             {
@@ -116,6 +118,20 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
         catch (Exception ex)
         {
             _logger.LogWarning("Failed to query usbmuxd devices: {Message}", ex.Message);
+            bool stateChanged = false;
+            lock (_lock)
+            {
+                if (_connectedDevices.Count > 0)
+                {
+                    _connectedDevices.Clear();
+                    _usbmuxIdToUdid.Clear();
+                    stateChanged = true;
+                }
+            }
+            if (stateChanged)
+            {
+                DeviceStateChanged?.Invoke(this, null);
+            }
             return ConnectedDevices;
         }
     }
@@ -147,11 +163,8 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
                     {
                         try
                         {
-                            await Task.Delay(3500, pollCts.Token);
-                            if (ConnectedDevices.Count == 0)
-                            {
-                                await RefreshDevicesAsync(pollCts.Token);
-                            }
+                            await Task.Delay(3000, pollCts.Token);
+                            await RefreshDevicesAsync(pollCts.Token);
                         }
                         catch { break; }
                     }
@@ -183,6 +196,20 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             finally
             {
                 client?.Dispose();
+                bool hadDevices = false;
+                lock (_lock)
+                {
+                    if (_connectedDevices.Count > 0)
+                    {
+                        _connectedDevices.Clear();
+                        _usbmuxIdToUdid.Clear();
+                        hadDevices = true;
+                    }
+                }
+                if (hadDevices)
+                {
+                    DeviceStateChanged?.Invoke(this, null);
+                }
             }
 
             try
@@ -207,6 +234,9 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             if (xml.Contains("<key>DeviceList</key>"))
             {
                 var array = doc.Descendants("array").FirstOrDefault();
+                var foundUdids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var activeDevices = new List<(int dId, string sNum, int cSpeed, bool isWifi)>();
+
                 if (array != null)
                 {
                     foreach (var devDict in array.Elements("dict"))
@@ -240,11 +270,58 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
                         if (!string.IsNullOrWhiteSpace(sNum))
                         {
                             bool isWifi = connType.Equals("Network", StringComparison.OrdinalIgnoreCase) || connType.Equals("WiFi", StringComparison.OrdinalIgnoreCase);
-                            _logger.LogInformation("Discovered existing iOS Device: UDID={UDID}, DeviceID={ID}, WiFi={IsWifi}", sNum, dId, isWifi);
-                            _ = Task.Run(async () => await HandleDeviceAttachedAsync(dId, sNum, cSpeed, isWifi));
+                            foundUdids.Add(sNum);
+                            activeDevices.Add((dId, sNum, cSpeed, isWifi));
                         }
                     }
                 }
+
+                bool stateChanged = false;
+                lock (_lock)
+                {
+                    // Remove disconnected devices
+                    int removed = _connectedDevices.RemoveAll(d => !foundUdids.Contains(d.DeviceId));
+                    if (removed > 0)
+                    {
+                        stateChanged = true;
+                        _logger.LogInformation("Reconciliation: removed {Count} disconnected device(s).", removed);
+                    }
+
+                    // Remove stale lookup keys
+                    var staleKeys = _usbmuxIdToUdid.Where(kvp => !foundUdids.Contains(kvp.Value)).Select(kvp => kvp.Key).ToList();
+                    foreach (var k in staleKeys)
+                    {
+                        _usbmuxIdToUdid.Remove(k);
+                    }
+
+                    // Register active device IDs
+                    foreach (var (dId, sNum, _, _) in activeDevices)
+                    {
+                        _usbmuxIdToUdid[dId] = sNum;
+                    }
+                }
+
+                if (stateChanged && foundUdids.Count == 0)
+                {
+                    DeviceStateChanged?.Invoke(this, null);
+                }
+
+                // Attach any newly discovered devices
+                foreach (var (dId, sNum, cSpeed, isWifi) in activeDevices)
+                {
+                    bool alreadyTracked;
+                    lock (_lock)
+                    {
+                        alreadyTracked = _connectedDevices.Any(d => d.DeviceId.Equals(sNum, StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    if (!alreadyTracked)
+                    {
+                        _logger.LogInformation("Discovered iOS Device: UDID={UDID}, DeviceID={ID}, WiFi={IsWifi}", sNum, dId, isWifi);
+                        _ = Task.Run(async () => await HandleDeviceAttachedAsync(dId, sNum, cSpeed, isWifi));
+                    }
+                }
+
                 return;
             }
 
@@ -305,6 +382,10 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
             if (messageType.Equals("Attached", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(serialNumber))
             {
                 bool isWifi = attachedConnType.Equals("Network", StringComparison.OrdinalIgnoreCase) || attachedConnType.Equals("WiFi", StringComparison.OrdinalIgnoreCase);
+                lock (_lock)
+                {
+                    _usbmuxIdToUdid[deviceId] = serialNumber;
+                }
                 _logger.LogInformation("iOS Device attached: UDID={UDID}, DeviceID={ID}, WiFi={IsWifi}", serialNumber, deviceId, isWifi);
                 _ = Task.Run(async () => await HandleDeviceAttachedAsync(deviceId, serialNumber, connectionSpeed, isWifi));
             }
@@ -365,6 +446,11 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
 
         lock (_lock)
         {
+            if (!_usbmuxIdToUdid.ContainsKey(deviceId) && !_usbmuxIdToUdid.ContainsValue(udid))
+            {
+                // Disconnected before query completed
+                return;
+            }
             _connectedDevices.RemoveAll(d => d.DeviceId.Equals(udid, StringComparison.OrdinalIgnoreCase));
             _connectedDevices.Insert(0, device);
         }
@@ -374,17 +460,29 @@ public class DeviceDiscoveryService : IDeviceDiscoveryService
 
     private void HandleDeviceDetached(int deviceId)
     {
-        IosDevice? removed = null;
+        IosDevice? current = null;
+        bool removed = false;
         lock (_lock)
         {
-            if (_connectedDevices.Count > 0)
+            if (_usbmuxIdToUdid.TryGetValue(deviceId, out var udid))
             {
-                removed = _connectedDevices[0];
-                _connectedDevices.RemoveAt(0);
+                int count = _connectedDevices.RemoveAll(d => d.DeviceId.Equals(udid, StringComparison.OrdinalIgnoreCase));
+                _usbmuxIdToUdid.Remove(deviceId);
+                removed = count > 0;
             }
+            else if (_connectedDevices.Count > 0)
+            {
+                _connectedDevices.RemoveAt(0);
+                removed = true;
+            }
+            current = _connectedDevices.FirstOrDefault();
         }
 
-        DeviceStateChanged?.Invoke(this, CurrentDevice);
+        if (removed)
+        {
+            _logger.LogInformation("Removed detached iOS Device: DeviceID={ID}", deviceId);
+            DeviceStateChanged?.Invoke(this, current);
+        }
     }
 
     public void AddSimulatedDeviceForTesting(IosDevice device)

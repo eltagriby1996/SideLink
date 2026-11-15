@@ -25,6 +25,8 @@ public partial class DashboardViewModel : ObservableObject
     private readonly ICredentialStore _credentialStore;
     private readonly IAppleIdentityService _identityService;
     private readonly ILogger<DashboardViewModel> _logger;
+    private string _lastAnnouncedDeviceId = string.Empty;
+    private bool _lastAnnouncedTrust;
 
     [ObservableProperty]
     private IosDevice? _currentDevice;
@@ -163,10 +165,22 @@ public partial class DashboardViewModel : ObservableObject
                 DeviceTrustColor = "#10B981";
                 DeviceStatusText = $"{DeviceModelText} ({IosVersionText}) - متصل وجاهز للتثبيت والتوقيع";
             }
-            AddActivityItem("اتصال الجهاز", $"تم الكشف عن {DeviceModelText} ({DeviceTrustBadge})", "📱", DeviceTrustColor);
+            if (_lastAnnouncedDeviceId != device.DeviceId || _lastAnnouncedTrust != device.IsTrusted)
+            {
+                _lastAnnouncedDeviceId = device.DeviceId;
+                _lastAnnouncedTrust = device.IsTrusted;
+                AddActivityItem("اتصال الجهاز", $"تم الكشف عن {DeviceModelText} ({DeviceTrustBadge})", "📱", DeviceTrustColor);
+            }
         }
         else
         {
+            if (!string.IsNullOrEmpty(_lastAnnouncedDeviceId))
+            {
+                AddActivityItem("فصل الجهاز", "تم فصل جهاز الآيفون من منفذ USB", "🔌", "#94A3B8");
+                _lastAnnouncedDeviceId = string.Empty;
+                _lastAnnouncedTrust = false;
+            }
+
             IsDeviceConnected = false;
             DeviceModelText = "لا يوجد جهاز متصل";
             IosVersionText = "—";
