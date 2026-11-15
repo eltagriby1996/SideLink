@@ -126,7 +126,7 @@
       "expiresAt": "2026-11-15T11:34:18.179Z",
       "usedCount": 1,
       "maxUses": 1,
-      "isActive": true
+      "isActive": false
     },
     {
       "key": "SL-VIP-MASTER-2026",
