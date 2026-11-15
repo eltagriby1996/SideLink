@@ -260,7 +260,7 @@ export default function ModdedIpaSection() {
 
   // Load VIP state and Ads configuration on mount
   useEffect(() => {
-    // 1. Verify VIP status against server with Web Client ID (Never wipes key on reload)
+    // 1. Verify VIP status against server with Web Client ID (Never wipes key on reload, but revokes if unbound/invalid)
     try {
       const savedKey = localStorage.getItem('sidelink_web_vip_key');
       const webClientId = getOrCreateWebClientId();
@@ -272,15 +272,15 @@ export default function ModdedIpaSection() {
         })
           .then((res) => res.json())
           .then((data) => {
-            if (data.success && data.valid) {
+            if (data && data.valid === true) {
               setIsVip(true);
               setVipKey(savedKey);
               setVipExpiry(data.expiresAt || null);
               if (data.expiresAt) {
                 localStorage.setItem('sidelink_web_vip_expiry', data.expiresAt);
               }
-            } else if (data.success && !data.valid) {
-              // Server explicitly revoked or expired this key
+            } else {
+              // Server rejected key (unbound by admin, revoked, expired, or invalid): DROP TO FREE!
               localStorage.removeItem('sidelink_web_vip_key');
               localStorage.removeItem('sidelink_web_vip_expiry');
               setIsVip(false);
@@ -289,8 +289,10 @@ export default function ModdedIpaSection() {
             }
           })
           .catch(() => {
-            // Keep optimistic VIP active offline
+            // Keep optimistic VIP active offline only if fetch failed
           });
+      } else {
+        setIsVip(false);
       }
     } catch {}
 
@@ -388,20 +390,25 @@ export default function ModdedIpaSection() {
   const handleFinishFreeDownload = () => {
     if (!activeDownloadApp) return;
 
-    // Trigger IPA download
-    executeDownload(activeDownloadApp.downloadUrl);
-
-    // If ads enabled, trigger smartlink in background if configured
-    if (adsConfig?.enabled && adsConfig?.openSmartlinkOnVerify && adsConfig?.smartlinkUrl) {
+    // Trigger Smartlink sponsor ad in new tab for free download
+    const smartlink = adsConfig?.smartlinkUrl || 'https://ardance.org/4/8a4e54806bf1d2e4984078c43efd8205';
+    if (adsConfig?.enabled !== false && smartlink) {
       try {
-        window.open(adsConfig.smartlinkUrl, '_blank', 'noopener,noreferrer');
+        window.open(smartlink, '_blank');
       } catch {}
     }
 
-    setToastMessage(`✓ جاري تحميل ${activeDownloadApp.name} الآن بنجاح!`);
+    // Trigger IPA file download directly
+    setTimeout(() => {
+      if (activeDownloadApp) {
+        executeDownload(activeDownloadApp.downloadUrl);
+        setToastMessage(`✓ جاري تحميل ${activeDownloadApp.name} الآن بنجاح!`);
+      }
+    }, 400);
+
     setTimeout(() => {
       setActiveDownloadApp(null);
-    }, 1200);
+    }, 1500);
   };
 
   const handleCopyLink = (app: ModdedApp) => {
@@ -603,6 +610,44 @@ export default function ModdedIpaSection() {
           </div>
         </div>
       </ScrollReveal>
+
+      {/* Sponsored Banner for Free Users (Visible Only When Not VIP) */}
+      {!isVip && adsConfig?.enabled !== false && (
+        <div className="pt-2 pb-6 max-w-4xl mx-auto">
+          {adsConfig?.topBannerHtml ? (
+            <AdBanner htmlCode={adsConfig.topBannerHtml} label="إعلان ممول" minHeight={90} />
+          ) : (
+            <a
+              href={adsConfig?.smartlinkUrl || 'https://ardance.org/4/8a4e54806bf1d2e4984078c43efd8205'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-indigo-950/60 border border-blue-500/30 hover:border-blue-400/70 transition shadow-lg group text-right cursor-pointer"
+            >
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-110 transition shrink-0">
+                    <ExternalLink className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        إعلان ممول • Sponsored
+                      </span>
+                      <span className="text-xs text-amber-400 font-semibold">عروض شركاء SideLink</span>
+                    </div>
+                    <p className="text-sm font-bold text-white group-hover:text-blue-300 transition mt-0.5">
+                      🔥 اضغط هنا لاستكشاف أفضل التطبيقات والألعاب والجوائز الحصرية لهذا الأسبوع
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold px-4 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white transition whitespace-nowrap border border-blue-500/30">
+                  انقر للمشاهدة ←
+                </span>
+              </div>
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Apps Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -837,14 +882,28 @@ export default function ModdedIpaSection() {
                 />
               </div>
             ) : (
-              <div className="p-3.5 rounded-2xl bg-slate-950/70 border border-slate-800 text-center space-y-1">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500 font-mono">
-                  إعلان ممول • Sponsored Ad
-                </span>
-                <p className="text-xs text-slate-400">
-                  حمل وثبت أحدث تطبيقات الآيفون مجاناً برعاية <span className="text-blue-400 font-bold">SideLink</span>
+              <a
+                href={adsConfig?.smartlinkUrl || 'https://ardance.org/4/8a4e54806bf1d2e4984078c43efd8205'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block p-3.5 rounded-2xl bg-gradient-to-r from-blue-950/80 via-slate-900 to-indigo-950/80 border border-blue-500/40 hover:border-blue-400 text-center space-y-1.5 transition group cursor-pointer shadow-md"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase tracking-wider text-blue-400 font-mono font-bold">
+                    إعلان ممول • Sponsored
+                  </span>
+                  <span className="text-[11px] text-amber-400 font-semibold group-hover:underline flex items-center gap-1">
+                    <span>فتح العرض</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+                <p className="text-xs text-white font-bold group-hover:text-blue-300 transition">
+                  🎁 انقر هنا للحصول على العرض المباشر والجوائز المتاحة الآن
                 </p>
-              </div>
+                <p className="text-[10px] text-slate-400">
+                  النقر على الإعلان يدعم استمرار تقديم خدمة SideLink المجانية لجميع المستخدمين
+                </p>
+              </a>
             )}
 
             {/* VIP Upgrade Fast-Track inside Download Modal */}

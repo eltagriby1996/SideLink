@@ -39,9 +39,10 @@ export default function AdScriptInjector({ scripts }: AdScriptInjectorProps) {
           Array.from(node.attributes).forEach((attr) => {
             scriptEl.setAttribute(attr.name, attr.value);
           });
-          if (node.src) {
-            scriptEl.src = node.src;
-          } else {
+          const srcAttr = node.getAttribute('src');
+          if (srcAttr) {
+            scriptEl.src = srcAttr;
+          } else if (node.textContent) {
             scriptEl.textContent = node.textContent;
           }
           scriptEl.setAttribute('data-sidelink-ad', 'true');

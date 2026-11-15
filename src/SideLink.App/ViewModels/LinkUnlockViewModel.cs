@@ -203,22 +203,7 @@ public partial class LinkUnlockViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                // Only if offline without internet, check emergency master key
-                if (key.Equals("SL-VIP-PRO-2026-X77", StringComparison.OrdinalIgnoreCase))
-                {
-                    _linkUnlockService.SavePersistentVipLicense(key);
-                    VipStatusMessage = "✓ تم تفعيل ترخيص الطوارئ دون اتصال بنجاح!";
-                    IsSuccessAnimation = true;
-                    await Task.Delay(1000);
-                    App.Current?.Dispatcher?.Invoke(() =>
-                    {
-                        IsSuccessAnimation = false;
-                        IsUnlocked = true;
-                        VerificationCompleted?.Invoke();
-                    });
-                    return;
-                }
-                VipStatusMessage = "تعذر الاتصال بالخادم للتحقق من المفتاح: " + ex.Message;
+                VipStatusMessage = "تعذر الاتصال بالخادم للتحقق من المفتاح. يرجى التأكد من اتصال الإنترنت: " + ex.Message;
                 return;
             }
 

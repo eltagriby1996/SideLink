@@ -218,7 +218,6 @@ export async function validateVipKey(
 ): Promise<{ isValid: boolean; reason?: string; expiresAt?: string | null }> {
   const db = dbInstance.getDb();
   const cleanKey = key.trim().toUpperCase();
-  const isVipFormat = /^SL-VIP(-[A-Z0-9]{3,8}){2,4}$/i.test(cleanKey) || cleanKey.startsWith('SL-VIP-');
 
   let found = db.vipKeys.find((k) => k.key.toUpperCase() === cleanKey);
 
@@ -298,29 +297,8 @@ export async function validateVipKey(
     return { isValid: true, expiresAt: found.expiresAt };
   }
 
-  // If key matches SideLink VIP format, auto-register as active lifetime key
-  if (isVipFormat) {
-    const newKey: VipKey = {
-      key: cleanKey,
-      note: 'مفتاح VIP نشط ومعتمد',
-      createdAt: new Date().toISOString(),
-      expiresAt: null,
-      usedCount: 1,
-      maxUses: 0,
-      isActive: true,
-      boundHwid: hwid || null,
-      boundMachine: machineName || (hwid ? 'جهاز كمبيوتر' : null),
-      boundAt: hwid ? new Date().toISOString() : null,
-      boundWebClientId: webClientId || null,
-      boundWebUserAgent: webUserAgent || (webClientId ? 'متصفح ويب' : null),
-      boundWebAt: webClientId ? new Date().toISOString() : null,
-    };
-    db.vipKeys.unshift(newKey);
-    await dbInstance.saveAsync();
-    return { isValid: true, expiresAt: null };
-  }
-
-  return { isValid: false, reason: 'كود التحقق غير موجود أو غير صالح.' };
+  // Key was not found in the database - STRICT REJECTION (No auto-registration backdoor)
+  return { isValid: false, reason: 'كود التحقق غير موجود في النظام. يرجى كتابة كود معتمد أو التواصل مع الإدارة.' };
 }
 
 export async function checkVipKeyStatus(
@@ -346,22 +324,29 @@ export async function checkVipKeyStatus(
       return { isValid: false, reason: 'انتهت صلاحية كود التحقق. يرجى تجديد الترخيص أو إعادة التحقق.' };
     }
 
-    // Web Client Check
+    // Web Client Check: If device was unbound by admin or is different, REVOKE access
     if (webClientId) {
-      if (found.boundWebClientId && found.boundWebClientId !== webClientId) {
-        return { isValid: false, reason: 'هذا الكود مرتبط بمتصفح آخر.' };
-      }
       if (!found.boundWebClientId) {
-        found.boundWebClientId = webClientId;
-        found.boundWebAt = new Date().toISOString();
-        await dbInstance.saveAsync();
+        return {
+          isValid: false,
+          reason: 'تم فك ارتباط هذا المتصفح من قبل الإدارة. يرجى إعادة تفعيل الكود من جديد.',
+        };
+      }
+      if (found.boundWebClientId !== webClientId) {
+        return { isValid: false, reason: 'هذا الكود مرتبط بمتصفح آخر.' };
       }
       return { isValid: true, expiresAt: found.expiresAt };
     }
 
-    // PC Hardware ID Check
+    // PC Hardware ID Check: If device was unbound by admin or is different, REVOKE access
     if (hwid) {
-      if (found.boundHwid && found.boundHwid !== hwid) {
+      if (!found.boundHwid) {
+        return {
+          isValid: false,
+          reason: 'تم فك ارتباط هذا الجهاز من قبل الإدارة. يرجى إعادة تفعيل الكود من جديد.',
+        };
+      }
+      if (found.boundHwid !== hwid) {
         return { isValid: false, reason: 'هذا الكود مرتبط بجهاز كمبيوتر آخر.' };
       }
       return { isValid: true, expiresAt: found.expiresAt };
