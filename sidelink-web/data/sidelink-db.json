@@ -58,6 +58,14 @@
       "expiresAt": "2026-11-13T12:11:11.907Z",
       "verifiedAt": null,
       "challengeNonce": ""
+    },
+    "6b70c38d081d4dd58ac79dcedf6a2e2f": {
+      "sessionId": "6b70c38d081d4dd58ac79dcedf6a2e2f",
+      "status": "pending",
+      "createdAt": "2026-11-15T11:02:05.870Z",
+      "expiresAt": "2026-11-15T11:17:05.870Z",
+      "verifiedAt": null,
+      "challengeNonce": ""
     }
   },
   "ipas": [
@@ -129,7 +137,10 @@
       "isActive": true,
       "boundWebClientId": "sl_web_szjoiu4n_mwhq3tau",
       "boundWebUserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0",
-      "boundWebAt": "2026-11-15T11:01:12.619Z"
+      "boundWebAt": "2026-11-15T11:01:12.619Z",
+      "boundHwid": "727AE365BAFEFB801E4AAFF185139DDA311C4606078BA0638DD75DA19E713A4F",
+      "boundMachine": "DESKTOP-KCR0OLA",
+      "boundAt": "2026-11-15T11:02:05.901Z"
     },
     {
       "key": "SL-VIP-MASTER-2026",
