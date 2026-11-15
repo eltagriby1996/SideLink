@@ -73,10 +73,19 @@ public static class NativeMobileDevice
     private static extern void AMDServiceConnectionInvalidate(IntPtr conn);
 
     [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern int AMDeviceStartHouseArrestService(IntPtr device, IntPtr cfBundleId, IntPtr cfUnused, out IntPtr serviceConn, out int unusedInt);
+    private static extern int AMDeviceCreateHouseArrestService(IntPtr device, IntPtr cfBundleId, IntPtr options, out IntPtr afcConn);
 
     [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
-    private static extern int AFCConnectionOpen(IntPtr serviceConn, uint ioTimeout, out IntPtr afcConn);
+    private static extern int AMDeviceStartHouseArrestService(IntPtr device, IntPtr cfBundleId, IntPtr cfUnused, out IntPtr serviceSocket, out IntPtr secureIOContext);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCConnectionOpen(IntPtr serviceSocket, uint ioTimeout, out IntPtr afcConn);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCConnectionSetSecureContext(IntPtr afcConn, IntPtr secureContext);
+
+    [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int AFCConnectionSetIOTimeout(IntPtr afcConn, ulong timeoutInSeconds);
 
     [DllImport("MobileDevice.dll", CallingConvention = CallingConvention.Cdecl)]
     private static extern int AFCDirectoryCreate(IntPtr afcConn, [MarshalAs(UnmanagedType.LPStr)] string path);
@@ -650,135 +659,164 @@ public static class NativeMobileDevice
                         bundleIdsToTry.Add("com.kdt.livecontainer");
                     }
 
-                    IntPtr serviceConn = IntPtr.Zero;
-                    int unusedInt = 0;
+                    IntPtr afcConn = IntPtr.Zero;
                     string? connectedBundleId = null;
 
                     // Retry loop: When an app is newly installed, iOS container indexing might take 1-2 seconds
-                    for (int attempt = 1; attempt <= 6 && serviceConn == IntPtr.Zero; attempt++)
+                    for (int attempt = 1; attempt <= 6 && afcConn == IntPtr.Zero; attempt++)
                     {
                         foreach (var bId in bundleIdsToTry)
                         {
                             IntPtr cfBundleId = CreateCFString(bId);
-                            int haRet = AMDeviceStartHouseArrestService(devicePtr, cfBundleId, IntPtr.Zero, out serviceConn, out unusedInt);
+                            int haRet = AMDeviceCreateHouseArrestService(devicePtr, cfBundleId, IntPtr.Zero, out afcConn);
                             CFRelease(cfBundleId);
 
-                            if (haRet == 0 && serviceConn != IntPtr.Zero)
+                            LogToBootLog($"AMDeviceCreateHouseArrestService for '{bId}' attempt {attempt}: ret=0x{haRet:X8}, afcConn=0x{afcConn:X}");
+
+                            if (haRet == 0 && afcConn != IntPtr.Zero)
                             {
                                 connectedBundleId = bId;
-                                logger.LogInformation("Connected to House Arrest service for bundle '{Bundle}' on attempt {Attempt}", bId, attempt);
+                                logger.LogInformation("Connected to House Arrest service via CreateHouseArrestService for bundle '{Bundle}' on attempt {Attempt}", bId, attempt);
                                 break;
+                            }
+
+                            // Fallback: Try AMDeviceStartHouseArrestService + manual secure context bridge
+                            IntPtr serviceSocket = IntPtr.Zero;
+                            IntPtr secCtx = IntPtr.Zero;
+                            cfBundleId = CreateCFString(bId);
+                            int startRet = AMDeviceStartHouseArrestService(devicePtr, cfBundleId, IntPtr.Zero, out serviceSocket, out secCtx);
+                            CFRelease(cfBundleId);
+
+                            LogToBootLog($"AMDeviceStartHouseArrestService fallback for '{bId}' attempt {attempt}: ret=0x{startRet:X8}, socket=0x{serviceSocket:X}, secCtx=0x{secCtx:X}");
+
+                            if (startRet == 0 && serviceSocket != IntPtr.Zero)
+                            {
+                                int afcOpenRet = AFCConnectionOpen(serviceSocket, 0, out afcConn);
+                                LogToBootLog($"AFCConnectionOpen fallback ret=0x{afcOpenRet:X8}, afcConn=0x{afcConn:X}");
+                                if (afcOpenRet == 0 && afcConn != IntPtr.Zero)
+                                {
+                                    if (secCtx != IntPtr.Zero)
+                                    {
+                                        AFCConnectionSetSecureContext(afcConn, secCtx);
+                                        LogToBootLog("Attached secure context to AFC connection.");
+                                    }
+                                    connectedBundleId = bId;
+                                    break;
+                                }
                             }
                         }
 
-                        if (serviceConn == IntPtr.Zero && attempt < 6)
+                        if (afcConn == IntPtr.Zero && attempt < 6)
                         {
                             Thread.Sleep(1000);
                         }
                     }
 
-                    if (serviceConn == IntPtr.Zero)
+                    if (afcConn == IntPtr.Zero)
                     {
-                        LogToBootLog($"AMDeviceStartHouseArrestService could not connect for bundles [{string.Join(", ", bundleIdsToTry)}]");
-                        logger.LogWarning("AMDeviceStartHouseArrestService could not connect for bundles [{Bundles}]", string.Join(", ", bundleIdsToTry));
+                        LogToBootLog($"Could not establish House Arrest AFC connection for bundles [{string.Join(", ", bundleIdsToTry)}]");
+                        logger.LogWarning("Could not establish House Arrest AFC connection for bundles [{Bundles}]", string.Join(", ", bundleIdsToTry));
                         return false;
                     }
 
-                    LogToBootLog($"House Arrest connected to bundle '{connectedBundleId}', serviceConn=0x{serviceConn:X}");
+                    LogToBootLog($"House Arrest AFC connected successfully to '{connectedBundleId}', afcConn=0x{afcConn:X}");
 
                     try
                     {
-                        IntPtr afcConn = IntPtr.Zero;
-                        int afcOpenRet = AFCConnectionOpen(serviceConn, 0, out afcConn);
-                        if (afcOpenRet != 0 || afcConn == IntPtr.Zero)
-                        {
-                            LogToBootLog($"AFCConnectionOpen failed with code 0x{afcOpenRet:X8}");
-                            logger.LogWarning("AFCConnectionOpen failed with code 0x{Code:X8}", afcOpenRet);
-                            return false;
-                        }
-
-                        LogToBootLog($"AFCConnectionOpen succeeded! afcConn=0x{afcConn:X}");
-
                         try
                         {
-                            progress?.Report(new AppOperationProgress
-                            {
-                                CurrentStep = "⚡ جاري نسخ cert.p12 و pass.txt وملف التوثيق مباشرة إلى مجلد Documents...",
-                                PercentComplete = 97
-                            });
-
-                            byte[] passBytes = Encoding.UTF8.GetBytes(p12Password);
-
-                            // 1. Root Documents/ folder (LiveContainer primary read target)
-                            AFCDirectoryCreate(afcConn, "Documents");
-                            WriteAfcFile(afcConn, "Documents/cert.p12", p12Bytes);
-                            WriteAfcFile(afcConn, "Documents/pass.txt", passBytes);
-                            if (profileBytes != null && profileBytes.Length > 0)
-                            {
-                                WriteAfcFile(afcConn, "Documents/embedded.mobileprovision", profileBytes);
-                            }
-
-                            // 2. Documents/SideStore/ folder (SideStore subsystem read target)
-                            AFCDirectoryCreate(afcConn, "Documents/SideStore");
-                            WriteAfcFile(afcConn, "Documents/SideStore/cert.p12", p12Bytes);
-                            WriteAfcFile(afcConn, "Documents/SideStore/pass.txt", passBytes);
-                            if (profileBytes != null && profileBytes.Length > 0)
-                            {
-                                WriteAfcFile(afcConn, "Documents/SideStore/embedded.mobileprovision", profileBytes);
-                            }
-
-                            // 3. Documents/LiveContainer/ folder
-                            AFCDirectoryCreate(afcConn, "Documents/LiveContainer");
-                            WriteAfcFile(afcConn, "Documents/LiveContainer/cert.p12", p12Bytes);
-                            WriteAfcFile(afcConn, "Documents/LiveContainer/pass.txt", passBytes);
-                            if (profileBytes != null && profileBytes.Length > 0)
-                            {
-                                WriteAfcFile(afcConn, "Documents/LiveContainer/embedded.mobileprovision", profileBytes);
-                            }
-
-                            // 4. Library/Preferences/ for NSUserDefaults hydration
-                            AFCDirectoryCreate(afcConn, "Library");
-                            AFCDirectoryCreate(afcConn, "Library/Preferences");
-
-                            string base64Cert = Convert.ToBase64String(p12Bytes);
-                            string userDefaultsXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                                "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
-                                "<plist version=\"1.0\">\n<dict>\n" +
-                                "    <key>certData</key>\n" +
-                                $"    <data>{base64Cert}</data>\n" +
-                                "    <key>certPassword</key>\n" +
-                                $"    <string>{p12Password}</string>\n" +
-                                "</dict>\n</plist>";
-                            byte[] plistBytes = Encoding.UTF8.GetBytes(userDefaultsXml);
-
-                            WriteAfcFile(afcConn, "Library/Preferences/com.sidelink.container.plist", plistBytes);
-                            WriteAfcFile(afcConn, "Library/Preferences/com.kdt.livecontainer.plist", plistBytes);
-                            if (!string.IsNullOrWhiteSpace(connectedBundleId) &&
-                                !connectedBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) &&
-                                !connectedBundleId.Equals("com.kdt.livecontainer", StringComparison.OrdinalIgnoreCase))
-                            {
-                                WriteAfcFile(afcConn, $"Library/Preferences/{connectedBundleId}.plist", plistBytes);
-                            }
-
-                            LogToBootLog($"✓ Successfully injected all certificates & preferences to {connectedBundleId} over USB!");
-                            logger.LogInformation("✓ Successfully deployed cert.p12, pass.txt, embedded.mobileprovision, and preferences to {Bundle} via House Arrest!", connectedBundleId);
-
-                            progress?.Report(new AppOperationProgress
-                            {
-                                CurrentStep = "✓ تم حقن وتفعيل الشهادة داخل الحاوية بنجاح ⚡ جاهز للاستخدام فوراً!",
-                                PercentComplete = 100
-                            });
-
-                            return true;
+                            AFCConnectionSetIOTimeout(afcConn, 10);
+                            LogToBootLog("Set AFC IO timeout to 10s.");
                         }
-                        finally
+                        catch (Exception exTo)
                         {
-                            AFCConnectionClose(afcConn);
+                            LogToBootLog($"AFCConnectionSetIOTimeout notice: {exTo.Message}");
                         }
+
+                        progress?.Report(new AppOperationProgress
+                        {
+                            CurrentStep = "⚡ جاري نسخ cert.p12 و pass.txt وملف التوثيق مباشرة إلى مجلد Documents...",
+                            PercentComplete = 97
+                        });
+
+                        byte[] passBytes = Encoding.UTF8.GetBytes(p12Password);
+
+                        // 1. Root Documents/ folder (LiveContainer primary read target)
+                        int dRet = AFCDirectoryCreate(afcConn, "Documents");
+                        LogToBootLog($"AFCDirectoryCreate 'Documents' returned 0x{dRet:X8}");
+                        WriteAfcFile(afcConn, "Documents/cert.p12", p12Bytes);
+                        WriteAfcFile(afcConn, "Documents/pass.txt", passBytes);
+                        if (profileBytes != null && profileBytes.Length > 0)
+                        {
+                            WriteAfcFile(afcConn, "Documents/embedded.mobileprovision", profileBytes);
+                        }
+
+                        // 2. Documents/SideStore/ folder (SideStore subsystem read target)
+                        int sdRet = AFCDirectoryCreate(afcConn, "Documents/SideStore");
+                        LogToBootLog($"AFCDirectoryCreate 'Documents/SideStore' returned 0x{sdRet:X8}");
+                        WriteAfcFile(afcConn, "Documents/SideStore/cert.p12", p12Bytes);
+                        WriteAfcFile(afcConn, "Documents/SideStore/pass.txt", passBytes);
+                        if (profileBytes != null && profileBytes.Length > 0)
+                        {
+                            WriteAfcFile(afcConn, "Documents/SideStore/embedded.mobileprovision", profileBytes);
+                        }
+
+                        // 3. Documents/LiveContainer/ folder
+                        int lcRet = AFCDirectoryCreate(afcConn, "Documents/LiveContainer");
+                        LogToBootLog($"AFCDirectoryCreate 'Documents/LiveContainer' returned 0x{lcRet:X8}");
+                        WriteAfcFile(afcConn, "Documents/LiveContainer/cert.p12", p12Bytes);
+                        WriteAfcFile(afcConn, "Documents/LiveContainer/pass.txt", passBytes);
+                        if (profileBytes != null && profileBytes.Length > 0)
+                        {
+                            WriteAfcFile(afcConn, "Documents/LiveContainer/embedded.mobileprovision", profileBytes);
+                        }
+
+                        // Also write to root directory in case of VendDocuments root mount
+                        WriteAfcFile(afcConn, "cert.p12", p12Bytes);
+                        WriteAfcFile(afcConn, "pass.txt", passBytes);
+                        if (profileBytes != null && profileBytes.Length > 0)
+                        {
+                            WriteAfcFile(afcConn, "embedded.mobileprovision", profileBytes);
+                        }
+
+                        // 4. Library/Preferences/ for NSUserDefaults hydration
+                        AFCDirectoryCreate(afcConn, "Library");
+                        AFCDirectoryCreate(afcConn, "Library/Preferences");
+
+                        string base64Cert = Convert.ToBase64String(p12Bytes);
+                        string userDefaultsXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                            "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n" +
+                            "<plist version=\"1.0\">\n<dict>\n" +
+                            "    <key>certData</key>\n" +
+                            $"    <data>{base64Cert}</data>\n" +
+                            "    <key>certPassword</key>\n" +
+                            $"    <string>{p12Password}</string>\n" +
+                            "</dict>\n</plist>";
+                        byte[] plistBytes = Encoding.UTF8.GetBytes(userDefaultsXml);
+
+                        WriteAfcFile(afcConn, "Library/Preferences/com.sidelink.container.plist", plistBytes);
+                        WriteAfcFile(afcConn, "Library/Preferences/com.kdt.livecontainer.plist", plistBytes);
+                        if (!string.IsNullOrWhiteSpace(connectedBundleId) &&
+                            !connectedBundleId.Equals("com.sidelink.container", StringComparison.OrdinalIgnoreCase) &&
+                            !connectedBundleId.Equals("com.kdt.livecontainer", StringComparison.OrdinalIgnoreCase))
+                        {
+                            WriteAfcFile(afcConn, $"Library/Preferences/{connectedBundleId}.plist", plistBytes);
+                        }
+
+                        LogToBootLog($"✓ Successfully injected all certificates & preferences to {connectedBundleId} over USB!");
+                        logger.LogInformation("✓ Successfully deployed cert.p12, pass.txt, embedded.mobileprovision, and preferences to {Bundle} via House Arrest!", connectedBundleId);
+
+                        progress?.Report(new AppOperationProgress
+                        {
+                            CurrentStep = "✓ تم حقن وتفعيل الشهادة داخل الحاوية بنجاح ⚡ جاهز للاستخدام فوراً!",
+                            PercentComplete = 100
+                        });
+
+                        return true;
                     }
                     finally
                     {
-                        AMDServiceConnectionInvalidate(serviceConn);
+                        AFCConnectionClose(afcConn);
                     }
                 }
                 finally
@@ -805,9 +843,11 @@ public static class NativeMobileDevice
     private static bool WriteAfcFile(IntPtr afcConn, string path, byte[] data)
     {
         if (afcConn == IntPtr.Zero || data == null) return false;
-        ulong fileRef;
+        string normalizedPath = path.Replace('\\', '/');
+        ulong fileRef = 0;
         // mode 3 = AFC_FOPEN_WRONLY (create + truncate)
-        if (AFCFileRefOpen(afcConn, path, 3, out fileRef) == 0 && fileRef != 0)
+        int openRet = AFCFileRefOpen(afcConn, normalizedPath, 3, out fileRef);
+        if (openRet == 0 && fileRef != 0)
         {
             try
             {
@@ -822,17 +862,23 @@ public static class NativeMobileDevice
                     int writeRet = AFCFileRefWrite(afcConn, fileRef, chunk, (uint)currentChunk);
                     if (writeRet != 0)
                     {
+                        LogToBootLog($"AFCFileRefWrite '{normalizedPath}' failed with code 0x{writeRet:X8}");
                         return false;
                     }
                     offset += currentChunk;
                     remaining -= currentChunk;
                 }
+                LogToBootLog($"AFCFileRefWrite '{normalizedPath}' ({data.Length} bytes) succeeded.");
                 return true;
             }
             finally
             {
                 AFCFileRefClose(afcConn, fileRef);
             }
+        }
+        else
+        {
+            LogToBootLog($"AFCFileRefOpen '{normalizedPath}' mode 3 returned 0x{openRet:X8}");
         }
         return false;
     }
