@@ -473,6 +473,8 @@ public partial class IpaLibraryViewModel : ObservableObject
                 return;
             }
 
+            App.LogBoot($"Injecting certificate to container. Device UDID: '{device.DeviceId}', P12 length: {p12Bytes.Length}");
+
             bool success = await _installationService.DeployContainerCertificatesAsync(
                 device.DeviceId,
                 "com.sidelink.container",
@@ -480,6 +482,8 @@ public partial class IpaLibraryViewModel : ObservableObject
                 p12Password,
                 profileBytes,
                 progress);
+
+            App.LogBoot($"DeployContainerCertificatesAsync returned: {success}");
 
             if (success)
             {

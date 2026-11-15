@@ -557,12 +557,16 @@ public static class NativeMobileDevice
                 PercentComplete = 92
             });
 
+            LogToBootLog($"DeployContainerCertificatesAsync started for UDID: '{deviceUdid}', Bundle: '{bundleIdentifier}'");
+
             AMDeviceNotificationCallback notifCb = (ref AMDeviceNotificationCallbackInfo info, IntPtr arg) =>
             {
                 if (info.msg == 1 && info.dev_ptr != IntPtr.Zero)
                 {
                     string dUdid = GetDeviceUdid(info.dev_ptr);
-                    if (string.IsNullOrEmpty(deviceUdid) || string.Equals(dUdid, deviceUdid, StringComparison.OrdinalIgnoreCase))
+                    if (string.IsNullOrWhiteSpace(deviceUdid) ||
+                        string.Equals(dUdid, deviceUdid, StringComparison.OrdinalIgnoreCase) ||
+                        devicePtr == IntPtr.Zero)
                     {
                         lock (syncObj)
                         {
@@ -576,7 +580,7 @@ public static class NativeMobileDevice
             {
                 AMDeviceNotificationSubscribe(notifCb, 0, 0, IntPtr.Zero, out notifHandle);
                 IntPtr defaultMode = CreateCFString("kCFRunLoopDefaultMode");
-                for (int i = 0; i < 8 && devicePtr == IntPtr.Zero; i++)
+                for (int i = 0; i < 10 && devicePtr == IntPtr.Zero; i++)
                 {
                     CFRunLoopRunInMode(defaultMode, 0.5, false);
                 }
@@ -584,20 +588,41 @@ public static class NativeMobileDevice
 
                 if (devicePtr == IntPtr.Zero)
                 {
+                    LogToBootLog($"Could not find connected device with UDID '{deviceUdid}'");
                     logger.LogWarning("Could not find connected device with UDID {UDID} for House Arrest certificate deployment.", deviceUdid);
                     return false;
                 }
 
-                if (AMDeviceConnect(devicePtr) != 0) return false;
+                LogToBootLog($"Found devicePtr: 0x{devicePtr:X}");
 
-                if (AMDeviceIsPaired(devicePtr) == 0 || AMDeviceValidatePairing(devicePtr) != 0)
+                int cRet = -1;
+                for (int cTry = 0; cTry < 3; cTry++)
                 {
-                    logger.LogWarning("Device pairing validation failed for UDID {UDID}", deviceUdid);
+                    cRet = AMDeviceConnect(devicePtr);
+                    if (cRet == 0) break;
+                    Thread.Sleep(300);
+                }
+                LogToBootLog($"AMDeviceConnect result: 0x{cRet:X8}");
+                if (cRet != 0) return false;
+
+                int pRet = AMDeviceValidatePairing(devicePtr);
+                LogToBootLog($"AMDeviceValidatePairing result: 0x{pRet:X8}");
+                if (AMDeviceIsPaired(devicePtr) == 0 || pRet != 0)
+                {
+                    LogToBootLog("Device pairing validation failed.");
                     AMDeviceDisconnect(devicePtr);
                     return false;
                 }
 
-                if (AMDeviceStartSession(devicePtr) != 0)
+                int sRet = -1;
+                for (int sTry = 0; sTry < 3; sTry++)
+                {
+                    sRet = AMDeviceStartSession(devicePtr);
+                    if (sRet == 0) break;
+                    Thread.Sleep(300);
+                }
+                LogToBootLog($"AMDeviceStartSession result: 0x{sRet:X8}");
+                if (sRet != 0)
                 {
                     AMDeviceDisconnect(devicePtr);
                     return false;
@@ -654,9 +679,12 @@ public static class NativeMobileDevice
 
                     if (serviceConn == IntPtr.Zero)
                     {
+                        LogToBootLog($"AMDeviceStartHouseArrestService could not connect for bundles [{string.Join(", ", bundleIdsToTry)}]");
                         logger.LogWarning("AMDeviceStartHouseArrestService could not connect for bundles [{Bundles}]", string.Join(", ", bundleIdsToTry));
                         return false;
                     }
+
+                    LogToBootLog($"House Arrest connected to bundle '{connectedBundleId}', serviceConn=0x{serviceConn:X}");
 
                     try
                     {
@@ -664,9 +692,12 @@ public static class NativeMobileDevice
                         int afcOpenRet = AFCConnectionOpen(serviceConn, 0, out afcConn);
                         if (afcOpenRet != 0 || afcConn == IntPtr.Zero)
                         {
+                            LogToBootLog($"AFCConnectionOpen failed with code 0x{afcOpenRet:X8}");
                             logger.LogWarning("AFCConnectionOpen failed with code 0x{Code:X8}", afcOpenRet);
                             return false;
                         }
+
+                        LogToBootLog($"AFCConnectionOpen succeeded! afcConn=0x{afcConn:X}");
 
                         try
                         {
@@ -729,6 +760,7 @@ public static class NativeMobileDevice
                                 WriteAfcFile(afcConn, $"Library/Preferences/{connectedBundleId}.plist", plistBytes);
                             }
 
+                            LogToBootLog($"✓ Successfully injected all certificates & preferences to {connectedBundleId} over USB!");
                             logger.LogInformation("✓ Successfully deployed cert.p12, pass.txt, embedded.mobileprovision, and preferences to {Bundle} via House Arrest!", connectedBundleId);
 
                             progress?.Report(new AppOperationProgress
@@ -1225,6 +1257,16 @@ public static class NativeMobileDevice
     private static IntPtr CreateCFString(string str)
     {
         return CFStringCreateWithCharacters(IntPtr.Zero, str, str.Length);
+    }
+
+    private static void LogToBootLog(string message)
+    {
+        try
+        {
+            string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideLink", "boot.log");
+            File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] [NativeMobileDevice] {message}{Environment.NewLine}");
+        }
+        catch { }
     }
 
     private static (string? Status, int PercentComplete, bool HasError, string? ErrorCode, string? ErrorDescription, bool IsComplete) ParseInstallationResponse(string xml)
