@@ -574,6 +574,22 @@ public partial class MainViewModel : ObservableObject
         {
             _ = SigningRefresh.InitializeAsync();
         }
+        else if (pageName == "Diagnostics")
+        {
+            _ = Diagnostics.RunDiagnosticsAsync();
+        }
+        else if (pageName == "Logs")
+        {
+            Logs.RefreshLogs();
+        }
+        else if (pageName == "Settings")
+        {
+            Settings.RefreshSettings();
+        }
+        else if (pageName == "Dashboard")
+        {
+            _ = Dashboard.ReloadDashboardAsync();
+        }
 
         // Real-time enforcement on navigation
         if (IsAppUnlocked)

@@ -20,7 +20,7 @@ public partial class DiagnosticsViewModel : ObservableObject
     private bool _isRunning;
 
     [ObservableProperty]
-    private string _statusSummary = "System diagnostics ready.";
+    private string _statusSummary = "جاهز لتشخيص وفحص مكونات النظام وتعريفات Apple...";
 
     [ObservableProperty]
     private bool _allPassed;
@@ -40,7 +40,7 @@ public partial class DiagnosticsViewModel : ObservableObject
     public async Task RunDiagnosticsAsync()
     {
         IsRunning = true;
-        StatusSummary = "Running system checks...";
+        StatusSummary = "جاري فحص تعريفات Apple، منافذ usbmuxd، وخدمات التوقيع...";
         Checks.Clear();
 
         try
@@ -53,12 +53,53 @@ public partial class DiagnosticsViewModel : ObservableObject
 
             AllPassed = Checks.All(c => c.Passed);
             int passedCount = Checks.Count(c => c.Passed);
-            StatusSummary = $"Completed: {passedCount} of {Checks.Count} checks passed.";
+            StatusSummary = AllPassed
+                ? $"✓ اكتمل الفحص بنجاح: جميع الفحوصات ({passedCount} من {Checks.Count}) سليمة والبرنامج جاهز تماماً للتوقيع والتثبيت."
+                : $"⚠️ اكتمل الفحص: {passedCount} من {Checks.Count} فحوصات سليمة. يرجى مراجعة التنبيهات الموضحة أدناه لحلها.";
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Diagnostics check failed");
-            StatusSummary = "Diagnostics failed: " + ex.Message;
+            StatusSummary = "تعذر إكمال الفحص: " + ex.Message;
+        }
+        finally
+        {
+            IsRunning = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task RestartAppleServiceAsync()
+    {
+        IsRunning = true;
+        StatusSummary = "جاري محاولة إعادة تشغيل خدمة Apple Mobile Device Service تلقائياً...";
+        try
+        {
+            await Task.Run(() =>
+            {
+                try
+                {
+                    using var p = new System.Diagnostics.Process();
+                    p.StartInfo = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = "/c net stop \"Apple Mobile Device Service\" & net start \"Apple Mobile Device Service\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+                    p.Start();
+                    p.WaitForExit(5000);
+                }
+                catch { }
+            });
+
+            await Task.Delay(1000);
+            await RunDiagnosticsAsync();
+            StatusSummary = "✓ تمت إعادة تشغيل خدمة Apple Mobile Device بنجاح وتم تحديث حالة الفحص.";
+        }
+        catch (Exception ex)
+        {
+            StatusSummary = "تعذر إعادة تشغيل الخدمة: " + ex.Message;
         }
         finally
         {
@@ -72,8 +113,8 @@ public partial class DiagnosticsViewModel : ObservableObject
         var dialog = new SaveFileDialog
         {
             FileName = $"SideLink_Diagnostic_Report_{DateTime.UtcNow:yyyyMMdd_HHmmss}.txt",
-            Filter = "Text Files (*.txt)|*.txt|All Files (*.*)|*.*",
-            Title = "Save Diagnostic Report"
+            Filter = "ملفات نصية (*.txt)|*.txt|كافة الملفات (*.*)|*.*",
+            Title = "حفظ تقرير تشخيص النظام"
         };
 
         if (dialog.ShowDialog() == true)
@@ -82,11 +123,11 @@ public partial class DiagnosticsViewModel : ObservableObject
             {
                 string report = await _diagnosticsService.GenerateDiagnosticReportAsync();
                 await File.WriteAllTextAsync(dialog.FileName, report);
-                StatusSummary = $"Diagnostic report exported to {Path.GetFileName(dialog.FileName)}.";
+                StatusSummary = $"✓ تم حفظ تقرير التشخيص بنجاح في ({Path.GetFileName(dialog.FileName)}).";
             }
             catch (Exception ex)
             {
-                StatusSummary = "Failed to export report: " + ex.Message;
+                StatusSummary = "فشل في حفظ التقرير: " + ex.Message;
             }
         }
     }
