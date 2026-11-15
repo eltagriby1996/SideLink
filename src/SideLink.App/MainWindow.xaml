@@ -7,6 +7,7 @@
         xmlns:vm="clr-namespace:SideLink.App.ViewModels"
         mc:Ignorable="d"
         Title="SideLink — Modern iOS IPA Sideloading &amp; 7-Day Refresh Manager" 
+        Icon="Assets/app.ico"
         Height="760" Width="1140"
         MinHeight="640" MinWidth="940"
         WindowStartupLocation="CenterScreen"

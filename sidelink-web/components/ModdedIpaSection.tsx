@@ -153,7 +153,7 @@ const INITIAL_TOP_APPS: ModdedApp[] = [
     category: 'social',
     version: 'v25.5.1',
     size: '115 MB',
-    icon: 'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico',
+    icon: '/logo.png',
     badge: 'نسخة برو مفتوحة',
     description: 'محرر الصور والتصميم الأشهر مع فتح كافة فلاتر ومميزات PicsArt Gold، إزالة الخلفية بالذكاء الاصطناعي، وتصدير الصور بدقة فائقة.',
     features: ['فتح كافة فلاتر وتأثيرات Gold', 'حفظ الصور بدقة فائقة بدون علامة', 'أدوات الذكاء الاصطناعي مفتوحة', 'تعديل الصور باحترافية'],
@@ -165,7 +165,7 @@ const INITIAL_TOP_APPS: ModdedApp[] = [
     category: 'social',
     version: 'v1.70.0',
     size: '117 MB',
-    icon: 'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico',
+    icon: '/logo.png',
     badge: 'محرر فيديو Pro',
     description: 'تطبيق مونتاج وتعديل الفيديو مع تفعيل عضوية Pro مجاناً: تصدير بدون علامة مائية، فتح جميع الانتقالات والمؤثرات، وجودة 4K.',
     features: ['تصدير بدون علامة مائية', 'كافة الانتقالات والمؤثرات مجانية', 'تصدير فيديو بدقة 4K و 60 إطار', 'دعم الخطوط والموسيقى الاحترافية'],
@@ -177,7 +177,7 @@ const INITIAL_TOP_APPS: ModdedApp[] = [
     category: 'social',
     version: 'v7.5.8',
     size: '40 MB',
-    icon: 'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico',
+    icon: '/logo.png',
     badge: 'مشغل وسائط 4K',
     description: 'أقوى مشغل أفلام ومسلسلات على الآيفون والآيباد: يدعم تشغيل كافة الصيغ بدقة 4K HDR، صوت Dolby Atmos، ومزامنة الترجمة التلقائية.',
     features: ['تشغيل كافة صيغ الفيديو MKV/MP4/AVI', 'دعم كامل لدقة 4K HDR و Dolby Vision', 'مزامنة تلقائية للترجمة العربية', 'تشغيل الفيديوهات من الشبكة السحابية'],
@@ -668,8 +668,7 @@ export default function ModdedIpaSection() {
                         alt={app.name}
                         className="w-10 h-10 object-contain rounded-xl"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src =
-                            'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico';
+                          (e.target as HTMLImageElement).src = '/logo.png';
                         }}
                       />
                     </div>
@@ -780,8 +779,7 @@ export default function ModdedIpaSection() {
                     alt={activeDownloadApp.name}
                     className="w-8 h-8 object-contain rounded-lg"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src =
-                        'https://raw.githubusercontent.com/eltagriby1996/SideLink/main/assets/app.ico';
+                      (e.target as HTMLImageElement).src = '/logo.png';
                     }}
                   />
                 </div>

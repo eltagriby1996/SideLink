@@ -4,6 +4,10 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'SideLink — iOS Sideloading & Refresh Verification',
   description: 'Secure launch verification gateway for SideLink Windows iOS Sideloading & Refresh Manager.',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({
