@@ -1475,7 +1475,7 @@
                                     <WrapPanel>
                                         <Button Style="{StaticResource SecondaryButtonStyle}" Content="📂 فتح مجلد التحميلات والكاش" Command="{Binding Settings.OpenCacheFolderCommand}" Margin="0,0,8,0" Padding="12,6" />
                                         <Button Style="{StaticResource SecondaryButtonStyle}" Content="🔑 فتح مجلد الشهادات (Identities)" Command="{Binding Settings.OpenIdentitiesFolderCommand}" Margin="0,0,8,0" Padding="12,6" />
-                                        <Button Style="{StaticResource DangerButtonStyle}" Content="🗑️ تنظيف الملفات المؤقتة وتفريغ المساحة" Command="{Binding Settings.ClearCacheCommand}" Padding="12,6" />
+                                        <Button Style="{StaticResource SecondaryButtonStyle}" Background="#450A0A" Foreground="#F87171" BorderBrush="#DC2626" Content="🗑️ تنظيف الملفات المؤقتة وتفريغ المساحة" Command="{Binding Settings.ClearCacheCommand}" Padding="12,6" />
                                     </WrapPanel>
                                 </StackPanel>
                             </Border>

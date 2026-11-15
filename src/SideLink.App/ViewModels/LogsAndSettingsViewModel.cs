@@ -33,12 +33,25 @@ public partial class LogsViewModel : ObservableObject
 
     public static void AddLog(string message)
     {
-        App.Current?.Dispatcher?.Invoke(() =>
+        try
         {
-            GlobalLogs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
-            while (GlobalLogs.Count > 1000)
-                GlobalLogs.RemoveAt(GlobalLogs.Count - 1);
-        });
+            if (App.Current?.Dispatcher != null && !App.Current.Dispatcher.CheckAccess())
+            {
+                App.Current.Dispatcher.BeginInvoke(() =>
+                {
+                    GlobalLogs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+                    while (GlobalLogs.Count > 1000)
+                        GlobalLogs.RemoveAt(GlobalLogs.Count - 1);
+                });
+            }
+            else
+            {
+                GlobalLogs.Insert(0, $"[{DateTime.Now:HH:mm:ss}] {message}");
+                while (GlobalLogs.Count > 1000)
+                    GlobalLogs.RemoveAt(GlobalLogs.Count - 1);
+            }
+        }
+        catch { }
     }
 
     partial void OnFilterQueryChanged(string value)

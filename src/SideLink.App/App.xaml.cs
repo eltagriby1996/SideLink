@@ -171,7 +171,6 @@ public partial class App : Application
         {
             string bootLog = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideLink", "boot.log");
             File.AppendAllText(bootLog, $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}");
-            LogsViewModel.AddLog(message);
         }
         catch { }
     }
