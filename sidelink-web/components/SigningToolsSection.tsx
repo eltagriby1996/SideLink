@@ -340,13 +340,11 @@ export default function SigningToolsSection() {
             </div>
 
             <a
-              href="https://github.com/dns-khoindvn/oci-auto-vm/releases/download/DNS/khoindvn.mobileconfig"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 active:scale-95 transition-all duration-200 hover:-translate-y-0.5 shrink-0 border border-emerald-400/30"
+              href="/api/dns/download"
+              className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-xl shadow-emerald-600/30 active:scale-95 transition-all duration-200 hover:-translate-y-0.5 shrink-0 border border-emerald-400/30 cursor-pointer"
             >
               <Download className="w-5 h-5" />
-              <span>تثبيت بروفايل DNS المباشر</span>
+              <span>تثبيت بروفايل DNS المباشر (SideLink)</span>
             </a>
           </div>
 

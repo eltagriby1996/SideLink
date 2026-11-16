@@ -13,6 +13,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
+    id: 'direct-install',
+    label: 'تثبيت بدون كمبيوتر',
+    badge: 'مباشر 🔥',
+    badgeColor: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    href: '/direct-install',
+  },
+  {
     id: 'esign-ksign',
     label: 'شهادات و DNS',
     badge: 'OTA',

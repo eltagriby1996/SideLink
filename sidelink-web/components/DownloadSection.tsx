@@ -110,6 +110,37 @@ export default function DownloadSection() {
         </button>
       </div>
 
+      {/* Mobile Direct Install Callout (For users without PC) */}
+      <div className="pt-1 max-w-2xl mx-auto">
+        <a
+          href="/direct-install"
+          className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-500/40 hover:border-emerald-400 text-right transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-950/30 group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30 group-hover:scale-105 transition-transform">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-sm group-hover:text-emerald-300 transition-colors">
+                  معندكش كمبيوتر؟ ثبّت تطبيقاتك مباشرة من الآيفون الآن
+                </span>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  OTA بدون كمبيوتر 🔥
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                تثبيت مباشر عبر Safari مع مانع حظر الشهادات (Anti-Revoke DNS) لتعمل للأبد.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:text-emerald-300 shrink-0">
+            <span>دخول التثبيت المباشر</span>
+            <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+          </div>
+        </a>
+      </div>
+
       {/* Quick Specs Badges */}
       <div className="pt-2 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-400">
         <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:-translate-y-0.5 hover:border-slate-700 transition-all">

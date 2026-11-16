@@ -9,6 +9,16 @@ interface PackageDef {
 }
 
 const VERIFIED_PACKAGES: Record<string, PackageDef> = {
+  sidelink: {
+    bundle: 'com.egoz.mdt.vrggr.04',
+    name: 'SideLink Container VIP',
+    url: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
+  },
+  container: {
+    bundle: 'com.egoz.mdt.vrggr.04',
+    name: 'SideLink Container',
+    url: 'https://website.khoindvn.io.vn/apps/5jv3w.ipa',
+  },
   esign: {
     bundle: 'com.egoz.mdt.vrggr.04',
     name: 'ESign SideLink Edition',

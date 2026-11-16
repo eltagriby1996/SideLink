@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>DNSSettings</key>
+			<dict>
+				<key>DNSProtocol</key>
+				<string>HTTPS</string>
+				<key>ServerAddresses</key>
+				<array>
+					<string>1.1.1.1</string>
+					<string>1.0.0.1</string>
+					<string>8.8.8.8</string>
+					<string>8.8.4.4</string>
+					<string>94.140.14.14</string>
+					<string>94.140.15.15</string>
+					<string>2606:4700:4700::1111</string>
+					<string>2606:4700:4700::1001</string>
+					<string>2001:4860:4860::8888</string>
+					<string>2001:4860:4860::8844</string>
+				</array>
+				<key>ServerURL</key>
+				<string>https://khoindvn.io.vn</string>
+				<key>SupplementalMatchDomains</key>
+				<array>
+					<string>certs.apple.com</string>
+					<string>certs.apple.com.edgekey.net</string>
+					<string>crl.apple.com</string>
+					<string>crl.apple.com.akadns.net</string>
+					<string>crl.apple.com.edgekey.net</string>
+					<string>crl.entrust.net</string>
+					<string>crl3.digicert.com</string>
+					<string>crl4.digicert.com</string>
+					<string>khoindvn.com</string>
+					<string>khoindvn.io.vn</string>
+					<string>ocsp-lb.apple.com.akadns.net</string>
+					<string>ocsp.apple.com</string>
+					<string>ocsp.apple.com.edgekey.net</string>
+					<string>ocsp.digicert.cn</string>
+					<string>ocsp.digicert.com</string>
+					<string>ocsp2.apple.com</string>
+					<string>ocsp2.apple.com.edgekey.net</string>
+					<string>valid.apple.com</string>
+					<string>valid.apple.com.akadns.net</string>
+					<string>valid.apple.com.edgekey.net</string>
+					<string>ppq.apple.com</string>
+					<string>ppq.apple.com.akadns.net</string>
+					<string>ppq.apple.com.edgekey.net</string>
+					<string>vuvankhoi.com</string>
+				</array>
+			</dict>
+			<key>OnDemandRules</key>
+			<array>
+				<dict>
+					<key>Action</key>
+					<string>Connect</string>
+					<key>InterfaceTypeMatch</key>
+					<string>WiFi</string>
+				</dict>
+				<dict>
+					<key>Action</key>
+					<string>Connect</string>
+					<key>InterfaceTypeMatch</key>
+					<string>Cellular</string>
+				</dict>
+			</array>
+			<key>PayloadDescription</key>
+			<string>Configures device to use SideLink Encrypted Anti-Revoke DNS over HTTPS</string>
+			<key>PayloadDisplayName</key>
+			<string>SideLink Anti-Revoke DNS Shield</string>
+			<key>PayloadIdentifier</key>
+			<string>com.apple.dnsSettings.managed.sidelink-shield</string>
+			<key>PayloadOrganization</key>
+			<string>SideLink iOS Studio</string>
+			<key>PayloadType</key>
+			<string>com.apple.dnsSettings.managed</string>
+			<key>PayloadUUID</key>
+			<string>A18F83C7-B053-4859-8664-9D9E12D4C001</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>AllowEnterpriseAppInstallation</key>
+			<true/>
+			<key>allowAppInstallation</key>
+			<true/>
+			<key>AllowEnterpriseAppTrust</key>
+			<true/>
+			<key>allowEnterpriseAppTrust</key>
+			<true/>
+			<key>allowOpenFromManagedToUnmanaged</key>
+			<true/>
+			<key>allowOpenFromUnmanagedToManaged</key>
+			<true/>
+			<key>allowUntrustedTLSPrompt</key>
+			<true/>
+			<key>allowUIConfigurationProfileInstallation</key>
+			<true/>
+			<key>PayloadDisplayName</key>
+			<string>SideLink Enterprise App Trust Permissions</string>
+			<key>PayloadIdentifier</key>
+			<string>com.sidelink.restrictions</string>
+			<key>PayloadType</key>
+			<string>com.apple.applicationaccess</string>
+			<key>PayloadUUID</key>
+			<string>B29E94D8-C164-4960-9775-AE0F23E5D002</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>PayloadDisplayName</key>
+	<string>SideLink Anti-Revoke DNS</string>
+	<key>PayloadIdentifier</key>
+	<string>com.sidelink.apple-dns.profile</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>C3AF05E9-D275-4A71-B886-BF1034F6E003</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+	<key>PayloadOrganization</key>
+	<string>SideLink iOS Studio</string>
+	<key>PayloadDescription</key>
+	<string>درع الحماية الرسمي لمنع توقف شهادات تطبيقات الآيفون (Anti-Revoke) والتحقق التلقائي لتعمل بدون كمبيوتر مدى الحياة.</string>
+</dict>
+</plist>
+
