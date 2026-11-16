@@ -144,6 +144,15 @@
   ],
   "vipKeys": [
     {
+      "key": "SL-VIP-3Z22-B1S3-KI6V",
+      "note": "4",
+      "createdAt": "2026-11-16T08:16:36.074Z",
+      "expiresAt": "2026-11-16T09:16:36.074Z",
+      "usedCount": 0,
+      "maxUses": 0,
+      "isActive": true
+    },
+    {
       "key": "SL-VIP-MASTER-2026",
       "note": "مفتاح المطور الأساسي الدائم (Master Lifetime Key)",
       "createdAt": "2026-11-04T17:29:49.565Z",
