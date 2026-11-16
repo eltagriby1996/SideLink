@@ -896,6 +896,52 @@ public static class NativeMobileDevice
                             WriteAfcFile(afcConn, $"Library/Preferences/{connectedBundleId}.plist", finalPlistBytes);
                         }
 
+                        // 5. Invalidate and rebrand SideStore icon caches so SideLink icon displays everywhere
+                        try
+                        {
+                            byte[]? iconBytes = null;
+                            string[] iconCandidates = [
+                                Path.Combine(AppContext.BaseDirectory, "Assets", "logo.png"),
+                                Path.Combine(AppContext.BaseDirectory, "logo.png"),
+                                Path.Combine(Directory.GetCurrentDirectory(), "Assets", "logo.png"),
+                                Path.GetFullPath("src/SideLink.App/Assets/logo.png")
+                            ];
+                            string? foundIcon = iconCandidates.FirstOrDefault(File.Exists);
+                            if (foundIcon != null)
+                            {
+                                iconBytes = File.ReadAllBytes(foundIcon);
+                            }
+
+                            if (iconBytes != null && iconBytes.Length > 0)
+                            {
+                                AFCDirectoryCreate(afcConn, "Library/Caches");
+                                WriteAfcFile(afcConn, "Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+
+                                AFCDirectoryCreate(afcConn, "SideStore");
+                                AFCDirectoryCreate(afcConn, "SideStore/Library");
+                                AFCDirectoryCreate(afcConn, "SideStore/Library/Caches");
+                                WriteAfcFile(afcConn, "SideStore/Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+
+                                AFCDirectoryCreate(afcConn, "Documents/SideStore");
+                                AFCDirectoryCreate(afcConn, "Documents/SideStore/Library");
+                                AFCDirectoryCreate(afcConn, "Documents/SideStore/Library/Caches");
+                                WriteAfcFile(afcConn, "Documents/SideStore/Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+
+                                AFCDirectoryCreate(afcConn, "Data");
+                                AFCDirectoryCreate(afcConn, "Data/Application");
+                                AFCDirectoryCreate(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72");
+                                AFCDirectoryCreate(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library");
+                                AFCDirectoryCreate(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library/Caches");
+                                WriteAfcFile(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+
+                                LogToBootLog("Refreshed BuiltInSideStoreIconCache with SideLink icon branding.");
+                            }
+                        }
+                        catch (Exception exIcon)
+                        {
+                            LogToBootLog($"BuiltInSideStoreIconCache update notice: {exIcon.Message}");
+                        }
+
                         LogToBootLog($"✓ Successfully injected all certificates & preferences to {connectedBundleId} over USB!");
                         logger.LogInformation("✓ Successfully deployed cert.p12, pass.txt, embedded.mobileprovision, and preferences to {Bundle} via House Arrest!", connectedBundleId);
 
