@@ -914,27 +914,40 @@ public static class NativeMobileDevice
 
                             if (iconBytes != null && iconBytes.Length > 0)
                             {
-                                AFCDirectoryCreate(afcConn, "Library/Caches");
-                                WriteAfcFile(afcConn, "Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+                                string[] cacheDirs = [
+                                    "BuiltInSideStoreIconCache",
+                                    "Documents/BuiltInSideStoreIconCache",
+                                    "Library/Caches/BuiltInSideStoreIconCache",
+                                    "SideStore/Library/Caches/BuiltInSideStoreIconCache",
+                                    "Documents/SideStore/Library/Caches/BuiltInSideStoreIconCache",
+                                    "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library/Caches/BuiltInSideStoreIconCache"
+                                ];
 
-                                AFCDirectoryCreate(afcConn, "SideStore");
-                                AFCDirectoryCreate(afcConn, "SideStore/Library");
-                                AFCDirectoryCreate(afcConn, "SideStore/Library/Caches");
-                                WriteAfcFile(afcConn, "SideStore/Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+                                foreach (var cDir in cacheDirs)
+                                {
+                                    try
+                                    {
+                                        string[] parts = cDir.Split('/');
+                                        string current = "";
+                                        foreach (var part in parts)
+                                        {
+                                            current = string.IsNullOrEmpty(current) ? part : $"{current}/{part}";
+                                            AFCDirectoryCreate(afcConn, current);
+                                        }
 
-                                AFCDirectoryCreate(afcConn, "Documents/SideStore");
-                                AFCDirectoryCreate(afcConn, "Documents/SideStore/Library");
-                                AFCDirectoryCreate(afcConn, "Documents/SideStore/Library/Caches");
-                                WriteAfcFile(afcConn, "Documents/SideStore/Library/Caches/BuiltInSideStoreIconCache", iconBytes);
+                                        WriteAfcFile(afcConn, $"{cDir}/LCAppIconLight.png", iconBytes);
+                                        WriteAfcFile(afcConn, $"{cDir}/LCAppIconDark.png", iconBytes);
+                                        WriteAfcFile(afcConn, $"{cDir}/SideStore.png", iconBytes);
+                                        WriteAfcFile(afcConn, $"{cDir}/SideStore@2x.png", iconBytes);
+                                        WriteAfcFile(afcConn, $"{cDir}/SideStore@3x.png", iconBytes);
+                                    }
+                                    catch (Exception exDir)
+                                    {
+                                        LogToBootLog($"Cache populate notice for {cDir}: {exDir.Message}");
+                                    }
+                                }
 
-                                AFCDirectoryCreate(afcConn, "Data");
-                                AFCDirectoryCreate(afcConn, "Data/Application");
-                                AFCDirectoryCreate(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72");
-                                AFCDirectoryCreate(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library");
-                                AFCDirectoryCreate(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library/Caches");
-                                WriteAfcFile(afcConn, "Data/Application/752B6522-37A4-404B-B0C6-8A37556C9F72/Library/Caches/BuiltInSideStoreIconCache", iconBytes);
-
-                                LogToBootLog("Refreshed BuiltInSideStoreIconCache with SideLink icon branding.");
+                                LogToBootLog("Refreshed all BuiltInSideStoreIconCache directories with SideLink icon branding.");
                             }
                         }
                         catch (Exception exIcon)
